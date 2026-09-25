@@ -9,6 +9,6 @@ Rill.app/Contents/Resources/bin/rillctl init
 Rill.app/Contents/Resources/bin/rillctl validate --config ~/.config/rill/config.toml
 ```
 
-See the guides for custom producers, AeroSpace, yabai and all-edge surfaces. Rill never edits manager configuration automatically. Launch-at-login is opt-in and user-managed.
+See the guides for custom producers, [AeroSpace](aerospace.md), [OmniWM](omniwm.md), [yabai](yabai.md) and all-edge surfaces. Rill never edits manager configuration automatically. Launch-at-login is opt-in and user-managed.
 
 The first release requires macOS 14 or newer and Apple Silicon. Unsigned local archives are development artifacts until signed, notarized and Gatekeeper-tested by the owner.

@@ -1,0 +1,21 @@
+schema_version = 1
+
+[[providers]]
+id = "omniwm"
+kind = "omniwm"
+executable = "/Applications/OmniWM.app/Contents/MacOS/omniwmctl"
+timeout_ms = 3000
+max_output_bytes = 262144
+
+[[modules]]
+id = "spaces"
+kind = "workspaces"
+provider = "omniwm"
+placeholder = "OmniWM..."
+
+[[surfaces]]
+id = "main"
+kind = "bar"
+display = "all"
+edge = "top"
+start = ["spaces"]

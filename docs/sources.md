@@ -7,6 +7,7 @@ Reviewed 2026-09-24. These are inspiration and API references, not evidence that
 - [yabai commands](https://github.com/asmvik/yabai/wiki/Commands): documented signal callbacks and JSON queries are the starting points for the adapter. Verify precise events and fields against the installed version's manual.
 - [AeroSpace guide](https://nikitabobko.github.io/AeroSpace/guide): workspace/focus callbacks provide integration points. Its workspace model is distinct from native Spaces. Confirm available query and subscription interfaces per version.
 - [AeroSpace commands](https://nikitabobko.github.io/AeroSpace/commands): consult when implementing and versioning CLI queries and actions.
+- [OmniWM](https://github.com/OmniNull/OmniWM) and its [CLI reference](https://omniwm.app/reference/cli/overview/): versioned workspace queries, subscriptions and focus actions used by the optional OmniWM adapter. Reviewed against upstream commit `df8890e` on 2026-09-25; real installed-version validation remains separate evidence.
 - [Apple NSPanel](https://developer.apple.com/documentation/appkit/nspanel) and [NSScreen.visibleFrame](https://developer.apple.com/documentation/appkit/nsscreen/visibleframe): starting references for native panels and system-aware screen geometry. Actual window behavior requires the feasibility prototype and device checks.
 
 Do not copy upstream assets or code without checking and preserving their license obligations. The project's own license remains an owner decision before publication.

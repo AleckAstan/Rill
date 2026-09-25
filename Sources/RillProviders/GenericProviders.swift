@@ -104,25 +104,35 @@ public final class GenericProcessSupervisor: @unchecked Sendable {
         _ spec: ProviderSpec,
         onFrame: @escaping @Sendable (Result<CustomModuleUpdate, Error>) -> Void
     ) throws -> Outcome {
+        try runLineStream(spec, maximumFrameBytes: IPCVersion.maximumFrameBytes) { result in
+            onFrame(result.flatMap { data in Result { try ProducerFrameDecoder.decode(data) } })
+        }
+    }
+
+    public func runLineStream(
+        _ spec: ProviderSpec,
+        maximumFrameBytes: Int,
+        onFrame: @escaping @Sendable (Result<Data, Error>) -> Void
+    ) throws -> Outcome {
         let active = try launch(spec)
         let stdout = active.standardOutput as! Pipe
         let stderrPipe = active.standardError as! Pipe
         let errors = BoundedBytes(limit: min(spec.maxOutputBytes, 16_384))
         stderrPipe.fileHandleForReading.readabilityHandler = { handle in errors.append(handle.availableData) }
         var buffer = Data()
-        while active.isRunning {
+        while true {
             let chunk = stdout.fileHandleForReading.availableData
             if chunk.isEmpty { break }
             buffer.append(chunk)
             while let newline = buffer.firstIndex(of: 0x0A) {
                 let frame = Data(buffer[..<newline]); buffer.removeSubrange(...newline)
-                if !frame.isEmpty { onFrame(Result { try ProducerFrameDecoder.decode(frame) }) }
+                if !frame.isEmpty { onFrame(.success(frame)) }
             }
-            if buffer.count > IPCVersion.maximumFrameBytes {
+            if buffer.count > maximumFrameBytes {
                 onFrame(.failure(IPCTransportError.oversized)); stop(graceMilliseconds: spec.timeoutMS); break
             }
         }
-        if !buffer.isEmpty { onFrame(Result { try ProducerFrameDecoder.decode(buffer) }) }
+        if !buffer.isEmpty { onFrame(.success(buffer)) }
         active.waitUntilExit()
         stderrPipe.fileHandleForReading.readabilityHandler = nil
         errors.append(stderrPipe.fileHandleForReading.readDataToEndOfFile())

@@ -99,7 +99,7 @@ public enum SurfaceEdge: String, Codable, Sendable, CaseIterable {
 public typealias PanelEdge = SurfaceEdge
 
 public enum SurfaceKind: String, Codable, Sendable { case bar }
-public enum ProviderKind: String, Codable, Sendable { case yabai, aerospace, event, command, stream }
+public enum ProviderKind: String, Codable, Sendable { case yabai, aerospace, omniwm, event, command, stream }
 public enum ModuleKind: String, Codable, Sendable { case text, clock, frontmostApp, battery, workspaces, custom }
 public enum TopPlacement: String, Codable, Sendable { case menuBarArea, belowSystemUI }
 public enum SafeAreaPolicy: String, Codable, Sendable { case system }
@@ -640,7 +640,7 @@ public extension AppConfiguration {
         }
         for (index, provider) in providers.enumerated() {
             let path = "providers[\(index)]"
-            let requiresExecutable = [.yabai, .aerospace, .command, .stream].contains(provider.kind)
+            let requiresExecutable = [.yabai, .aerospace, .omniwm, .command, .stream].contains(provider.kind)
             if requiresExecutable, provider.executable == nil {
                 append("\(path).executable", "\(provider.kind.rawValue) providers require an executable")
             }
@@ -690,8 +690,8 @@ public extension AppConfiguration {
                     append("\(path).provider", "Unknown provider '\(providerID.rawValue)'")
                     continue
                 }
-                if module.kind == .workspaces, ![.yabai, .aerospace].contains(provider.kind) {
-                    append("\(path).provider", "Workspace modules require a yabai or aerospace provider")
+                if module.kind == .workspaces, ![.yabai, .aerospace, .omniwm].contains(provider.kind) {
+                    append("\(path).provider", "Workspace modules require a yabai, aerospace, or omniwm provider")
                 }
                 if module.kind == .custom, ![.event, .command, .stream].contains(provider.kind) {
                     append("\(path).provider", "Custom modules require an event, command, or stream provider")

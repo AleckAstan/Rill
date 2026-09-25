@@ -13,7 +13,7 @@ Rill is a native Swift desktop customization app for macOS, built in a checked-i
 
 - Native Swift and an actual Xcode project for macOS; prioritize responsiveness and animation quality.
 - A configurable bar inspired by Waybar is the first milestone.
-- Listen to yabai, AeroSpace, and arbitrary sources chosen in a config file.
+- Listen to yabai, AeroSpace, OmniWM, and arbitrary sources chosen in a config file.
 - Settings belong in editable files, following Linux desktop customization workflows.
 - Start with reusable placement primitives for top, bottom, left, and right surfaces.
 
@@ -23,13 +23,13 @@ Release target: `0.1.0`, a usable desktop bar foundation. Proposed baseline: mac
 
 The default top bar occupies the system menu-bar area when the user enables macOS menu-bar auto-hide. Its background reaches the physical top edge and spans behind the notch; visible controls stay in the usable regions beside the notch. This replaces the visible status strip, not Apple's app-menu functionality or other apps' status items. A small native status item offers reload, diagnostics, and quit. Rill does not change or automatically infer the system auto-hide setting. Optional `belowSystemUI` placement preserves a bar below system UI. Phase 01 must validate both placements on real hardware.
 
-Required by release: multi-display bars; file-driven styling and module ordering; clock, text, frontmost app, battery, workspaces, and custom data modules; configured click actions; hot reload with last-good rollback; event-driven yabai/AeroSpace providers; generic commands, JSON line streams and local event injection; stable top/bottom/left/right placement; diagnostics, accessibility, packaging, examples, and user documentation.
+Required by release: multi-display bars; file-driven styling and module ordering; clock, text, frontmost app, battery, workspaces, and custom data modules; configured click actions; hot reload with last-good rollback; event-driven yabai/AeroSpace/OmniWM providers; generic commands, JSON line streams and local event injection; stable top/bottom/left/right placement; diagnostics, accessibility, packaging, examples, and user documentation.
 
 Deferred: QML/JavaScript/Swift execution as a UI language, arbitrary floating widget composition, lockscreen replacement, a widget marketplace, private APIs, system tray replacement, automatic updates, and full Quickshell/Waybar compatibility. Additional hardware/media modules can follow 0.1. Native performance is an implementation target to measure, not a guarantee of the technology choice.
 
 ## Current state
 
-Phases 01–06 are complete. Production Rill renders configurable multi-display bars on all four edges with native and custom modules, nonactivating AppKit/SwiftUI panels, notch-safe bounded slots and visual transactional reload. Command, NDJSON stream and local event providers share source-scoped state; the per-user IPC service powers runtime `rillctl` status, displays, reload, diagnostics, emit and redacted diagnostics export. Providers are shared across displays and generations; configured actions use literal arguments, bounded execution and visible failures. Recovery/troubleshooting, performance methodology and local 0.1.0 packaging are prepared. Phases 07 and 08 (window-manager adapters) remain deferred; real desktop validation, signing, notarization and publication remain open. See [platform findings](docs/platform-feasibility.md).
+Phases 01–06 are complete. Production Rill renders configurable multi-display bars on all four edges with native and custom modules, nonactivating AppKit/SwiftUI panels, notch-safe bounded slots and visual transactional reload. Command, NDJSON stream and local event providers share source-scoped state; the per-user IPC service powers runtime `rillctl` status, displays, reload, diagnostics, emit and redacted diagnostics export. Providers are shared across displays and generations; configured actions use literal arguments, bounded execution and visible failures. Yabai, AeroSpace and OmniWM workspace adapters are implemented with fixtures, examples and documentation; their remaining environment-specific checks are recorded in phase handoffs. Recovery/troubleshooting, performance methodology and local 0.1.0 packaging are prepared. Real desktop validation, signing, notarization and publication remain open. See [platform findings](docs/platform-feasibility.md).
 
 ## Decision policy
 

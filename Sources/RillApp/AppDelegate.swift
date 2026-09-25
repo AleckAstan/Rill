@@ -53,9 +53,20 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
             guard let provider = configuration.providers.first(where: { $0.id == providerID }) else {
                 return EmptyManagedResource()
             }
-            if provider.kind == .yabai || provider.kind == .aerospace {
+            if provider.kind == .yabai || provider.kind == .aerospace || provider.kind == .omniwm {
                 if provider.kind == .yabai {
                     return await YabaiProviderResource(
+                        spec: provider,
+                        generation: generation,
+                        runtime: self.moduleRuntime,
+                        invalidations: self.providerInvalidations,
+                        acceptsGeneration: { [generationGate = self.generationGate] candidate in
+                            await generationGate.accepts(candidate)
+                        }
+                    )
+                }
+                if provider.kind == .omniwm {
+                    return await OmniWMProviderResource(
                         spec: provider,
                         generation: generation,
                         runtime: self.moduleRuntime,
@@ -349,7 +360,7 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
                 return .init(requestID: request.requestID, code: "unknown_source", message: "No configured provider named '\(source)'")
             }
             if name == "refresh" {
-                guard provider.kind == .yabai || provider.kind == .aerospace else {
+                guard [.yabai, .aerospace, .omniwm].contains(provider.kind) else {
                     return .init(requestID: request.requestID, code: "invalid_event", message: "refresh targets only manager providers")
                 }
                 guard payload == .object([:]) else {

@@ -10,7 +10,7 @@ Status: proposed starting design; phase 01 validates platform assumptions. All s
 - `Sources/RillConfig/`: TOML parsing, source diagnostics, directory watcher, validated snapshot transactions.
 - `Sources/RillPlatform/`: AppKit panel controllers, screen inventory, appearance/accessibility integration.
 - `Sources/RillModules/`: SwiftUI module renderers and module lifecycle.
-- `Sources/RillProviders/`: native information, process supervision, generic producers, yabai/AeroSpace adapters.
+- `Sources/RillProviders/`: native information, process supervision, generic producers, yabai/AeroSpace/OmniWM adapters.
 - `Sources/RillIPC/` and `Sources/rillctl/`: local transport, command parsing and replies.
 - `Tests/`: unit/integration fixtures and controllable fake producers; UI checks where useful.
 - `Examples/`, `docs/user/`, `scripts/`: distributable configs, user guides, build/release helpers.
