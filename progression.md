@@ -81,3 +81,9 @@ User visual validation update: Rill was switched to AeroSpace 0.20.3-Beta, detec
 User design validation update: the `segmented` preset was loaded with the live AeroSpace configuration and explicitly approved by the user on 2026-09-25.
 
 User flat-design validation update: the `flat` preset was loaded with the same live AeroSpace configuration and explicitly approved by the user on 2026-09-25. The active configuration is returned to `segmented` before native macOS glass-theme work.
+
+2026-09-25 native-design update: a third `glass` preset uses SwiftUI Liquid Glass on macOS 26+ while preserving the macOS 14 deployment target through a translucent segmented fallback. The preset makes the Rill surface transparent and keeps all visual tokens configurable.
+
+2026-09-25 glass interaction update: clickable modules and workspace buttons retain keyboard/accessibility focus but suppress SwiftUI's persistent visual focus ring, which conflicted with the bar's native glass chrome.
+
+User native-design validation update: the `glass` preset and focus-ring correction were loaded on macOS 27 with AeroSpace and explicitly approved by the user on 2026-09-25.

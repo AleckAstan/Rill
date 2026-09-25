@@ -314,7 +314,7 @@ struct BarSurfaceView: View {
             }
         }
         .foregroundStyle(Color(hex: theme.foreground))
-        .background(Color(hex: theme.background))
+        .background(Color(hex: theme.resolvedSurfaceBackground))
         .clipShape(RoundedRectangle(cornerRadius: surface.resolvedTopPlacement == .menuBarArea ? 0 : theme.cornerRadius))
         .ignoresSafeArea()
     }
@@ -384,17 +384,7 @@ private struct ModuleView: View {
                 standardContent
             }
         }
-        .padding(.horizontal, module.style?.padding ?? theme.resolvedModulePadding)
-        .padding(.vertical, theme.resolvedModuleVerticalPadding)
-        .background(Color(hex: module.style?.background ?? theme.resolvedModuleBackground))
-        .clipShape(RoundedRectangle(cornerRadius: theme.resolvedModuleCornerRadius))
-        .overlay {
-            RoundedRectangle(cornerRadius: theme.resolvedModuleCornerRadius)
-                .stroke(
-                    Color(hex: theme.resolvedBorderColor),
-                    lineWidth: theme.resolvedBorderWidth
-                )
-        }
+        .modifier(ModuleChrome(theme: theme, style: module.style))
     }
 
     private var standardContent: some View {
@@ -403,6 +393,7 @@ private struct ModuleView: View {
                 Button { performAction(module.id, action) } label: { decoratedContent }
                     .buttonStyle(.plain)
                     .focusable()
+                    .focusEffectDisabled()
                     .accessibilityHint("Runs the configured action")
             } else { decoratedContent }
         }
@@ -458,6 +449,7 @@ private struct ModuleView: View {
                     }
                     .buttonStyle(.plain)
                     .focusable()
+                    .focusEffectDisabled()
                     .help(workspaceHelp(workspace))
                     .accessibilityLabel("Workspace \(workspace.name)")
                     .accessibilityValue(workspace.focused ? "Focused" : workspace.visible ? "Visible" : "Available")
@@ -605,6 +597,43 @@ private struct WorkspaceApplicationIcon: View {
         application.windowCount > 1
             ? "\(application.name), \(application.windowCount) windows"
             : application.name
+    }
+}
+
+private struct ModuleChrome: ViewModifier {
+    let theme: ThemeSpec
+    let style: ModuleStyle?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        let padded = content
+            .padding(.horizontal, style?.padding ?? theme.resolvedModulePadding)
+            .padding(.vertical, theme.resolvedModuleVerticalPadding)
+        if theme.preset == .glass {
+            if #available(macOS 26.0, *) {
+                padded.glassEffect(
+                    .regular.tint(Color(hex: style?.background ?? theme.resolvedModuleBackground)).interactive(),
+                    in: RoundedRectangle(cornerRadius: theme.resolvedModuleCornerRadius)
+                )
+            } else {
+                fallback(content: padded)
+            }
+        } else {
+            fallback(content: padded)
+        }
+    }
+
+    private func fallback<Content: View>(content: Content) -> some View {
+        content
+            .background(Color(hex: style?.background ?? theme.resolvedModuleBackground))
+            .clipShape(RoundedRectangle(cornerRadius: theme.resolvedModuleCornerRadius))
+            .overlay {
+                RoundedRectangle(cornerRadius: theme.resolvedModuleCornerRadius)
+                    .stroke(
+                        Color(hex: theme.resolvedBorderColor),
+                        lineWidth: theme.resolvedBorderWidth
+                    )
+            }
     }
 }
 

@@ -117,6 +117,16 @@ final class ConfigurationParserTests: XCTestCase {
         XCTAssertEqual(theme.resolvedApplicationIconSize, 20)
     }
 
+    func testGlassThemePresetDecodes() throws {
+        let text = DefaultConfiguration.contents.replacingOccurrences(
+            of: "preset = \"segmented\"",
+            with: "preset = \"glass\""
+        )
+        let theme = try parser.parse(text: text).configuration.theme
+        XCTAssertEqual(theme.preset, .glass)
+        XCTAssertEqual(theme.resolvedSurfaceBackground, "#00000000")
+    }
+
     func testThemeVisualOverrideBoundsAreRejected() {
         assertInvalid(
             DefaultConfiguration.contents.replacingOccurrences(

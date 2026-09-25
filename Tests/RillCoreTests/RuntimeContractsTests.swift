@@ -48,6 +48,13 @@ final class RuntimeContractsTests: XCTestCase {
         XCTAssertEqual(segmented.resolvedFocusedWorkspaceBackground, "#3B4252FF")
         XCTAssertEqual(segmented.resolvedBorderWidth, 1)
         XCTAssertEqual(segmented.resolvedApplicationIconSize, 16)
+
+        let glass = ThemeSpec(preset: .glass)
+        XCTAssertEqual(glass.resolvedSurfaceBackground, "#00000000")
+        XCTAssertEqual(glass.resolvedModuleBackground, "#FFFFFF14")
+        XCTAssertEqual(glass.resolvedFocusedWorkspaceBackground, "#FFFFFF24")
+        XCTAssertEqual(glass.resolvedModuleCornerRadius, 12)
+        XCTAssertEqual(glass.resolvedModulePadding, 9)
     }
 
     func testExplicitThemeTokensOverridePresetDefaults() {

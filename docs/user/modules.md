@@ -76,7 +76,7 @@ Interactive modules use native SwiftUI buttons with VoiceOver labels, values, hi
 
 Native modules publish healthy, warning/stale, or unavailable presentation. A module's `style` overrides its normal foreground, background, font, size, and padding. `states.warning` and `states.error` can override warning and unavailable foreground colors. See the complete [configuration reference](configuration.md).
 
-The global `theme.preset` selects either `flat` or `segmented`. The segmented preset draws independent module capsules, a stronger focused-workspace capsule, subtle borders and compact application icons. Every generated token can be overridden in `[theme]`, including module/workspace backgrounds, radii, border, spacing, padding and `application_icon_size`.
+The global `theme.preset` selects `flat`, `segmented`, or `glass`. The segmented preset draws independent module capsules, a stronger focused-workspace capsule, subtle borders and compact application icons. Glass uses SwiftUI's native Liquid Glass effect on macOS 26+ and a translucent fallback on older supported systems. Every generated token can be overridden in `[theme]`, including surface/module/workspace backgrounds, radii, border, spacing, padding and `application_icon_size`.
 
 Custom updates also select `states.normal`, `states.warning`, `states.error`, or `states.success`. Stream data becomes stale after the configured `stale_after_ms` while retaining the last visible value.
 
