@@ -1,0 +1,601 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project "/Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/Rill.xcodeproj" -scheme Rill -configuration Debug -destination platform=macOS,arch=arm64 -derivedDataPath "/Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/.build/DerivedData" ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=NO build
+
+Build settings from command line:
+    ARCHS = arm64
+    CODE_SIGN_IDENTITY = -
+    CODE_SIGNING_ALLOWED = NO
+    ONLY_ACTIVE_ARCH = YES
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  TOMLDecoder: https://github.com/dduan/TOMLDecoder.git @ 0.4.5
+
+note: Using codesigning identity override: -
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (4 targets)
+    Target 'Rill' in project 'Rill'
+        ➜ Explicit dependency on target 'rillctl' in project 'Rill'
+        ➜ Explicit dependency on target 'TOMLDecoder-product' in project 'TOMLDecoder'
+    Target 'TOMLDecoder-product' in project 'TOMLDecoder'
+        ➜ Explicit dependency on target 'TOMLDecoder' in project 'TOMLDecoder'
+    Target 'TOMLDecoder' in project 'TOMLDecoder' (no dependencies)
+    Target 'rillctl' in project 'Rill' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ReadFileContents /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/docc/features.json
+
+Build description signature: 5a5df882cc1dba0473bf47009f700102
+Build description path: /Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/XCBuildData/5a5df882cc1dba0473bf47009f700102.xcbuilddata
+CreateBuildDirectory /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-create-build-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex
+
+CreateBuildDirectory /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKExplicitPrecompiledModules
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-create-build-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKExplicitPrecompiledModules
+
+CreateBuildDirectory /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/CompilationCache.noindex
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-create-build-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/CompilationCache.noindex
+
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKStatCaches.noindex/macosx27.0-26A425-7231f6df4def33e022ae2eb8f782df1a.sdkstatcache
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -o /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKStatCaches.noindex/macosx27.0-26A425-7231f6df4def33e022ae2eb8f782df1a.sdkstatcache
+
+CreateBuildDirectory /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-create-build-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products
+
+CreateBuildDirectory /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-create-build-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex
+
+CreateBuildDirectory /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/PrecompiledHeaders
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-create-build-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/PrecompiledHeaders
+
+CreateBuildDirectory /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-create-build-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+
+CreateBuildDirectory /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/ExplicitPrecompiledModules
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-create-build-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/ExplicitPrecompiledModules
+
+CreateBuildDirectory /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/EagerLinkingTBDs/Debug
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-create-build-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/EagerLinkingTBDs/Debug
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill-00d437654d3d39fe545a72b74c563623-VFS/all-product-headers.yaml
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill-00d437654d3d39fe545a72b74c563623-VFS/all-product-headers.yaml
+
+CreateBuildDirectory /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-create-build-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug
+
+CreateBuildDirectory /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/PackageFrameworks
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-create-build-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/PackageFrameworks
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl.DependencyStaticMetadataFileList (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl.DependencyStaticMetadataFileList
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-generated-files.hmap (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-generated-files.hmap
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-own-target-headers.hmap (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-own-target-headers.hmap
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-project-headers.hmap (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-project-headers.hmap
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-all-non-framework-target-headers.hmap (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-all-non-framework-target-headers.hmap
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-all-target-headers.hmap (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-all-target-headers.hmap
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl.hmap (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl.hmap
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl.DependencyMetadataFileList (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl.DependencyMetadataFileList
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl_const_extract_protocols.json (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl_const_extract_protocols.json
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.SwiftFileList (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.SwiftFileList
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.LinkFileList (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.LinkFileList
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl-OutputFileMap.json (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl-OutputFileMap.json
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/TOMLDecoder.DependencyStaticMetadataFileList (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/TOMLDecoder.DependencyStaticMetadataFileList
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/TOMLDecoder.DependencyMetadataFileList (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/TOMLDecoder.DependencyMetadataFileList
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/TOMLDecoder.modulemap (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/TOMLDecoder.modulemap
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder_const_extract_protocols.json (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder_const_extract_protocols.json
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.LinkFileList (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.LinkFileList
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.SwiftFileList (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.SwiftFileList
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.SwiftConstValuesFileList (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.SwiftConstValuesFileList
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder-OutputFileMap.json (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder-OutputFileMap.json
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill.hmap (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill.hmap
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill.DependencyStaticMetadataFileList (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill.DependencyStaticMetadataFileList
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill.DependencyMetadataFileList (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill.DependencyMetadataFileList
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-project-headers.hmap (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-project-headers.hmap
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-own-target-headers.hmap (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-own-target-headers.hmap
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-generated-files.hmap (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-generated-files.hmap
+
+Copy /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/TOMLDecoder.modulemap /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/TOMLDecoder.modulemap (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/TOMLDecoder.modulemap /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-all-target-headers.hmap (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-all-target-headers.hmap
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-all-non-framework-target-headers.hmap (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-all-non-framework-target-headers.hmap
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-DebugDylibPath-normal-arm64.txt (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-DebugDylibPath-normal-arm64.txt
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-DebugDylibInstallName-normal-arm64.txt (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-DebugDylibInstallName-normal-arm64.txt
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill_const_extract_protocols.json (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill_const_extract_protocols.json
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.SwiftFileList (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.SwiftFileList
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.SwiftConstValuesFileList (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.SwiftConstValuesFileList
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.LinkFileList (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.LinkFileList
+
+WriteAuxiliaryFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill-OutputFileMap.json (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    write-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill-OutputFileMap.json
+
+MkDir /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/MacOS (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    /bin/mkdir -p /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/MacOS
+
+MkDir /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/Resources (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    /bin/mkdir -p /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/Resources
+
+MkDir /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    /bin/mkdir -p /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents
+
+MkDir /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    /bin/mkdir -p /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app
+
+SwiftDriver rillctl normal arm64 com.apple.xcode.tools.swift.compiler (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name rillctl -Onone @/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.SwiftFileList -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -target arm64-apple-macos14.0 -g -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -index-store-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Index.noindex/DataStore -swift-version 6 -I /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -F /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -c -j12 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKStatCaches.noindex/macosx27.0-26A425-7231f6df4def33e022ae2eb8f782df1a.sdkstatcache -output-file-map /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKExplicitPrecompiledModules -emit-dependencies -emit-module -emit-module-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl-dependency-scan.dia -validate-clang-modules-once -clang-build-session-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -emit-const-values -const-gather-protocols-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl_const_extract_protocols.json -Xcc -iquote -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-generated-files.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-own-target-headers.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill-00d437654d3d39fe545a72b74c563623-VFS/all-product-headers.yaml -Xcc -iquote -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-project-headers.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/include -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/DerivedSources-normal/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/DerivedSources/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/DerivedSources -emit-objc-header -emit-objc-header-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl-Swift.h -working-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill -experimental-emit-module-separately -disable-cmo
+
+SwiftDriver TOMLDecoder normal arm64 com.apple.xcode.tools.swift.compiler (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -parse-as-library -module-name TOMLDecoder -Onone @/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.SwiftFileList -DSWIFT_PACKAGE -DDEBUG -DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE -DXcode -enable-upcoming-feature ExistentialAny -enable-upcoming-feature InternalImportsByDefault -enable-upcoming-feature MemberImportVisibility -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -target arm64-apple-macos12.0 -g -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -suppress-warnings -index-store-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 6 -I /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -F /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -c -j12 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKStatCaches.noindex/macosx27.0-26A425-7231f6df4def33e022ae2eb8f782df1a.sdkstatcache -output-file-map /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKExplicitPrecompiledModules -emit-dependencies -emit-module -emit-module-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder-dependency-scan.dia -user-module-version 0.4.5 -validate-clang-modules-once -clang-build-session-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -package-name tomldecoder -emit-const-values -const-gather-protocols-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder_const_extract_protocols.json -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/include -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/DerivedSources-normal/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/DerivedSources/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/DerivedSources -Xcc -DSWIFT_PACKAGE -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder-Swift.h -working-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj -experimental-emit-module-separately -disable-cmo
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ rillctl (in target 'rillctl' from project 'Rill')
+
+SwiftCompile normal arm64 (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    
+
+SwiftCompile normal arm64 Compiling\ IPCVersion.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/Sources/RillIPC/IPCVersion.swift (in target 'rillctl' from project 'Rill')
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/Sources/RillIPC/IPCVersion.swift (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-SwiftPerFileCompile IPCVersion.swift
+
+SwiftCompile normal arm64 Compiling\ main.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/Sources/rillctl/main.swift (in target 'rillctl' from project 'Rill')
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/Sources/rillctl/main.swift (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-SwiftPerFileCompile main.swift
+
+SwiftCompile normal arm64 Compiling\ TOMLDocument.swift,\ Token.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/Parsing/TOMLDocument.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/Parsing/Token.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/Parsing/TOMLDocument.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-SwiftPerFileCompile TOMLDocument.swift
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/Parsing/Token.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-SwiftPerFileCompile Token.swift
+
+SwiftCompile normal arm64 Compiling\ TOMLArray.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/TOMLArray.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/TOMLArray.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-SwiftPerFileCompile TOMLArray.swift
+
+SwiftCompile normal arm64 Compiling\ DateTime.swift,\ Constants.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/DateTime.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/Parsing/Constants.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/DateTime.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-SwiftPerFileCompile DateTime.swift
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/Parsing/Constants.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-SwiftPerFileCompile Constants.swift
+
+SwiftCompile normal arm64 Compiling\ TOMLKey.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/TOMLKey.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/TOMLKey.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-SwiftPerFileCompile TOMLKey.swift
+
+SwiftCompile normal arm64 Compiling\ TOMLDecoder.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/TOMLDecoder.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftCompile normal arm64 (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    
+
+SwiftCompile normal arm64 Compiling\ Parser+Finish.swift,\ Parser.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/Parsing/Parser+Finish.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/Parsing/Parser.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/Parsing/Parser+Finish.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-SwiftPerFileCompile Parser+Finish.swift
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/Parsing/Parser.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-SwiftPerFileCompile Parser.swift
+
+SwiftCompile normal arm64 Compiling\ TOMLError.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/TOMLError.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/TOMLError.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-SwiftPerFileCompile TOMLError.swift
+
+SwiftCompile normal arm64 Compiling\ TOMLKeyedDecodingContainer.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/TOMLKeyedDecodingContainer.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/TOMLKeyedDecodingContainer.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-SwiftPerFileCompile TOMLKeyedDecodingContainer.swift
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ TOMLDecoder (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftCompile normal arm64 (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    
+
+SwiftCompile normal arm64 Compiling\ TOMLSingleValueDecodingContainer.Generated.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/TOMLSingleValueDecodingContainer.Generated.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/TOMLSingleValueDecodingContainer.Generated.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-SwiftPerFileCompile TOMLSingleValueDecodingContainer.Generated.swift
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for rillctl (in target 'rillctl' from project 'Rill')
+
+SwiftDriver\ Compilation\ Requirements rillctl normal arm64 com.apple.xcode.tools.swift.compiler (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name rillctl -Onone @/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.SwiftFileList -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -target arm64-apple-macos14.0 -g -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -index-store-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Index.noindex/DataStore -swift-version 6 -I /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -F /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -c -j12 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKStatCaches.noindex/macosx27.0-26A425-7231f6df4def33e022ae2eb8f782df1a.sdkstatcache -output-file-map /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKExplicitPrecompiledModules -emit-dependencies -emit-module -emit-module-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl-dependency-scan.dia -validate-clang-modules-once -clang-build-session-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -emit-const-values -const-gather-protocols-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl_const_extract_protocols.json -Xcc -iquote -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-generated-files.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-own-target-headers.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill-00d437654d3d39fe545a72b74c563623-VFS/all-product-headers.yaml -Xcc -iquote -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-project-headers.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/include -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/DerivedSources-normal/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/DerivedSources/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/DerivedSources -emit-objc-header -emit-objc-header-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl-Swift.h -working-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill -experimental-emit-module-separately -disable-cmo
+
+SwiftDriverJobDiscovery normal arm64 Compiling main.swift (in target 'rillctl' from project 'Rill')
+
+SwiftCompile normal arm64 Compiling\ TOMLUnkeyedDecodingContainer.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/TOMLUnkeyedDecodingContainer.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/TOMLUnkeyedDecodingContainer.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-SwiftPerFileCompile TOMLUnkeyedDecodingContainer.swift
+
+SwiftDriverJobDiscovery normal arm64 Compiling TOMLKey.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftMergeGeneratedHeaders /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/DerivedSources/rillctl-Swift.h /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl-Swift.h (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-swiftHeaderTool -arch arm64 /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl-Swift.h -o /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/DerivedSources/rillctl-Swift.h
+
+Copy /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/rillctl.swiftmodule/arm64-apple-macos.swiftmodule /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.swiftmodule (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -strip-unsigned-binaries -strip-deterministic -strip-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/strip -resolve-src-symlinks -rename /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.swiftmodule /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/rillctl.swiftmodule/arm64-apple-macos.swiftmodule
+
+Copy /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/rillctl.swiftmodule/arm64-apple-macos.swiftdoc /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.swiftdoc (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -strip-unsigned-binaries -strip-deterministic -strip-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/strip -resolve-src-symlinks -rename /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.swiftdoc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/rillctl.swiftmodule/arm64-apple-macos.swiftdoc
+
+Copy /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/rillctl.swiftmodule/arm64-apple-macos.abi.json /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.abi.json (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -strip-unsigned-binaries -strip-deterministic -strip-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/strip -resolve-src-symlinks -rename /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.abi.json /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/rillctl.swiftmodule/arm64-apple-macos.abi.json
+
+Copy /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/rillctl.swiftmodule/Project/arm64-apple-macos.swiftsourceinfo /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.swiftsourceinfo (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -strip-unsigned-binaries -strip-deterministic -strip-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/strip -resolve-src-symlinks -rename /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.swiftsourceinfo /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/rillctl.swiftmodule/Project/arm64-apple-macos.swiftsourceinfo
+
+SwiftCompile normal arm64 Compiling\ _TOMLDecoder.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/_TOMLDecoder.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/_TOMLDecoder.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-SwiftPerFileCompile _TOMLDecoder.swift
+
+SwiftDriverJobDiscovery normal arm64 Compiling IPCVersion.swift (in target 'rillctl' from project 'Rill')
+
+SwiftCompile normal arm64 Compiling\ TOMLTable.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/TOMLTable.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder/Sources/TOMLDecoder/TOMLTable.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-SwiftPerFileCompile TOMLTable.swift
+
+SwiftDriver\ Compilation rillctl normal arm64 com.apple.xcode.tools.swift.compiler (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-Swift-Compilation -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name rillctl -Onone @/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.SwiftFileList -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -target arm64-apple-macos14.0 -g -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -index-store-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Index.noindex/DataStore -swift-version 6 -I /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -F /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -c -j12 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKStatCaches.noindex/macosx27.0-26A425-7231f6df4def33e022ae2eb8f782df1a.sdkstatcache -output-file-map /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKExplicitPrecompiledModules -emit-dependencies -emit-module -emit-module-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl-dependency-scan.dia -validate-clang-modules-once -clang-build-session-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -emit-const-values -const-gather-protocols-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl_const_extract_protocols.json -Xcc -iquote -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-generated-files.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-own-target-headers.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill-00d437654d3d39fe545a72b74c563623-VFS/all-product-headers.yaml -Xcc -iquote -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/rillctl-project-headers.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/include -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/DerivedSources-normal/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/DerivedSources/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/DerivedSources -emit-objc-header -emit-objc-header-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl-Swift.h -working-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill -experimental-emit-module-separately -disable-cmo
+
+SwiftDriverJobDiscovery normal arm64 Compiling TOMLArray.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+Ld /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/rillctl normal (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-macos14.0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -Os -Xlinker -no_warn_duplicate_libraries -L/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/EagerLinkingTBDs/Debug -L/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -F/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/EagerLinkingTBDs/Debug -F/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -filelist /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.LinkFileList -Xlinker -rpath -Xlinker /usr/lib/swift -Xlinker -object_path_lto -Xlinker /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl_lto.o -Xlinker -dependency_info -Xlinker /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/rillctl.build/Objects-normal/arm64/rillctl.swiftmodule -o /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/rillctl
+
+SwiftDriverJobDiscovery normal arm64 Compiling TOMLDecoder.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftDriverJobDiscovery normal arm64 Compiling TOMLError.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftDriverJobDiscovery normal arm64 Compiling TOMLKeyedDecodingContainer.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftDriverJobDiscovery normal arm64 Compiling _TOMLDecoder.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for TOMLDecoder (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftDriver\ Compilation\ Requirements TOMLDecoder normal arm64 com.apple.xcode.tools.swift.compiler (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -parse-as-library -module-name TOMLDecoder -Onone @/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.SwiftFileList -DSWIFT_PACKAGE -DDEBUG -DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE -DXcode -enable-upcoming-feature ExistentialAny -enable-upcoming-feature InternalImportsByDefault -enable-upcoming-feature MemberImportVisibility -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -target arm64-apple-macos12.0 -g -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -suppress-warnings -index-store-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 6 -I /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -F /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -c -j12 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKStatCaches.noindex/macosx27.0-26A425-7231f6df4def33e022ae2eb8f782df1a.sdkstatcache -output-file-map /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKExplicitPrecompiledModules -emit-dependencies -emit-module -emit-module-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder-dependency-scan.dia -user-module-version 0.4.5 -validate-clang-modules-once -clang-build-session-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -package-name tomldecoder -emit-const-values -const-gather-protocols-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder_const_extract_protocols.json -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/include -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/DerivedSources-normal/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/DerivedSources/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/DerivedSources -Xcc -DSWIFT_PACKAGE -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder-Swift.h -working-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj -experimental-emit-module-separately -disable-cmo
+
+SwiftMergeGeneratedHeaders /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/TOMLDecoder-Swift.h /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder-Swift.h (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder
+    builtin-swiftHeaderTool -arch arm64 /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder-Swift.h -o /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/GeneratedModuleMaps/TOMLDecoder-Swift.h
+
+Copy /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/TOMLDecoder.swiftmodule/arm64-apple-macos.swiftmodule /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.swiftmodule (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.swiftmodule /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/TOMLDecoder.swiftmodule/arm64-apple-macos.swiftmodule
+
+Copy /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/TOMLDecoder.swiftmodule/Project/arm64-apple-macos.swiftsourceinfo /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.swiftsourceinfo (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.swiftsourceinfo /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/TOMLDecoder.swiftmodule/Project/arm64-apple-macos.swiftsourceinfo
+
+Copy /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/TOMLDecoder.swiftmodule/arm64-apple-macos.swiftdoc /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.swiftdoc (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.swiftdoc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/TOMLDecoder.swiftmodule/arm64-apple-macos.swiftdoc
+
+Copy /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/TOMLDecoder.swiftmodule/arm64-apple-macos.abi.json /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.abi.json (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.abi.json /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/TOMLDecoder.swiftmodule/arm64-apple-macos.abi.json
+
+SwiftDriver Rill normal arm64 com.apple.xcode.tools.swift.compiler (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name Rill -Onone @/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.SwiftFileList -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -target arm64-apple-macos14.0 -g -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -index-store-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Index.noindex/DataStore -swift-version 6 -I /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -F /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -c -j12 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKStatCaches.noindex/macosx27.0-26A425-7231f6df4def33e022ae2eb8f782df1a.sdkstatcache -output-file-map /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKExplicitPrecompiledModules -emit-dependencies -emit-module -emit-module-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill-dependency-scan.dia -validate-clang-modules-once -clang-build-session-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -emit-const-values -const-gather-protocols-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill_const_extract_protocols.json -Xcc -iquote -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-generated-files.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-own-target-headers.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill-00d437654d3d39fe545a72b74c563623-VFS/all-product-headers.yaml -Xcc -iquote -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-project-headers.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/include -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/DerivedSources-normal/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/DerivedSources/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/DerivedSources -emit-objc-header -emit-objc-header-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill-Swift.h -working-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill -experimental-emit-module-separately -disable-cmo
+
+RegisterExecutionPolicyException /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/rillctl (in target 'rillctl' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-RegisterExecutionPolicyException /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/rillctl
+
+SwiftDriverJobDiscovery normal arm64 Compiling TOMLTable.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftDriverJobDiscovery normal arm64 Compiling TOMLUnkeyedDecodingContainer.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftDriverJobDiscovery normal arm64 Compiling TOMLDocument.swift, Token.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftCompile normal arm64 Compiling\ AppDelegate.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/Sources/RillApp/AppDelegate.swift (in target 'Rill' from project 'Rill')
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/Sources/RillApp/AppDelegate.swift (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-SwiftPerFileCompile AppDelegate.swift
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ Rill (in target 'Rill' from project 'Rill')
+
+SwiftCompile normal arm64 (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    
+
+SwiftCompile normal arm64 Compiling\ RuntimeContracts.swift /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/Sources/RillCore/RuntimeContracts.swift (in target 'Rill' from project 'Rill')
+
+SwiftCompile normal arm64 /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/Sources/RillCore/RuntimeContracts.swift (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-SwiftPerFileCompile RuntimeContracts.swift
+
+SwiftDriverJobDiscovery normal arm64 Compiling TOMLSingleValueDecodingContainer.Generated.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftDriverJobDiscovery normal arm64 Compiling DateTime.swift, Constants.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for Rill (in target 'Rill' from project 'Rill')
+
+SwiftDriver\ Compilation\ Requirements Rill normal arm64 com.apple.xcode.tools.swift.compiler (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name Rill -Onone @/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.SwiftFileList -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -target arm64-apple-macos14.0 -g -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -index-store-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Index.noindex/DataStore -swift-version 6 -I /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -F /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -c -j12 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKStatCaches.noindex/macosx27.0-26A425-7231f6df4def33e022ae2eb8f782df1a.sdkstatcache -output-file-map /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKExplicitPrecompiledModules -emit-dependencies -emit-module -emit-module-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill-dependency-scan.dia -validate-clang-modules-once -clang-build-session-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -emit-const-values -const-gather-protocols-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill_const_extract_protocols.json -Xcc -iquote -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-generated-files.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-own-target-headers.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill-00d437654d3d39fe545a72b74c563623-VFS/all-product-headers.yaml -Xcc -iquote -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-project-headers.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/include -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/DerivedSources-normal/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/DerivedSources/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/DerivedSources -emit-objc-header -emit-objc-header-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill-Swift.h -working-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill -experimental-emit-module-separately -disable-cmo
+
+SwiftMergeGeneratedHeaders /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/DerivedSources/Rill-Swift.h /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill-Swift.h (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-swiftHeaderTool -arch arm64 /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill-Swift.h -o /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/DerivedSources/Rill-Swift.h
+
+Copy /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.swiftmodule/arm64-apple-macos.swiftdoc /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.swiftdoc (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -strip-unsigned-binaries -strip-deterministic -strip-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/strip -resolve-src-symlinks -rename /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.swiftdoc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.swiftmodule/arm64-apple-macos.swiftdoc
+
+Copy /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.swiftmodule/arm64-apple-macos.abi.json /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.abi.json (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -strip-unsigned-binaries -strip-deterministic -strip-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/strip -resolve-src-symlinks -rename /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.abi.json /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.swiftmodule/arm64-apple-macos.abi.json
+
+Copy /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.swiftmodule/arm64-apple-macos.swiftmodule /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.swiftmodule (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -strip-unsigned-binaries -strip-deterministic -strip-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/strip -resolve-src-symlinks -rename /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.swiftmodule /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.swiftmodule/arm64-apple-macos.swiftmodule
+
+Copy /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.swiftmodule/Project/arm64-apple-macos.swiftsourceinfo /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.swiftsourceinfo (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -strip-unsigned-binaries -strip-deterministic -strip-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/strip -resolve-src-symlinks -rename /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.swiftsourceinfo /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.swiftmodule/Project/arm64-apple-macos.swiftsourceinfo
+
+SwiftDriverJobDiscovery normal arm64 Compiling AppDelegate.swift (in target 'Rill' from project 'Rill')
+
+SwiftDriverJobDiscovery normal arm64 Compiling RuntimeContracts.swift (in target 'Rill' from project 'Rill')
+
+SwiftDriver\ Compilation Rill normal arm64 com.apple.xcode.tools.swift.compiler (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-Swift-Compilation -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name Rill -Onone @/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.SwiftFileList -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -target arm64-apple-macos14.0 -g -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -index-store-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Index.noindex/DataStore -swift-version 6 -I /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -F /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/PackageFrameworks -F /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -c -j12 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKStatCaches.noindex/macosx27.0-26A425-7231f6df4def33e022ae2eb8f782df1a.sdkstatcache -output-file-map /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKExplicitPrecompiledModules -emit-dependencies -emit-module -emit-module-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill-dependency-scan.dia -validate-clang-modules-once -clang-build-session-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -emit-const-values -const-gather-protocols-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill_const_extract_protocols.json -Xcc -iquote -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-generated-files.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-own-target-headers.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill-00d437654d3d39fe545a72b74c563623-VFS/all-product-headers.yaml -Xcc -iquote -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-project-headers.hmap -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/include -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/DerivedSources-normal/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/DerivedSources/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/DerivedSources -emit-objc-header -emit-objc-header-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill-Swift.h -working-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill -experimental-emit-module-separately -disable-cmo
+
+SwiftDriverJobDiscovery normal arm64 Compiling Parser+Finish.swift, Parser.swift (in target 'TOMLDecoder' from project 'TOMLDecoder')
+
+SwiftDriver\ Compilation TOMLDecoder normal arm64 com.apple.xcode.tools.swift.compiler (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    builtin-Swift-Compilation -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -parse-as-library -module-name TOMLDecoder -Onone @/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.SwiftFileList -DSWIFT_PACKAGE -DDEBUG -DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE -DXcode -enable-upcoming-feature ExistentialAny -enable-upcoming-feature InternalImportsByDefault -enable-upcoming-feature MemberImportVisibility -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -target arm64-apple-macos12.0 -g -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -suppress-warnings -index-store-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 6 -I /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -F /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -c -j12 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKStatCaches.noindex/macosx27.0-26A425-7231f6df4def33e022ae2eb8f782df1a.sdkstatcache -output-file-map /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKExplicitPrecompiledModules -emit-dependencies -emit-module -emit-module-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder-dependency-scan.dia -user-module-version 0.4.5 -validate-clang-modules-once -clang-build-session-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -package-name tomldecoder -emit-const-values -const-gather-protocols-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder_const_extract_protocols.json -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/include -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/DerivedSources-normal/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/DerivedSources/arm64 -Xcc -I/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/DerivedSources -Xcc -DSWIFT_PACKAGE -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder-Swift.h -working-directory /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj -experimental-emit-module-separately -disable-cmo
+
+Ld /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/TOMLDecoder.o normal (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-macos12.0 -r -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -O0 -w -Xlinker -no_warn_duplicate_libraries -F/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/EagerLinkingTBDs/Debug -F/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -filelist /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.LinkFileList -nostdlib -Xlinker -object_path_lto -Xlinker /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder_lto.o -Xlinker -no_deduplicate -Xlinker -dependency_info -Xlinker /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.swiftmodule -o /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/TOMLDecoder.o
+
+ExtractAppIntentsMetadata (in target 'TOMLDecoder' from project 'TOMLDecoder')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SourcePackages/checkouts/TOMLDecoder
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name TOMLDecoder --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk --xcode-version 27A266a --platform-family macOS --deployment-target 12.0 --bundle-identifier tomldecoder.TOMLDecoder --output /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/TOMLDecoder.appintents --target-triple arm64-apple-macos12.0 --binary-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/TOMLDecoder.o --dependency-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder_dependency_info.dat --stringsdata-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.SwiftFileList --metadata-file-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/TOMLDecoder.DependencyMetadataFileList --static-metadata-file-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/TOMLDecoder.DependencyStaticMetadataFileList --swift-const-vals-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/TOMLDecoder.build/Debug/TOMLDecoder-t.build/Objects-normal/arm64/TOMLDecoder.SwiftConstValuesFileList --force --compile-time-extraction --deployment-aware-processing --no-app-shortcuts-localization
+2026-09-24 23:03:31.305 appintentsmetadataprocessor[5235:37799062] Starting appintentsmetadataprocessor export
+2026-09-24 23:03:31.352 appintentsmetadataprocessor[5235:37799062] Extracted no relevant App Intents symbols, skipping writing output
+
+Ld /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/MacOS/__preview.dylib normal (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-macos14.0 -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -Os -Xlinker -no_warn_duplicate_libraries -L/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -F/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/PackageFrameworks -F/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -install_name @rpath/Rill.debug.dylib -Xlinker -dependency_info -Xlinker /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill_dependency_info.dat -o /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/MacOS/__preview.dylib
+
+ProcessInfoPlistFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/Info.plist /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/Info.plist (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-infoPlistUtility /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Info.plist -producttype com.apple.product-type.application -genpkginfo /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/PkgInfo -expandbuildsettings -platform macosx -o /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/Info.plist
+
+Ld /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/MacOS/Rill.debug.dylib normal (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-macos14.0 -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -Os -Xlinker -no_warn_duplicate_libraries -L/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/EagerLinkingTBDs/Debug -L/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -F/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/EagerLinkingTBDs/Debug -F/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/PackageFrameworks -F/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -filelist /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.LinkFileList -install_name @rpath/Rill.debug.dylib -Xlinker -rpath -Xlinker /usr/lib/swift -Xlinker -rpath -Xlinker @loader_path -Xlinker -rpath -Xlinker /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/PackageFrameworks -Xlinker -object_path_lto -Xlinker /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill_lto.o -rdynamic -Xlinker -dependency_info -Xlinker /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.swiftmodule -Xlinker -alias -Xlinker _main -Xlinker ___debug_main_executable_dylib_entry_point -o /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/MacOS/Rill.debug.dylib
+
+ConstructStubExecutorLinkFileList /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-ExecutorLinkFileList-normal-arm64.txt (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    construct-stub-executor-link-file-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/MacOS/Rill.debug.dylib /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libPreviewsJITStubExecutor_no_swift_entry_point.a /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libPreviewsJITStubExecutor.a --output /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-ExecutorLinkFileList-normal-arm64.txt
+note: Using stub executor library with Swift entry point. (in target 'Rill' from project 'Rill')
+
+Ld /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/MacOS/Rill normal (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-macos14.0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -Os -Xlinker -no_warn_duplicate_libraries -L/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -F/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/PackageFrameworks -F/Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug -Xlinker -rpath -Xlinker @executable_path -Xlinker -rpath -Xlinker @loader_path -Xlinker -rpath -Xlinker /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/PackageFrameworks -rdynamic -e ___debug_blank_executor_main -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_dylib -Xlinker /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-DebugDylibPath-normal-arm64.txt -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_instlnm -Xlinker /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-DebugDylibInstallName-normal-arm64.txt -Xlinker -filelist -Xlinker /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill-ExecutorLinkFileList-normal-arm64.txt /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/MacOS/Rill.debug.dylib -o /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/MacOS/Rill
+
+Copy /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/Resources/bin/rillctl /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/rillctl (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -strip-unsigned-binaries -strip-deterministic -strip-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/strip -resolve-src-symlinks -remove-static-executable /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/rillctl /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/Resources/bin
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/strip -D -S -no_atom_info /Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/rillctl -o /Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/Resources/bin/rillctl
+ExtractAppIntentsMetadata (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name Rill --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk --xcode-version 27A266a --platform-family macOS --deployment-target 14.0 --bundle-identifier dev.rill.Rill --output /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/Resources --target-triple arm64-apple-macos14.0 --binary-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/MacOS/Rill --dependency-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill_dependency_info.dat --stringsdata-file /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.SwiftFileList --metadata-file-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill.DependencyMetadataFileList --static-metadata-file-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Rill.DependencyStaticMetadataFileList --swift-const-vals-list /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/Objects-normal/arm64/Rill.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --no-app-shortcuts-localization
+2026-09-24 23:03:31.644 appintentsmetadataprocessor[5243:37799119] Starting appintentsmetadataprocessor export
+2026-09-24 23:03:31.645 appintentsmetadataprocessor[5243:37799119] warning: Metadata extraction skipped, no AppIntents.framework dependency found
+
+CopySwiftLibs /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/MacOS/Rill.debug.dylib --scan-folder /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/Frameworks --scan-folder /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/PlugIns --scan-folder /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/Library/SystemExtensions --scan-folder /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/Extensions --platform macosx --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/Rill.build/Debug/Rill.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os --back-deploy-swift-span
+Ignoring --strip-bitcode because --sign was not passed
+
+RegisterExecutionPolicyException /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-RegisterExecutionPolicyException /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app
+
+Validate /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-validationUtility /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app -no-validate-extension -infoplist-subpath Contents/Info.plist
+
+Touch /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    /usr/bin/touch -c /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app
+
+RegisterWithLaunchServices /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-lsregisterurl --record-path /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/XCBuildData/registered-launchservices.txt -- /System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f -R -trusted /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app
+
+PruneExplicitPrecompiledModules /Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/ExplicitPrecompiledModules
+
+PruneExplicitPrecompiledModules /Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKExplicitPrecompiledModules
+
+PruneExplicitPrecompiledModules /Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+
+** BUILD SUCCEEDED **
+

@@ -1,0 +1,47 @@
+schema_version = 1
+
+[theme]
+accent = "#89B4FAFF"
+
+[[providers]]
+id = "poll"
+kind = "command"
+executable = "./polling.sh"
+interval_ms = 5000
+timeout_ms = 2000
+
+[[providers]]
+id = "live"
+kind = "stream"
+executable = "./stream.sh"
+stale_after_ms = 10000
+
+[[providers]]
+id = "external"
+kind = "event"
+
+[[modules]]
+id = "polled"
+kind = "custom"
+provider = "poll"
+placeholder = "polling…"
+
+[[modules]]
+id = "streamed"
+kind = "custom"
+provider = "live"
+placeholder = "starting…"
+
+[[modules]]
+id = "emitted"
+kind = "custom"
+provider = "external"
+placeholder = "run rillctl emit"
+
+[[surfaces]]
+id = "custom-examples"
+display = "all"
+edge = "top"
+start = ["polled"]
+center = ["streamed"]
+end = ["emitted"]

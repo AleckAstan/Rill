@@ -1,0 +1,35 @@
+schema_version = 1
+
+[[providers]]
+id = "yabai"
+kind = "yabai"
+executable = "/opt/homebrew/bin/yabai"
+timeout_ms = 3000
+max_output_bytes = 262144
+
+[[modules]]
+id = "spaces"
+kind = "workspaces"
+provider = "yabai"
+placeholder = "yabai…"
+
+[[modules]]
+id = "frontmost"
+kind = "frontmostApp"
+
+[[modules]]
+id = "clock"
+kind = "clock"
+format = "HH:mm"
+
+[[modules]]
+id = "battery"
+kind = "battery"
+
+[[surfaces]]
+id = "main"
+display = "all"
+edge = "top"
+start = ["spaces", "frontmost"]
+center = ["clock"]
+end = ["battery"]

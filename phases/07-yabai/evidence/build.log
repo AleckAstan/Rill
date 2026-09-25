@@ -1,0 +1,68 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project "/Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/Rill.xcodeproj" -scheme Rill -configuration Debug -destination platform=macOS,arch=arm64 -derivedDataPath "/Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/.build/DerivedData" ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=NO build
+
+Build settings from command line:
+    ARCHS = arm64
+    CODE_SIGN_IDENTITY = -
+    CODE_SIGNING_ALLOWED = NO
+    ONLY_ACTIVE_ARCH = YES
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  TOMLDecoder: https://github.com/dduan/TOMLDecoder.git @ 0.4.5
+
+note: Using codesigning identity override: -
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (4 targets)
+    Target 'Rill' in project 'Rill'
+        ➜ Explicit dependency on target 'rillctl' in project 'Rill'
+        ➜ Explicit dependency on target 'TOMLDecoder-product' in project 'TOMLDecoder'
+    Target 'rillctl' in project 'Rill'
+        ➜ Explicit dependency on target 'TOMLDecoder-product' in project 'TOMLDecoder'
+    Target 'TOMLDecoder-product' in project 'TOMLDecoder'
+        ➜ Explicit dependency on target 'TOMLDecoder' in project 'TOMLDecoder'
+    Target 'TOMLDecoder' in project 'TOMLDecoder' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ReadFileContents /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/docc/features.json
+
+Build description signature: 6061e584f29f9b71d74873b7cf548e23
+Build description path: /Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/XCBuildData/6061e584f29f9b71d74873b7cf548e23.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKStatCaches.noindex/macosx27.0-26A425-7231f6df4def33e022ae2eb8f782df1a.sdkstatcache
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Rill.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -o /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKStatCaches.noindex/macosx27.0-26A425-7231f6df4def33e022ae2eb8f782df1a.sdkstatcache
+
+ProcessInfoPlistFile /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/Info.plist /Volumes/PROJECTS\ &\ UTILS/DEV/PERSO/Rill/Info.plist (in target 'Rill' from project 'Rill')
+    cd /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill
+    builtin-infoPlistUtility /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/Info.plist -producttype com.apple.product-type.application -genpkginfo /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/PkgInfo -expandbuildsettings -platform macosx -o /Volumes/PROJECTS\ \&\ UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/Info.plist
+
+PruneExplicitPrecompiledModules /Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+
+PruneExplicitPrecompiledModules /Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/.build/DerivedData/SDKExplicitPrecompiledModules
+
+PruneExplicitPrecompiledModules /Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Intermediates.noindex/ExplicitPrecompiledModules
+
+** BUILD SUCCEEDED **
+

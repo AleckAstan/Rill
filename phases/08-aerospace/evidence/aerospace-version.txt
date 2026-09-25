@@ -1,0 +1,1 @@
+aerospace CLI client/server version: 0.20.3-Beta

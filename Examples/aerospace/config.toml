@@ -1,0 +1,30 @@
+# Merge these entries into the user's AeroSpace config; this file is not installed automatically.
+config-version = 2
+
+exec-on-workspace-change = [
+  "/Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/rillctl",
+  "emit",
+  "--source", "aerospace",
+  "--name", "refresh",
+  "--data", "{}"
+]
+
+[[providers]]
+id = "aerospace"
+kind = "aerospace"
+executable = "/opt/homebrew/bin/aerospace"
+timeout_ms = 3000
+max_output_bytes = 262144
+
+[[modules]]
+id = "spaces"
+kind = "workspaces"
+provider = "aerospace"
+placeholder = "AeroSpace…"
+
+[[surfaces]]
+id = "main"
+kind = "bar"
+display = "all"
+edge = "top"
+start = ["spaces"]

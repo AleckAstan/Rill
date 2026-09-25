@@ -1,0 +1,1 @@
+failed: yabai-msg: failed to connect to socket..

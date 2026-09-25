@@ -1,0 +1,6 @@
+[
+  {"workspace":"1", "monitor-id":1, "workspace-is-focused":true, "workspace-is-visible":true},
+  {"workspace":"Media & TV", "monitor-id":1, "workspace-is-focused":false, "workspace-is-visible":false},
+  {"workspace":"équipe", "monitor-id":2, "workspace-is-focused":false, "workspace-is-visible":false},
+  {"workspace":"", "monitor-id":2, "workspace-is-focused":false, "workspace-is-visible":false}
+]

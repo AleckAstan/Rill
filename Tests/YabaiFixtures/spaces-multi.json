@@ -1,0 +1,5 @@
+[
+  {"id":11,"index":1,"label":"main","display":1,"windows":[501,502],"has-focus":true,"is-visible":true},
+  {"id":12,"index":2,"label":"","display":1,"windows":[],"has-focus":false,"is-visible":false},
+  {"id":13,"index":3,"label":"chat","display":2,"windows":[503],"has-focus":false,"is-visible":true}
+]

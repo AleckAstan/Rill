@@ -1,0 +1,21 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project Rill.xcodeproj -scheme Rill -configuration Debug -derivedDataPath .build/DerivedData clean
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  TOMLDecoder: https://github.com/dduan/TOMLDecoder.git @ 0.4.5
+
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:macOS, arch:arm64, id:00006021-001A7154349BC01E, name:My Mac }
+{ platform:macOS, arch:x86_64, id:00006021-001A7154349BC01E, name:My Mac }
+{ platform:macOS, name:Any Mac }
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+** CLEAN SUCCEEDED **
+

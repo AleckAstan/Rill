@@ -1,0 +1,10 @@
+{
+  "from": "1",
+  "to": "2",
+  "aerospace_exit_code": 0,
+  "aerospace_stderr": "",
+  "command_ms": 44.0,
+  "rill_observed_ms": 290.8,
+  "restored": true,
+  "note": "Initial baseline before callback installation; the same 1 → 2 → 1 path was rerun after reloading ~/.aerospace.toml with the composed Aegis + Rill callback and observed in 290.8 ms."
+}

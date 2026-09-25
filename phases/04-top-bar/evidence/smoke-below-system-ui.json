@@ -1,0 +1,39 @@
+{
+  "appActive" : false,
+  "panelCount" : 1,
+  "panels" : [
+    {
+      "displayID" : "443656EF-11B1-43B4-A0B1-5635DFBA3EF4",
+      "frame" : {
+        "height" : 32,
+        "width" : 2548,
+        "x" : 6,
+        "y" : 1042
+      },
+      "key" : false,
+      "main" : false,
+      "surfaceID" : "main",
+      "visible" : true
+    }
+  ],
+  "passed" : true,
+  "screens" : [
+    {
+      "displayID" : "443656EF-11B1-43B4-A0B1-5635DFBA3EF4",
+      "frame" : {
+        "height" : 1080,
+        "width" : 2560,
+        "x" : 0,
+        "y" : 0
+      },
+      "safeAreaTop" : 0,
+      "scale" : 1,
+      "visibleFrame" : {
+        "height" : 1080,
+        "width" : 2560,
+        "x" : 0,
+        "y" : 0
+      }
+    }
+  ]
+}

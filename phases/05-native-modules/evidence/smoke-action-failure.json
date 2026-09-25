@@ -1,0 +1,73 @@
+{
+  "actionFailureVisible" : true,
+  "appActive" : false,
+  "panelCount" : 2,
+  "panels" : [
+    {
+      "displayID" : "443656EF-11B1-43B4-A0B1-5635DFBA3EF4",
+      "frame" : {
+        "height" : 28,
+        "width" : 2560,
+        "x" : 0,
+        "y" : 1052
+      },
+      "key" : false,
+      "main" : false,
+      "surfaceID" : "main",
+      "visible" : true
+    },
+    {
+      "displayID" : "37D8832A-2D66-02CA-B9F7-8F30A301B230",
+      "frame" : {
+        "height" : 38,
+        "width" : 1800,
+        "x" : 476,
+        "y" : -38
+      },
+      "key" : false,
+      "main" : false,
+      "surfaceID" : "main",
+      "visible" : true
+    }
+  ],
+  "passed" : true,
+  "reload" : {
+
+  },
+  "screens" : [
+    {
+      "displayID" : "443656EF-11B1-43B4-A0B1-5635DFBA3EF4",
+      "frame" : {
+        "height" : 1080,
+        "width" : 2560,
+        "x" : 0,
+        "y" : 0
+      },
+      "safeAreaTop" : 0,
+      "scale" : 1,
+      "visibleFrame" : {
+        "height" : 1080,
+        "width" : 2560,
+        "x" : 0,
+        "y" : 0
+      }
+    },
+    {
+      "displayID" : "37D8832A-2D66-02CA-B9F7-8F30A301B230",
+      "frame" : {
+        "height" : 1169,
+        "width" : 1800,
+        "x" : 476,
+        "y" : -1169
+      },
+      "safeAreaTop" : 38,
+      "scale" : 2,
+      "visibleFrame" : {
+        "height" : 1131,
+        "width" : 1800,
+        "x" : 476,
+        "y" : -1169
+      }
+    }
+  ]
+}

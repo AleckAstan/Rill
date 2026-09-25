@@ -1,0 +1,7 @@
+{
+  "operation": "rillctl emit --source yabai --name refresh --data '{}'",
+  "observed_ms": 119.0,
+  "before_updated_at": 1790334680.563313,
+  "after_updated_at": 1790334691.994076,
+  "result": "PASS"
+}

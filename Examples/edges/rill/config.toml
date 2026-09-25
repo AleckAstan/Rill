@@ -1,0 +1,62 @@
+schema_version = 1
+
+[theme]
+font = "SF Pro Text"
+font_size = 13
+foreground = "#F2F2F7FF"
+background = "#17171CDD"
+accent = "#89B4FAFF"
+corner_radius = 8
+padding = 8
+spacing = 8
+
+[[modules]]
+id = "top-label"
+kind = "text"
+text = "Top"
+
+[[modules]]
+id = "bottom-label"
+kind = "text"
+text = "Bottom"
+
+[[modules]]
+id = "left-label"
+kind = "text"
+text = "Left"
+
+[[modules]]
+id = "right-label"
+kind = "text"
+text = "Right"
+
+[[surfaces]]
+id = "top"
+display = "primary"
+edge = "top"
+top_placement = "belowSystemUI"
+start = ["top-label"]
+
+[[surfaces]]
+id = "bottom"
+display = "primary"
+edge = "bottom"
+thickness = 32
+inset = 6
+start = ["bottom-label"]
+
+[[surfaces]]
+id = "left"
+display = "primary"
+edge = "left"
+thickness = 32
+inset = 6
+start = ["left-label"]
+
+[[surfaces]]
+id = "right"
+display = "primary"
+edge = "right"
+thickness = 32
+inset = 6
+start = ["right-label"]

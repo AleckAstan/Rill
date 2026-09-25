@@ -1,0 +1,42 @@
+schema_version = 1
+
+[[providers]]
+id = "command-source"
+kind = "command"
+executable = "./command.sh"
+interval_ms = 1000
+
+[[providers]]
+id = "stream-source"
+kind = "stream"
+executable = "./fragmented-stream.sh"
+stale_after_ms = 5000
+
+[[providers]]
+id = "event-source"
+kind = "event"
+
+[[modules]]
+id = "command"
+kind = "custom"
+provider = "command-source"
+placeholder = "command pending"
+
+[[modules]]
+id = "stream"
+kind = "custom"
+provider = "stream-source"
+placeholder = "stream pending"
+
+[[modules]]
+id = "event"
+kind = "custom"
+provider = "event-source"
+placeholder = "event pending"
+
+[[surfaces]]
+id = "acceptance"
+display = "all"
+start = ["command"]
+center = ["stream"]
+end = ["event"]

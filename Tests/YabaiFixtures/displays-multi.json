@@ -1,0 +1,4 @@
+[
+  {"id":101,"uuid":"DISPLAY-A","index":1,"frame":{"x":0,"y":0,"w":1920,"h":1080},"spaces":[1,2]},
+  {"id":202,"uuid":"DISPLAY-B","index":2,"frame":{"x":1920,"y":0,"w":2560,"h":1440},"spaces":[3]}
+]

@@ -1,0 +1,99 @@
+{
+  "accessibility" : [
+    {
+      "actions" : "",
+      "help" : "",
+      "identifier" : "",
+      "label" : "",
+      "role" : "AXGroup",
+      "supportsPress" : "true",
+      "value" : ""
+    },
+    {
+      "actions" : "",
+      "help" : "Frontmost application: Rio",
+      "identifier" : "rill.module.frontmost",
+      "label" : "Rio",
+      "role" : "AXStaticText",
+      "supportsPress" : "true",
+      "value" : "Available"
+    },
+    {
+      "actions" : "",
+      "help" : "Current time",
+      "identifier" : "rill.module.clock",
+      "label" : "23:55",
+      "role" : "AXStaticText",
+      "supportsPress" : "true",
+      "value" : "Available"
+    },
+    {
+      "actions" : "",
+      "help" : "Runs the configured action",
+      "identifier" : "rill.module.action",
+      "label" : "Accessible action",
+      "role" : "AXButton",
+      "supportsPress" : "true",
+      "value" : "Available"
+    }
+  ],
+  "accessibilityActivationSucceeded" : true,
+  "actionFailureVisible" : false,
+  "appActive" : false,
+  "panelCount" : 1,
+  "panels" : [
+    {
+      "displayID" : "443656EF-11B1-43B4-A0B1-5635DFBA3EF4",
+      "frame" : {
+        "height" : 28,
+        "width" : 2560,
+        "x" : 0,
+        "y" : 1052
+      },
+      "key" : false,
+      "main" : false,
+      "surfaceID" : "main",
+      "visible" : true
+    }
+  ],
+  "passed" : true,
+  "reload" : {
+
+  },
+  "screens" : [
+    {
+      "displayID" : "443656EF-11B1-43B4-A0B1-5635DFBA3EF4",
+      "frame" : {
+        "height" : 1080,
+        "width" : 2560,
+        "x" : 0,
+        "y" : 0
+      },
+      "safeAreaTop" : 0,
+      "scale" : 1,
+      "visibleFrame" : {
+        "height" : 1080,
+        "width" : 2560,
+        "x" : 0,
+        "y" : 0
+      }
+    },
+    {
+      "displayID" : "37D8832A-2D66-02CA-B9F7-8F30A301B230",
+      "frame" : {
+        "height" : 1169,
+        "width" : 1800,
+        "x" : 476,
+        "y" : -1169
+      },
+      "safeAreaTop" : 38,
+      "scale" : 2,
+      "visibleFrame" : {
+        "height" : 1131,
+        "width" : 1800,
+        "x" : 476,
+        "y" : -1169
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+schema_version = 1
+
+[[modules]]
+id = "duplicate"
+kind = "clock"
+
+[[modules]]
+id = "duplicate"
+kind = "battery"
