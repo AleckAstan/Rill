@@ -431,6 +431,7 @@ public struct ProviderSpec: Codable, Sendable, Equatable {
 public enum ThemePreset: String, Codable, Hashable, Sendable, CaseIterable {
     case flat
     case segmented
+    case glass
 }
 
 public struct ThemeSpec: Codable, Hashable, Sendable {
@@ -444,6 +445,7 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
     public var padding: Double
     public var spacing: Double
     public var animationMS: Int
+    public var surfaceBackground: String?
     public var moduleBackground: String?
     public var workspaceBackground: String?
     public var focusedWorkspaceBackground: String?
@@ -462,6 +464,7 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
         case fontSize = "font_size"
         case cornerRadius = "corner_radius"
         case animationMS = "animation_ms"
+        case surfaceBackground = "surface_background"
         case moduleBackground = "module_background"
         case workspaceBackground = "workspace_background"
         case focusedWorkspaceBackground = "focused_workspace_background"
@@ -487,6 +490,7 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
         padding: Double = 8,
         spacing: Double = 10,
         animationMS: Int = 160,
+        surfaceBackground: String? = nil,
         moduleBackground: String? = nil,
         workspaceBackground: String? = nil,
         focusedWorkspaceBackground: String? = nil,
@@ -510,6 +514,7 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
         self.padding = padding
         self.spacing = spacing
         self.animationMS = animationMS
+        self.surfaceBackground = surfaceBackground
         self.moduleBackground = moduleBackground
         self.workspaceBackground = workspaceBackground
         self.focusedWorkspaceBackground = focusedWorkspaceBackground
@@ -536,6 +541,7 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
         padding = try container.decodeIfPresent(Double.self, forKey: .padding) ?? 8
         spacing = try container.decodeIfPresent(Double.self, forKey: .spacing) ?? 10
         animationMS = try container.decodeIfPresent(Int.self, forKey: .animationMS) ?? 160
+        surfaceBackground = try container.decodeIfPresent(String.self, forKey: .surfaceBackground)
         moduleBackground = try container.decodeIfPresent(String.self, forKey: .moduleBackground)
         workspaceBackground = try container.decodeIfPresent(String.self, forKey: .workspaceBackground)
         focusedWorkspaceBackground = try container.decodeIfPresent(String.self, forKey: .focusedWorkspaceBackground)
@@ -550,8 +556,19 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
         applicationIconSize = try container.decodeIfPresent(Double.self, forKey: .applicationIconSize)
     }
 
+    public var resolvedSurfaceBackground: String {
+        surfaceBackground ?? (preset == .glass ? "#00000000" : background)
+    }
+
     public var resolvedModuleBackground: String {
-        moduleBackground ?? (preset == .segmented ? "#2A2F39FF" : "#00000000")
+        guard let moduleBackground else {
+            switch preset {
+            case .flat: return "#00000000"
+            case .segmented: return "#2A2F39FF"
+            case .glass: return "#FFFFFF14"
+            }
+        }
+        return moduleBackground
     }
 
     public var resolvedWorkspaceBackground: String {
@@ -559,39 +576,95 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
     }
 
     public var resolvedFocusedWorkspaceBackground: String {
-        focusedWorkspaceBackground ?? (preset == .segmented ? "#3B4252FF" : "#00000000")
+        guard let focusedWorkspaceBackground else {
+            switch preset {
+            case .flat: return "#00000000"
+            case .segmented: return "#3B4252FF"
+            case .glass: return "#FFFFFF24"
+            }
+        }
+        return focusedWorkspaceBackground
     }
 
     public var resolvedBorderColor: String {
-        borderColor ?? (preset == .segmented ? "#FFFFFF18" : "#00000000")
+        guard let borderColor else {
+            switch preset {
+            case .flat: return "#00000000"
+            case .segmented: return "#FFFFFF18"
+            case .glass: return "#FFFFFF20"
+            }
+        }
+        return borderColor
     }
 
     public var resolvedBorderWidth: Double {
-        borderWidth ?? (preset == .segmented ? 1 : 0)
+        borderWidth ?? (preset == .flat ? 0 : 1)
     }
 
     public var resolvedModuleCornerRadius: Double {
-        moduleCornerRadius ?? (preset == .segmented ? 5 : 0)
+        guard let moduleCornerRadius else {
+            switch preset {
+            case .flat: return 0
+            case .segmented: return 5
+            case .glass: return 12
+            }
+        }
+        return moduleCornerRadius
     }
 
     public var resolvedWorkspaceCornerRadius: Double {
-        workspaceCornerRadius ?? (preset == .segmented ? 4 : 0)
+        guard let workspaceCornerRadius else {
+            switch preset {
+            case .flat: return 0
+            case .segmented: return 4
+            case .glass: return 9
+            }
+        }
+        return workspaceCornerRadius
     }
 
     public var resolvedModulePadding: Double {
-        modulePadding ?? (preset == .segmented ? 8 : 0)
+        guard let modulePadding else {
+            switch preset {
+            case .flat: return 0
+            case .segmented: return 8
+            case .glass: return 9
+            }
+        }
+        return modulePadding
     }
 
     public var resolvedModuleVerticalPadding: Double {
-        moduleVerticalPadding ?? (preset == .segmented ? 4 : 0)
+        guard let moduleVerticalPadding else {
+            switch preset {
+            case .flat: return 0
+            case .segmented: return 4
+            case .glass: return 5
+            }
+        }
+        return moduleVerticalPadding
     }
 
     public var resolvedWorkspacePadding: Double {
-        workspacePadding ?? (preset == .segmented ? 5 : 2)
+        guard let workspacePadding else {
+            switch preset {
+            case .flat: return 2
+            case .segmented: return 5
+            case .glass: return 6
+            }
+        }
+        return workspacePadding
     }
 
     public var resolvedWorkspaceSpacing: Double {
-        workspaceSpacing ?? (preset == .segmented ? 4 : 6)
+        guard let workspaceSpacing else {
+            switch preset {
+            case .flat: return 6
+            case .segmented: return 4
+            case .glass: return 5
+            }
+        }
+        return workspaceSpacing
     }
 
     public var resolvedApplicationIconSize: Double {
@@ -740,6 +813,7 @@ public extension AppConfiguration {
         if !(0...5_000).contains(theme.animationMS) {
             append("theme.animation_ms", "Expected 0...5000")
         }
+        if let value = theme.surfaceBackground { validateColor(value, path: "theme.surface_background") }
         if let value = theme.moduleBackground { validateColor(value, path: "theme.module_background") }
         if let value = theme.workspaceBackground { validateColor(value, path: "theme.workspace_background") }
         if let value = theme.focusedWorkspaceBackground {

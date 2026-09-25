@@ -18,6 +18,8 @@ scripts/release.sh; signed/notarized package when credentials exist; docs/user/q
 - Extended the OmniWM workspace projection with `query workspace-bar`: each Rill workspace button now lists its managed applications with native macOS icons, accessible names and window counts while unsupported providers retain their existing label/occupancy rendering.
 - Extended the AeroSpace adapter with one bounded all-window query that groups bundle identifiers and window counts by workspace, enabling the same native application-icon rendering without per-workspace count subprocesses.
 - Added configurable `flat` and `segmented` theme presets. Segmented is the default and exposes bounded overrides for module/workspace backgrounds, focused state, borders, radii, spacing, padding and application icon size; module style overrides remain authoritative.
+- Added a native macOS `glass` preset. On macOS 26+ module capsules use SwiftUI `glassEffect` over a transparent panel; supported older systems receive a bounded translucent fallback.
+- Disabled SwiftUI's persistent visual focus ring on clickable bar modules and workspace buttons while retaining keyboard focusability and accessibility actions.
 - Signing, notarization, quarantine installation, owner license choice and publication remain blocked on owner credentials/decisions and are intentionally NOT RUN.
 
 ## Verification record
@@ -35,6 +37,7 @@ scripts/release.sh; signed/notarized package when credentials exist; docs/user/q
 | AeroSpace application-list rendering | Current macOS desktop, AeroSpace 0.20.3-Beta, updated Debug Rill app | 9 workspaces load from a ready provider; managed applications render in their workspaces; user reported “super! c'est valide!” | PASS (user-reported) | User confirmation on 2026-09-25 |
 | Segmented design preset | Current macOS desktop, AeroSpace-backed user configuration | Module capsules, focused-workspace state, borders, spacing and application icons render correctly; user reported “super! je valide le style segmented” | PASS (user-reported) | User confirmation on 2026-09-25 |
 | Flat design preset | Current macOS desktop, AeroSpace-backed user configuration | Transparent minimal module/workspace treatment renders correctly; user reported “super!” and requested returning to segmented | PASS (user-reported) | User confirmation on 2026-09-25 |
+| Native Liquid Glass preset | macOS 27 desktop, AeroSpace-backed user configuration | Native SwiftUI glass capsules render over the transparent surface and clickable elements no longer retain a focus ring; user reported “super!” | PASS (user-reported) | User confirmation on 2026-09-25 |
 | Signing/notarization/Gatekeeper/publication | Owner credentials and destination | Required external inputs unavailable | NOT RUN | `docs/release-evidence.md` |
 
 ## Remaining work and risks
