@@ -32,7 +32,7 @@ id = "frontmost"
 kind = "frontmostApp"
 ```
 
-Rill reads the frontmost application's localized name from public `NSWorkspace` notifications. It does not poll processes and does not request Accessibility permission. Window titles are not read or claimed in version 0.1.
+Rill reads the frontmost application's localized name from public `NSWorkspace` notifications and does not poll processes. Click the module to open a native menu containing the application's current macOS menu-bar hierarchy; selecting an item invokes that application's corresponding menu action. This interaction requires Rill in **System Settings → Privacy & Security → Accessibility**. The first click requests access, and a denied or unavailable menu is shown as a visible module error. Configure `on_click` to replace this built-in click behavior with an explicit command. Window titles are not read or claimed in version 0.1.
 
 ## Battery
 

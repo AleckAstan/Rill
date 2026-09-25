@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import Darwin
 import Foundation
 import IOKit.ps
@@ -176,6 +177,161 @@ public struct ActionExecutionResult: Equatable, Sendable {
     }
 }
 
+struct ApplicationMenuEntry: Equatable, Sendable {
+    let title: String
+    let enabled: Bool
+    let isSeparator: Bool
+    let children: [ApplicationMenuEntry]
+    let actionID: Int?
+
+    static var separator: ApplicationMenuEntry {
+        .init(title: "", enabled: false, isSeparator: true, children: [], actionID: nil)
+    }
+}
+
+@MainActor
+private struct ApplicationMenuSnapshot {
+    let entries: [ApplicationMenuEntry]
+    let actions: [Int: AXUIElement]
+}
+
+@MainActor
+final class ApplicationMenuActionTarget: NSObject {
+    private let actions: [Int: AXUIElement]
+    private let completion: (AXError) -> Void
+
+    init(actions: [Int: AXUIElement], completion: @escaping (AXError) -> Void) {
+        self.actions = actions
+        self.completion = completion
+    }
+
+    @objc func performMenuAction(_ sender: NSMenuItem) {
+        guard let element = actions[sender.tag] else {
+            completion(.illegalArgument)
+            return
+        }
+        completion(AXUIElementPerformAction(element, kAXPressAction as CFString))
+    }
+}
+
+@MainActor
+enum ApplicationMenuFactory {
+    static func makeMenu(
+        entries: [ApplicationMenuEntry],
+        target: ApplicationMenuActionTarget
+    ) -> NSMenu {
+        let menu = NSMenu()
+        append(entries, to: menu, target: target)
+        return menu
+    }
+
+    private static func append(
+        _ entries: [ApplicationMenuEntry],
+        to menu: NSMenu,
+        target: ApplicationMenuActionTarget
+    ) {
+        for entry in entries {
+            if entry.isSeparator {
+                menu.addItem(.separator())
+                continue
+            }
+            let item = NSMenuItem(title: entry.title, action: nil, keyEquivalent: "")
+            item.isEnabled = entry.enabled
+            if entry.children.isEmpty {
+                if let actionID = entry.actionID {
+                    item.action = #selector(ApplicationMenuActionTarget.performMenuAction(_:))
+                    item.target = target
+                    item.tag = actionID
+                }
+            } else {
+                let submenu = NSMenu(title: entry.title)
+                append(entry.children, to: submenu, target: target)
+                item.submenu = submenu
+            }
+            menu.addItem(item)
+        }
+    }
+}
+
+@MainActor
+private enum ApplicationMenuReader {
+    private static let maximumDepth = 8
+    private static let maximumItems = 1_000
+
+    static func snapshot(processIdentifier: pid_t) throws -> ApplicationMenuSnapshot {
+        let application = AXUIElementCreateApplication(processIdentifier)
+        guard let menuBar: AXUIElement = attribute(kAXMenuBarAttribute as CFString, of: application) else {
+            throw ApplicationMenuError.unavailable
+        }
+
+        var actions: [Int: AXUIElement] = [:]
+        var itemCount = 0
+        let entries = children(of: menuBar).compactMap {
+            entry(for: $0, depth: 0, itemCount: &itemCount, actions: &actions)
+        }
+        guard !entries.isEmpty else { throw ApplicationMenuError.empty }
+        return .init(entries: entries, actions: actions)
+    }
+
+    private static func entry(
+        for element: AXUIElement,
+        depth: Int,
+        itemCount: inout Int,
+        actions: inout [Int: AXUIElement]
+    ) -> ApplicationMenuEntry? {
+        guard depth <= maximumDepth, itemCount < maximumItems else { return nil }
+        itemCount += 1
+
+        let role: String? = attribute(kAXRoleAttribute as CFString, of: element)
+        let rawTitle: String? = attribute(kAXTitleAttribute as CFString, of: element)
+        let description: String? = attribute(kAXDescriptionAttribute as CFString, of: element)
+        let title = rawTitle?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let visibleTitle = title?.isEmpty == false ? title! : (description ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let directChildren = children(of: element)
+        let menuChildren = directChildren.flatMap { child -> [AXUIElement] in
+            let childRole: String? = attribute(kAXRoleAttribute as CFString, of: child)
+            return childRole == (kAXMenuRole as String) ? children(of: child) : [child]
+        }
+        let nested = menuChildren.compactMap {
+            entry(for: $0, depth: depth + 1, itemCount: &itemCount, actions: &actions)
+        }
+
+        if visibleTitle.isEmpty, nested.isEmpty {
+            return role == (kAXMenuItemRole as String) ? .separator : nil
+        }
+        let enabled: Bool = (attribute(kAXEnabledAttribute as CFString, of: element) as NSNumber?)?.boolValue ?? true
+        let actionID: Int?
+        if nested.isEmpty, enabled {
+            actionID = itemCount
+            actions[itemCount] = element
+        } else {
+            actionID = nil
+        }
+        return .init(
+            title: visibleTitle.isEmpty ? "Application" : visibleTitle,
+            enabled: enabled,
+            isSeparator: false,
+            children: nested,
+            actionID: actionID
+        )
+    }
+
+    private static func children(of element: AXUIElement) -> [AXUIElement] {
+        attribute(kAXChildrenAttribute as CFString, of: element) ?? []
+    }
+
+    private static func attribute<T>(_ name: CFString, of element: AXUIElement) -> T? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, name, &value) == .success else { return nil }
+        return value as? T
+    }
+}
+
+private enum ApplicationMenuError: Error {
+    case unavailable
+    case empty
+}
+
 private final class ProcessOutputState: @unchecked Sendable {
     private let lock = NSLock()
     private let limit: Int
@@ -285,6 +441,7 @@ public final class NativeModuleRuntime: NSObject {
     private var observingClockChanges = false
     private var observingFrontmostApp = false
     private var observingBattery = false
+    private var applicationMenuTarget: ApplicationMenuActionTarget?
 
     public var lifecycleCounts: (clock: Int, frontmost: Int, battery: Int, mock: Int) {
         (
@@ -313,6 +470,47 @@ public final class NativeModuleRuntime: NSObject {
             } else {
                 store.actionFailures[moduleID] = "Action exited with status \(result.exitCode ?? -1)"
             }
+        }
+    }
+
+    public func showFrontmostApplicationMenu(moduleID: ModuleID) {
+        guard AXIsProcessTrusted() else {
+            let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+            _ = AXIsProcessTrustedWithOptions(options)
+            store.actionFailures[moduleID] =
+                "Allow Rill in System Settings → Privacy & Security → Accessibility, then click again"
+            return
+        }
+        guard let application = NSWorkspace.shared.frontmostApplication,
+              application.processIdentifier != ProcessInfo.processInfo.processIdentifier else {
+            store.actionFailures[moduleID] = "The frontmost application menu is unavailable"
+            return
+        }
+
+        do {
+            let snapshot = try ApplicationMenuReader.snapshot(
+                processIdentifier: application.processIdentifier
+            )
+            let target = ApplicationMenuActionTarget(actions: snapshot.actions) { [weak self] result in
+                if result == .success {
+                    self?.store.actionFailures[moduleID] = nil
+                } else {
+                    self?.store.actionFailures[moduleID] =
+                        "macOS menu action failed with AX error \(result.rawValue)"
+                }
+            }
+            let menu = ApplicationMenuFactory.makeMenu(entries: snapshot.entries, target: target)
+            guard let event = NSApp.currentEvent,
+                  let view = event.window?.contentView else {
+                store.actionFailures[moduleID] = "Unable to position the application menu"
+                return
+            }
+            store.actionFailures[moduleID] = nil
+            applicationMenuTarget = target
+            NSMenu.popUpContextMenu(menu, with: event, for: view)
+            applicationMenuTarget = nil
+        } catch {
+            store.actionFailures[moduleID] = "The frontmost application menu is unavailable"
         }
     }
 
