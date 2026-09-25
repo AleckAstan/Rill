@@ -34,6 +34,7 @@ scripts/release.sh; signed/notarized package when credentials exist; docs/user/q
 | OmniWM application-list rendering | Automated fixture only | Workspace apps, bundle identifiers, focus and window counts normalize and render as icon data | PASS | `Tests/RillProvidersTests/OmniWMProviderTests.swift`; `Tests/OmniWMFixtures/fake-omniwmctl.sh` |
 | AeroSpace application-list rendering | Current macOS desktop, AeroSpace 0.20.3-Beta, updated Debug Rill app | 9 workspaces load from a ready provider; managed applications render in their workspaces; user reported “super! c'est valide!” | PASS (user-reported) | User confirmation on 2026-09-25 |
 | Segmented design preset | Current macOS desktop, AeroSpace-backed user configuration | Module capsules, focused-workspace state, borders, spacing and application icons render correctly; user reported “super! je valide le style segmented” | PASS (user-reported) | User confirmation on 2026-09-25 |
+| Flat design preset | Current macOS desktop, AeroSpace-backed user configuration | Transparent minimal module/workspace treatment renders correctly; user reported “super!” and requested returning to segmented | PASS (user-reported) | User confirmation on 2026-09-25 |
 | Signing/notarization/Gatekeeper/publication | Owner credentials and destination | Required external inputs unavailable | NOT RUN | `docs/release-evidence.md` |
 
 ## Remaining work and risks
