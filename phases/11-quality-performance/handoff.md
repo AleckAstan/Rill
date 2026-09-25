@@ -1,6 +1,6 @@
 # Phase 11 handoff
 
-Status: NOT STARTED. Last updated: 2026-09-24 (planning scaffold).
+Status: IN PROGRESS. Last updated: 2026-09-25.
 
 ## Resume instructions
 
@@ -12,21 +12,20 @@ docs/performance.md with raw measurements and reproduction; accessibility checkl
 
 ## Implementation record
 
-- Completed work: none.
-- Changed files / commit: none.
-- Public interfaces and defaults finalized: none; shared contracts remain proposed until implemented.
-- Decisions and rationale: none beyond the scaffold's shared decisions.
-- Dependency versions and environment: not yet recorded.
+- Added a reproducible bounded event-enqueue benchmark at `scripts/benchmark.sh` and documented performance budgets, Instruments methodology and soak procedure in `docs/performance.md`.
+- Added an explicit accessibility checklist in `docs/accessibility-checklist.md`; no manual VoiceOver or performance result is inferred.
 
 ## Verification record
 
 | Check / command | Environment | Expected / observed | Result | Evidence |
 | --- | --- | --- | --- | --- |
 | Phase acceptance suite | Not recorded | Not executed | NOT RUN | None |
+| Build/test regression | macOS arm64, Xcode 27 / Swift 6.4 | Existing build and automated tests remain green | PASS | `/tmp/rill-phase10-build.log`; `/tmp/rill-phase10-tests.log` |
+| Release benchmark, Instruments, soak and accessibility audit | Real desktop session | Raw measurements and manual evidence required | NOT RUN | None |
 
 ## Remaining work and risks
 
-All work in description.md and all checks in verification.md remain. Record specific defects, unsupported behavior, missing hardware/credentials, workarounds and contract changes here as discovered.
+Performance, frame pacing, soak, VoiceOver, keyboard, appearance and reduced-motion gates remain NOT RUN until a real desktop session is available.
 
 ## Next agent handoff
 
