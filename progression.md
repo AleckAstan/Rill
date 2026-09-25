@@ -75,3 +75,7 @@ User validation update: the updated Debug Rill app was launched against the user
 2026-09-25 visual workspace update: the OmniWM adapter now merges its documented `workspace-bar` projection into normalized workspace state, and AeroSpace groups its documented all-window projection by workspace. Workspace buttons render native macOS application icons with accessible app/window-count descriptions; Yabai retains its existing label/occupancy behavior until its adapter exposes application identities. Automated fixture and regression verification covers both data paths; real desktop visual validation remains open.
 
 User visual validation update: Rill was switched to AeroSpace 0.20.3-Beta, detected 9 workspaces with the provider ready, and rendered the new per-workspace application list. The user explicitly confirmed the result as valid on 2026-09-25.
+
+2026-09-25 design-system update: visual configuration now offers `flat` and `segmented` presets, with segmented selected by default. Bounded theme tokens cover module and workspace backgrounds, focused state, borders, radii, spacing, padding and application icon size while preserving per-module overrides.
+
+User design validation update: the `segmented` preset was loaded with the live AeroSpace configuration and explicitly approved by the user on 2026-09-25.

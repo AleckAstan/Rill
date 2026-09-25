@@ -10,6 +10,7 @@ Paths inside config resolve relative to its directory. Environment expansion is 
 schema_version = 1
 
 [theme]
+preset = "segmented"
 font = "SF Pro Text"
 font_size = 13
 foreground = "#F2F2F7FF"
@@ -76,5 +77,7 @@ For `belowSystemUI` and other edges, `thickness` defaults to 32 points, `inset` 
 Provider kinds: `yabai`, `aerospace`, `omniwm`, `event`, `command`, `stream`. Manager, command and stream providers require `executable`; command/stream also accept `args` (string array), optional string `env` table, `timeout_ms` and `max_output_bytes`. Command additionally uses `interval_ms` (minimum 1000); invocations do not overlap. Defaults are 5000 ms command timeout and 65536 output bytes. Stream timeout means shutdown grace, not total stream lifetime; optional `stale_after_ms` controls freshness. Stream frames are bounded separately by the event protocol. Reconnect backoff is 1, 2, 4, 8, 16, 30 seconds with ±20% jitter and resets after 60 seconds healthy.
 
 Module `on_click` is an optional inline/table action with `executable`, `args`, and bounded `timeout_ms`; no implicit shell expansion. Workspace modules can use their provider's typed focus action when supported. Styling uses declared state tokens and per-module overrides, not arbitrary CSS. Phase 03 must enumerate allowed overrides, validation bounds, overflow policy and complete defaults in a schema reference before calling version 1 stable.
+
+Theme preset `segmented` groups modules into subtle capsules and highlights the focused workspace; `flat` keeps those layers transparent. Version 1 accepts bounded overrides for module/workspace backgrounds, focused background, border color/width, module/workspace radii and padding, workspace spacing, and application icon size. Presets only provide defaults, so explicit tokens remain stable when changing preset.
 
 Hot reload watches the containing directory to catch atomic-save rename patterns, debounces bursts (target 150 ms), reparses and validates the entire file, then commits a generation. Failure retains the last good layout and shows a diagnostic. No executing commands during parsing or `validate`. Unsupported future keys are errors until supported, even if described in the longer-term roadmap.

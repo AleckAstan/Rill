@@ -17,6 +17,7 @@ scripts/release.sh; signed/notarized package when credentials exist; docs/user/q
 - Added the optional OmniWM provider using the upstream versioned CLI/IPC workspace and focused-window queries, literal workspace focus, owned live subscription process, event coalescing and reconciliation. Added fixtures, automated lifecycle coverage, `Examples/omniwm/` and `docs/user/omniwm.md`.
 - Extended the OmniWM workspace projection with `query workspace-bar`: each Rill workspace button now lists its managed applications with native macOS icons, accessible names and window counts while unsupported providers retain their existing label/occupancy rendering.
 - Extended the AeroSpace adapter with one bounded all-window query that groups bundle identifiers and window counts by workspace, enabling the same native application-icon rendering without per-workspace count subprocesses.
+- Added configurable `flat` and `segmented` theme presets. Segmented is the default and exposes bounded overrides for module/workspace backgrounds, focused state, borders, radii, spacing, padding and application icon size; module style overrides remain authoritative.
 - Signing, notarization, quarantine installation, owner license choice and publication remain blocked on owner credentials/decisions and are intentionally NOT RUN.
 
 ## Verification record
@@ -32,6 +33,7 @@ scripts/release.sh; signed/notarized package when credentials exist; docs/user/q
 | User visual validation | Current macOS desktop, updated Debug Rill app | OmniWM workspace bar renders and behaves correctly; user reported “super! je viens de valider!” | PASS (user-reported) | User confirmation on 2026-09-25 |
 | OmniWM application-list rendering | Automated fixture only | Workspace apps, bundle identifiers, focus and window counts normalize and render as icon data | PASS | `Tests/RillProvidersTests/OmniWMProviderTests.swift`; `Tests/OmniWMFixtures/fake-omniwmctl.sh` |
 | AeroSpace application-list rendering | Current macOS desktop, AeroSpace 0.20.3-Beta, updated Debug Rill app | 9 workspaces load from a ready provider; managed applications render in their workspaces; user reported “super! c'est valide!” | PASS (user-reported) | User confirmation on 2026-09-25 |
+| Segmented design preset | Current macOS desktop, AeroSpace-backed user configuration | Module capsules, focused-workspace state, borders, spacing and application icons render correctly; user reported “super! je valide le style segmented” | PASS (user-reported) | User confirmation on 2026-09-25 |
 | Signing/notarization/Gatekeeper/publication | Owner credentials and destination | Required external inputs unavailable | NOT RUN | `docs/release-evidence.md` |
 
 ## Remaining work and risks

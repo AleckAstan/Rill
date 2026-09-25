@@ -92,6 +92,41 @@ final class ConfigurationParserTests: XCTestCase {
         )
     }
 
+    func testThemePresetAndVisualOverridesDecode() throws {
+        let text = DefaultConfiguration.contents.replacingOccurrences(
+            of: "preset = \"segmented\"",
+            with: """
+            preset = "flat"
+            module_background = "#11223344"
+            focused_workspace_background = "#334455FF"
+            border_color = "#FFFFFFFF"
+            border_width = 2
+            module_corner_radius = 6
+            workspace_corner_radius = 4
+            module_padding = 7
+            module_vertical_padding = 3
+            workspace_padding = 5
+            workspace_spacing = 4
+            application_icon_size = 20
+            """
+        )
+        let theme = try parser.parse(text: text).configuration.theme
+        XCTAssertEqual(theme.preset, .flat)
+        XCTAssertEqual(theme.resolvedModuleBackground, "#11223344")
+        XCTAssertEqual(theme.resolvedBorderWidth, 2)
+        XCTAssertEqual(theme.resolvedApplicationIconSize, 20)
+    }
+
+    func testThemeVisualOverrideBoundsAreRejected() {
+        assertInvalid(
+            DefaultConfiguration.contents.replacingOccurrences(
+                of: "preset = \"segmented\"",
+                with: "preset = \"segmented\"\napplication_icon_size = 40"
+            ),
+            contains: "theme.application_icon_size"
+        )
+    }
+
     func testMenuBarAreaRejectsExplicitGeometry() {
         assertInvalid(
             DefaultConfiguration.contents.replacingOccurrences(

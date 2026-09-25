@@ -222,6 +222,7 @@ public enum DefaultConfiguration {
     schema_version = 1
 
     [theme]
+    preset = "segmented"
     font = "SF Pro Text"
     font_size = 13
     foreground = "#F2F2F7FF"

@@ -36,6 +36,34 @@ final class RuntimeContractsTests: XCTestCase {
         XCTAssertEqual(decoded.surfaces.first?.start.first?.rawValue, "clock")
     }
 
+    func testThemePresetsResolveFlatAndSegmentedVisualTokens() {
+        let flat = ThemeSpec(preset: .flat)
+        XCTAssertEqual(flat.resolvedModuleBackground, "#00000000")
+        XCTAssertEqual(flat.resolvedFocusedWorkspaceBackground, "#00000000")
+        XCTAssertEqual(flat.resolvedBorderWidth, 0)
+        XCTAssertEqual(flat.resolvedModulePadding, 0)
+
+        let segmented = ThemeSpec(preset: .segmented)
+        XCTAssertEqual(segmented.resolvedModuleBackground, "#2A2F39FF")
+        XCTAssertEqual(segmented.resolvedFocusedWorkspaceBackground, "#3B4252FF")
+        XCTAssertEqual(segmented.resolvedBorderWidth, 1)
+        XCTAssertEqual(segmented.resolvedApplicationIconSize, 16)
+    }
+
+    func testExplicitThemeTokensOverridePresetDefaults() {
+        let theme = ThemeSpec(
+            preset: .flat,
+            moduleBackground: "#11223344",
+            borderWidth: 2,
+            modulePadding: 7,
+            applicationIconSize: 20
+        )
+        XCTAssertEqual(theme.resolvedModuleBackground, "#11223344")
+        XCTAssertEqual(theme.resolvedBorderWidth, 2)
+        XCTAssertEqual(theme.resolvedModulePadding, 7)
+        XCTAssertEqual(theme.resolvedApplicationIconSize, 20)
+    }
+
     func testSurfaceEdgesAreComplete() { XCTAssertEqual(Set(SurfaceEdge.allCases), [.top, .bottom, .left, .right]) }
 
     func testDisplaySelectorsDetectPotentialSurfaceCollisions() {
