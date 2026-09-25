@@ -79,3 +79,5 @@ User visual validation update: Rill was switched to AeroSpace 0.20.3-Beta, detec
 2026-09-25 design-system update: visual configuration now offers `flat` and `segmented` presets, with segmented selected by default. Bounded theme tokens cover module and workspace backgrounds, focused state, borders, radii, spacing, padding and application icon size while preserving per-module overrides.
 
 User design validation update: the `segmented` preset was loaded with the live AeroSpace configuration and explicitly approved by the user on 2026-09-25.
+
+User flat-design validation update: the `flat` preset was loaded with the same live AeroSpace configuration and explicitly approved by the user on 2026-09-25. The active configuration is returned to `segmented` before native macOS glass-theme work.
