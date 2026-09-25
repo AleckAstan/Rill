@@ -1,0 +1,6 @@
+# Merge this callback entry into the user's AeroSpace configuration.
+config-version = 2
+exec-on-workspace-change = [
+  "/absolute/path/to/rillctl",
+  "emit", "--source", "aerospace", "--name", "refresh", "--data", "{}"
+]

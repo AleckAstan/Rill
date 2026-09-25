@@ -1,6 +1,6 @@
 # Phase 12 handoff
 
-Status: NOT STARTED. Last updated: 2026-09-24 (planning scaffold).
+Status: IN PROGRESS. Last updated: 2026-09-25.
 
 ## Resume instructions
 
@@ -12,21 +12,22 @@ scripts/release.sh; signed/notarized package when credentials exist; docs/user/q
 
 ## Implementation record
 
-- Completed work: none.
-- Changed files / commit: none.
-- Public interfaces and defaults finalized: none; shared contracts remain proposed until implemented.
-- Decisions and rationale: none beyond the scaffold's shared decisions.
-- Dependency versions and environment: not yet recorded.
+- Added reproducible unsigned archive/checksum preparation in `scripts/release.sh`.
+- Added quickstart, uninstall, changelog, third-party notices and release-evidence documentation; version/build identifiers are `0.1.0` / `1`.
+- Signing, notarization, quarantine installation, owner license choice and publication remain blocked on owner credentials/decisions and are intentionally NOT RUN.
 
 ## Verification record
 
 | Check / command | Environment | Expected / observed | Result | Evidence |
 | --- | --- | --- | --- | --- |
 | Phase acceptance suite | Not recorded | Not executed | NOT RUN | None |
+| Local release build | macOS arm64, Xcode 27 / Swift 6.4 | Archive and SHA-256 checksum created successfully | PASS | `/tmp/rill-release.log`; `.build/releases/Rill-0.1.0-macos-arm64.zip.sha256` |
+| Shipped Rill examples | Bundled `rillctl` | default, yabai, AeroSpace, edges and custom examples validate | PASS | `/tmp/rill-release-build.log`; `Examples/*/config.toml` |
+| Signing/notarization/Gatekeeper/publication | Owner credentials and destination | Required external inputs unavailable | NOT RUN | `docs/release-evidence.md` |
 
 ## Remaining work and risks
 
-All work in description.md and all checks in verification.md remain. Record specific defects, unsupported behavior, missing hardware/credentials, workarounds and contract changes here as discovered.
+Local packaging and user documentation are prepared. Signing, notarization, quarantine/clean-user install, login-item, upgrade/uninstall and publication checks remain open.
 
 ## Next agent handoff
 

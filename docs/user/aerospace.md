@@ -34,7 +34,7 @@ exec-on-workspace-change = [
 ]
 ```
 
-Do not replace an existing callback. AeroSpace callbacks are recursion-resistant; Rill's callback only invalidates its provider and does not focus a workspace. See [`Examples/aerospace/config.toml`](../../Examples/aerospace/config.toml) for a copyable reference.
+Do not replace an existing callback. AeroSpace callbacks are recursion-resistant; Rill's callback only invalidates its provider and does not focus a workspace. See [`Examples/aerospace/config.toml`](../../Examples/aerospace/config.toml) for the Rill configuration and [`Examples/aerospace/aerospace-callback.toml`](../../Examples/aerospace/aerospace-callback.toml) for the manager callback fragment.
 
 ## Monitor identity and recovery
 

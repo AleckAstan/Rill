@@ -1,13 +1,4 @@
-# Merge these entries into the user's AeroSpace config; this file is not installed automatically.
-config-version = 2
-
-exec-on-workspace-change = [
-  "/Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/rillctl",
-  "emit",
-  "--source", "aerospace",
-  "--name", "refresh",
-  "--data", "{}"
-]
+schema_version = 1
 
 [[providers]]
 id = "aerospace"
