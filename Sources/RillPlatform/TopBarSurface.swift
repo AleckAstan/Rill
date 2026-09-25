@@ -408,12 +408,19 @@ private struct ModuleView: View {
                     Button {
                         focusWorkspace(module.id, providerID, workspace.id)
                     } label: {
-                        Text(workspace.name)
-                            .font(font)
-                            .fontWeight(workspace.focused ? .semibold : .regular)
-                            .foregroundStyle(workspace.focused ? Color(hex: theme.accent) : Color(hex: theme.foreground))
-                            .opacity(workspace.occupied == false && !workspace.focused ? 0.55 : 1)
-                            .padding(.horizontal, module.style?.padding ?? 2)
+                        HStack(spacing: 4) {
+                            Text(workspace.name)
+                                .font(font)
+                                .fontWeight(workspace.focused ? .semibold : .regular)
+                            if let applications = workspace.applications {
+                                ForEach(applications, id: \.id) { application in
+                                    WorkspaceApplicationIcon(application: application)
+                                }
+                            }
+                        }
+                        .foregroundStyle(workspace.focused ? Color(hex: theme.accent) : Color(hex: theme.foreground))
+                        .opacity(workspace.occupied == false && !workspace.focused ? 0.55 : 1)
+                        .padding(.horizontal, module.style?.padding ?? 2)
                     }
                     .buttonStyle(.plain)
                     .focusable()
@@ -443,7 +450,13 @@ private struct ModuleView: View {
     private func workspaceHelp(_ workspace: WorkspaceState) -> String {
         if let failure = store.actionFailures[module.id] { return failure }
         let status = workspace.focused ? "focused" : workspace.visible ? "visible" : "available"
-        return "Workspace \(workspace.name), \(status)"
+        let applications = workspace.applications?
+            .map { $0.windowCount > 1 ? "\($0.name) (\($0.windowCount))" : $0.name }
+            .joined(separator: ", ")
+        guard let applications, !applications.isEmpty else {
+            return "Workspace \(workspace.name), \(status)"
+        }
+        return "Workspace \(workspace.name), \(status): \(applications)"
     }
 
     private var decoratedContent: some View {
@@ -525,6 +538,41 @@ private struct ModuleView: View {
         return .custom(name, size: size)
     }
 
+}
+
+private struct WorkspaceApplicationIcon: View {
+    let application: WorkspaceApplication
+
+    var body: some View {
+        Group {
+            if let image = applicationIcon {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+            } else {
+                Image(systemName: "app")
+                    .resizable()
+            }
+        }
+        .scaledToFit()
+        .frame(width: 16, height: 16)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var applicationIcon: NSImage? {
+        guard let bundleIdentifier = application.bundleIdentifier,
+              let applicationURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier)
+        else {
+            return nil
+        }
+        return NSWorkspace.shared.icon(forFile: applicationURL.path)
+    }
+
+    private var accessibilityLabel: String {
+        application.windowCount > 1
+            ? "\(application.name), \(application.windowCount) windows"
+            : application.name
+    }
 }
 
 private extension Color {

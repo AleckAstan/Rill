@@ -15,11 +15,17 @@ public struct AerospaceWorkspaceRecord: Codable, Equatable, Sendable {
 }
 
 public struct AerospaceWindowRecord: Codable, Equatable, Sendable {
+    public let windowID: Int?
+    public let workspace: String?
     public let appName: String?
+    public let bundleIdentifier: String?
     public let windowTitle: String?
 
     enum CodingKeys: String, CodingKey {
+        case workspace
+        case windowID = "window-id"
         case appName = "app-name"
+        case bundleIdentifier = "app-bundle-id"
         case windowTitle = "window-title"
     }
 }
@@ -29,8 +35,18 @@ public enum AerospaceNormalizer {
         providerID: ProviderID,
         workspaces: [AerospaceWorkspaceRecord],
         window: AerospaceWindowRecord?,
-        occupied: [String: Bool] = [:]
+        windows: [AerospaceWindowRecord] = []
     ) -> YabaiSnapshot {
+        let applicationsByWorkspace = workspaceApplications(
+            workspaces: workspaces,
+            windows: windows,
+            focusedWindow: window
+        )
+        let occupied = Dictionary(
+            uniqueKeysWithValues: workspaces.map { workspace in
+                (workspace.workspace, windows.contains { $0.workspace == workspace.workspace })
+            }
+        )
         let states = workspaces.map { workspace in
             WorkspaceState(
                 id: WorkspaceID(provider: providerID, rawID: workspace.workspace),
@@ -38,13 +54,49 @@ public enum AerospaceNormalizer {
                 display: nil,
                 focused: workspace.focused,
                 visible: workspace.visible,
-                occupied: occupied[workspace.workspace]
+                occupied: occupied[workspace.workspace],
+                applications: applicationsByWorkspace[workspace.workspace] ?? []
             )
         }
         let focusedWindow = window?.appName.map {
             FocusedWindow(appName: $0, title: window?.windowTitle)
         }
         return YabaiSnapshot(workspaces: states, focusedWindow: focusedWindow)
+    }
+
+    private static func workspaceApplications(
+        workspaces: [AerospaceWorkspaceRecord],
+        windows: [AerospaceWindowRecord],
+        focusedWindow: AerospaceWindowRecord?
+    ) -> [String: [WorkspaceApplication]] {
+        let focusedWorkspace = workspaces.first(where: \.focused)?.workspace
+        var result: [String: [WorkspaceApplication]] = [:]
+        for window in windows {
+            guard let workspace = window.workspace, let name = window.appName else { continue }
+            let id = window.bundleIdentifier ?? name
+            var applications = result[workspace, default: []]
+            if let index = applications.firstIndex(where: { $0.id == id }) {
+                let existing = applications[index]
+                applications[index] = WorkspaceApplication(
+                    id: existing.id,
+                    name: existing.name,
+                    bundleIdentifier: existing.bundleIdentifier,
+                    focused: existing.focused,
+                    windowCount: existing.windowCount + 1
+                )
+            } else {
+                applications.append(
+                    WorkspaceApplication(
+                        id: id,
+                        name: name,
+                        bundleIdentifier: window.bundleIdentifier,
+                        focused: workspace == focusedWorkspace && name == focusedWindow?.appName
+                    )
+                )
+            }
+            result[workspace] = applications
+        }
+        return result
     }
 }
 
@@ -75,14 +127,19 @@ public final class AerospaceCommandRunner: @unchecked Sendable {
                 arguments: ["list-windows", "--focused", "--json"]
             )) ?? []
             let window = windowRecords.first
-            var occupied: [String: Bool] = [:]
-            for workspace in workspaces {
-                let result = try run(spec: spec, arguments: ["list-windows", "--workspace", workspace.workspace, "--count"])
-                guard result.exitCode == 0, !result.timedOut else { continue }
-                let count = Int(String(decoding: result.output, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
-                occupied[workspace.workspace] = count > 0
-            }
-            return AerospaceNormalizer.snapshot(providerID: spec.id, workspaces: workspaces, window: window, occupied: occupied)
+            let allWindows: [AerospaceWindowRecord] = try query(
+                spec: spec,
+                arguments: [
+                    "list-windows", "--all", "--json", "--format",
+                    "%{window-id} %{workspace} %{app-name} %{app-bundle-id}"
+                ]
+            )
+            return AerospaceNormalizer.snapshot(
+                providerID: spec.id,
+                workspaces: workspaces,
+                window: window,
+                windows: allWindows
+            )
         }
     }
 

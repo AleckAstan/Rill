@@ -56,6 +56,27 @@ private struct OmniWMWorkspacesPayload: Codable {
     let workspaces: [OmniWMWorkspaceRecord]
 }
 
+public struct OmniWMWorkspaceBarAppRecord: Codable, Equatable, Sendable {
+    public let id: String
+    public let appName: String
+    public let bundleId: String?
+    public let isFocused: Bool
+    public let windowCount: Int
+}
+
+public struct OmniWMWorkspaceBarWorkspaceRecord: Codable, Equatable, Sendable {
+    public let rawName: String
+    public let windows: [OmniWMWorkspaceBarAppRecord]
+}
+
+public struct OmniWMWorkspaceBarMonitorRecord: Codable, Equatable, Sendable {
+    public let workspaces: [OmniWMWorkspaceBarWorkspaceRecord]
+}
+
+private struct OmniWMWorkspaceBarPayload: Codable {
+    let monitors: [OmniWMWorkspaceBarMonitorRecord]
+}
+
 private struct OmniWMFocusedWindowPayload: Codable {
     let window: OmniWMFocusedWindowRecord?
 }
@@ -76,8 +97,28 @@ public enum OmniWMNormalizer {
     public static func snapshot(
         providerID: ProviderID,
         workspaces: [OmniWMWorkspaceRecord],
+        workspaceBar: [OmniWMWorkspaceBarMonitorRecord] = [],
         window: OmniWMFocusedWindowRecord?
     ) -> YabaiSnapshot {
+        let applicationsByWorkspace = Dictionary(
+            workspaceBar
+                .flatMap(\.workspaces)
+                .map { workspace in
+                    (
+                        workspace.rawName,
+                        workspace.windows.map { app in
+                            WorkspaceApplication(
+                                id: app.id,
+                                name: app.appName,
+                                bundleIdentifier: app.bundleId,
+                                focused: app.isFocused,
+                                windowCount: app.windowCount
+                            )
+                        }
+                    )
+                },
+            uniquingKeysWith: { first, _ in first }
+        )
         let states = workspaces.map { workspace in
             WorkspaceState(
                 id: WorkspaceID(provider: providerID, rawID: workspace.rawName),
@@ -85,7 +126,8 @@ public enum OmniWMNormalizer {
                 display: nil,
                 focused: workspace.isCurrent ?? workspace.isFocused,
                 visible: workspace.isVisible,
-                occupied: workspace.counts.map { $0.total > 0 }
+                occupied: workspace.counts.map { $0.total > 0 },
+                applications: applicationsByWorkspace[workspace.rawName]
             )
         }
         let focusedWindow = window?.app.map { FocusedWindow(appName: $0.name, title: window?.title) }
@@ -117,6 +159,11 @@ public final class OmniWMCommandRunner: @unchecked Sendable {
                 arguments: ["query", "workspaces", "--format", "json"],
                 expectedKind: "workspaces"
             )
+            let workspaceBar: OmniWMWorkspaceBarPayload = try query(
+                spec: spec,
+                arguments: ["query", "workspace-bar", "--format", "json"],
+                expectedKind: "workspace-bar"
+            )
             let focused: OmniWMFocusedWindowPayload? = try? query(
                 spec: spec,
                 arguments: ["query", "focused-window", "--format", "json"],
@@ -125,6 +172,7 @@ public final class OmniWMCommandRunner: @unchecked Sendable {
             return OmniWMNormalizer.snapshot(
                 providerID: spec.id,
                 workspaces: payload.workspaces,
+                workspaceBar: workspaceBar.monitors,
                 window: focused?.window
             )
         }

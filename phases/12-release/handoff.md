@@ -15,6 +15,8 @@ scripts/release.sh; signed/notarized package when credentials exist; docs/user/q
 - Added reproducible unsigned archive/checksum preparation in `scripts/release.sh`.
 - Added quickstart, uninstall, changelog, third-party notices and release-evidence documentation; version/build identifiers are `0.1.0` / `1`.
 - Added the optional OmniWM provider using the upstream versioned CLI/IPC workspace and focused-window queries, literal workspace focus, owned live subscription process, event coalescing and reconciliation. Added fixtures, automated lifecycle coverage, `Examples/omniwm/` and `docs/user/omniwm.md`.
+- Extended the OmniWM workspace projection with `query workspace-bar`: each Rill workspace button now lists its managed applications with native macOS icons, accessible names and window counts while unsupported providers retain their existing label/occupancy rendering.
+- Extended the AeroSpace adapter with one bounded all-window query that groups bundle identifiers and window counts by workspace, enabling the same native application-icon rendering without per-workspace count subprocesses.
 - Signing, notarization, quarantine installation, owner license choice and publication remain blocked on owner credentials/decisions and are intentionally NOT RUN.
 
 ## Verification record
@@ -28,6 +30,8 @@ scripts/release.sh; signed/notarized package when credentials exist; docs/user/q
 | OmniWM adapter fixtures and example | macOS arm64, upstream CLI contract at OmniWM commit `df8890e` | Query envelopes, `isCurrent` normalization, literal focus, comma-separated subscription channels, subscription-triggered refresh and example validation pass | PASS | `Tests/RillProvidersTests/OmniWMProviderTests.swift`; `Tests/OmniWMFixtures/`; `Examples/omniwm/config.toml` |
 | Real OmniWM integration | macOS 27.0 arm64, OmniWM 0.6.9 / IPC protocol 15 | IPC enabled; Rill becomes ready with 9 workspaces; one owned subscription; empty-workspace switch observed in 80.2 ms and restored in 104.3 ms; explicit refresh accepted | PASS | `/tmp/rill-omniwm-version.json`; `/tmp/rill-omniwm-workspaces.json`; `/tmp/rill-omniwm-live-status.json`; `docs/user/omniwm.md` |
 | User visual validation | Current macOS desktop, updated Debug Rill app | OmniWM workspace bar renders and behaves correctly; user reported “super! je viens de valider!” | PASS (user-reported) | User confirmation on 2026-09-25 |
+| OmniWM application-list rendering | Automated fixture only | Workspace apps, bundle identifiers, focus and window counts normalize and render as icon data | PASS | `Tests/RillProvidersTests/OmniWMProviderTests.swift`; `Tests/OmniWMFixtures/fake-omniwmctl.sh` |
+| AeroSpace application-list rendering | Current macOS desktop, AeroSpace 0.20.3-Beta, updated Debug Rill app | 9 workspaces load from a ready provider; managed applications render in their workspaces; user reported “super! c'est valide!” | PASS (user-reported) | User confirmation on 2026-09-25 |
 | Signing/notarization/Gatekeeper/publication | Owner credentials and destination | Required external inputs unavailable | NOT RUN | `docs/release-evidence.md` |
 
 ## Remaining work and risks

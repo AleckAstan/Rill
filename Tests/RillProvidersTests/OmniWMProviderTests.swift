@@ -33,6 +33,23 @@ final class OmniWMProviderTests: XCTestCase {
         let snapshot = OmniWMNormalizer.snapshot(
             providerID: ProviderID("omniwm"),
             workspaces: records,
+            workspaceBar: [
+                .init(workspaces: [
+                    .init(
+                        rawName: "1",
+                        windows: [
+                            .init(
+                                id: "app:terminal",
+                                appName: "Terminal",
+                                bundleId: "com.apple.Terminal",
+                                isFocused: true,
+                                windowCount: 2
+                            )
+                        ]
+                    ),
+                    .init(rawName: "Media & TV", windows: [])
+                ])
+            ],
             window: .init(app: .init(name: "Terminal"), title: "Rill")
         )
 
@@ -42,6 +59,19 @@ final class OmniWMProviderTests: XCTestCase {
         XCTAssertTrue(snapshot.workspaces[0].focused)
         XCTAssertTrue(snapshot.workspaces[0].visible)
         XCTAssertNil(snapshot.workspaces[0].display)
+        XCTAssertEqual(
+            snapshot.workspaces[0].applications,
+            [
+                WorkspaceApplication(
+                    id: "app:terminal",
+                    name: "Terminal",
+                    bundleIdentifier: "com.apple.Terminal",
+                    focused: true,
+                    windowCount: 2
+                )
+            ]
+        )
+        XCTAssertEqual(snapshot.workspaces[1].applications, [])
         XCTAssertEqual(snapshot.focusedWindow, FocusedWindow(appName: "Terminal", title: "Rill"))
     }
 
@@ -60,6 +90,8 @@ final class OmniWMProviderTests: XCTestCase {
 
         let snapshot = try runner.snapshot(spec: spec)
         XCTAssertEqual(snapshot.workspaces.map(\.name), ["Code", "Media & TV"])
+        XCTAssertEqual(snapshot.workspaces[0].applications?.map(\.name), ["Finder"])
+        XCTAssertEqual(snapshot.workspaces[0].applications?.first?.windowCount, 2)
         XCTAssertEqual(snapshot.focusedWindow?.appName, "Fixture App")
 
         try runner.focus(
@@ -106,7 +138,8 @@ final class OmniWMProviderTests: XCTestCase {
         try await waitUntil {
             guard let contents = try? String(contentsOf: log, encoding: .utf8) else { return false }
             return contents.contains("subscribe workspace-bar,focus --reconnect --format ndjson") &&
-                contents.split(separator: "\n").filter { $0 == "query workspaces --format json" }.count >= 2
+                contents.split(separator: "\n").filter { $0 == "query workspaces --format json" }.count >= 2 &&
+                contents.split(separator: "\n").filter { $0 == "query workspace-bar --format json" }.count >= 2
         }
 
         await provider.stop()
