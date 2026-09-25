@@ -58,11 +58,11 @@ Non-top edges use the same system-safe thickness, inset and safe-area rules. `to
 
 ## Providers
 
-All providers require `id` and `kind`. Kinds are `yabai`, `aerospace`, `event`, `command`, and `stream`.
+All providers require `id` and `kind`. Kinds are `yabai`, `aerospace`, `omniwm`, `event`, `command`, and `stream`.
 
 | Key | Type | Default / rule |
 | --- | --- | --- |
-| `executable` | string | Required for `yabai`, `aerospace`, `command`, and `stream` |
+| `executable` | string | Required for `yabai`, `aerospace`, `omniwm`, `command`, and `stream` |
 | `args` | string array | `[]` |
 | `env` | string table | `{}` |
 | `timeout_ms` | integer | `5000`; 100–300000 |
@@ -74,7 +74,7 @@ All providers require `id` and `kind`. Kinds are `yabai`, `aerospace`, `event`, 
 
 ## Modules and actions
 
-All modules require `id` and `kind`. Kinds are `text`, `clock`, `frontmostApp`, `battery`, `workspaces`, and `custom`. A `text` module requires its non-empty `text` value. `format` and `placeholder` are optional strings. A `workspaces` module requires a `yabai` or `aerospace` provider. A `custom` module requires an `event`, `command`, or `stream` provider.
+All modules require `id` and `kind`. Kinds are `text`, `clock`, `frontmostApp`, `battery`, `workspaces`, and `custom`. A `text` module requires its non-empty `text` value. `format` and `placeholder` are optional strings. A `workspaces` module requires a `yabai`, `aerospace`, or `omniwm` provider. A `custom` module requires an `event`, `command`, or `stream` provider.
 
 `on_click` accepts `executable`, optional `args = []`, and `timeout_ms = 5000` in the range 100–300000. It follows the same explicit executable-path rules.
 

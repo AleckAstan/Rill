@@ -4,7 +4,7 @@ Status: IN PROGRESS. Last updated: 2026-09-25.
 
 ## Resume instructions
 
-Read [description.md](description.md) and [verification.md](verification.md), then the linked shared contracts and prerequisite handoffs. Confirm dependencies 11 have passed. Set this phase IN PROGRESS in [progression.md](../../progression.md), inspect actual source files, and start with implementation task 1. This file must describe actual implementation state when work stops; it is currently a template, not evidence of completed work.
+Read [description.md](description.md) and [verification.md](verification.md), then the linked shared contracts and prerequisite handoffs. Local release preparation and the optional manager adapters are implemented. Resume with the open real-environment release and OmniWM checks below; do not infer them from fixture coverage.
 
 ## Expected output for downstream agents
 
@@ -14,6 +14,7 @@ scripts/release.sh; signed/notarized package when credentials exist; docs/user/q
 
 - Added reproducible unsigned archive/checksum preparation in `scripts/release.sh`.
 - Added quickstart, uninstall, changelog, third-party notices and release-evidence documentation; version/build identifiers are `0.1.0` / `1`.
+- Added the optional OmniWM provider using the upstream versioned CLI/IPC workspace and focused-window queries, literal workspace focus, owned live subscription process, event coalescing and reconciliation. Added fixtures, automated lifecycle coverage, `Examples/omniwm/` and `docs/user/omniwm.md`.
 - Signing, notarization, quarantine installation, owner license choice and publication remain blocked on owner credentials/decisions and are intentionally NOT RUN.
 
 ## Verification record
@@ -21,17 +22,21 @@ scripts/release.sh; signed/notarized package when credentials exist; docs/user/q
 | Check / command | Environment | Expected / observed | Result | Evidence |
 | --- | --- | --- | --- | --- |
 | Phase acceptance suite | Not recorded | Not executed | NOT RUN | None |
+| Automated regression suite | macOS arm64, Xcode 27 / Swift 6.4 | 61 core/config/platform/module/provider tests and 6 IPC tests pass | PASS | `/tmp/rill-omniwm-tests.log` |
 | Local release build | macOS arm64, Xcode 27 / Swift 6.4 | Archive and SHA-256 checksum created successfully | PASS | `/tmp/rill-release.log`; `.build/releases/Rill-0.1.0-macos-arm64.zip.sha256` |
-| Shipped Rill examples | Bundled `rillctl` | default, yabai, AeroSpace, edges and custom examples validate | PASS | `/tmp/rill-release-build.log`; `Examples/*/config.toml` |
+| Shipped Rill examples | Bundled `rillctl` | default, yabai, AeroSpace, OmniWM, edges and custom examples validate | PASS | `/tmp/rill-release-build.log`; `Examples/*/config.toml` |
+| OmniWM adapter fixtures and example | macOS arm64, upstream CLI contract at OmniWM commit `df8890e` | Query envelopes, `isCurrent` normalization, literal focus, comma-separated subscription channels, subscription-triggered refresh and example validation pass | PASS | `Tests/RillProvidersTests/OmniWMProviderTests.swift`; `Tests/OmniWMFixtures/`; `Examples/omniwm/config.toml` |
+| Real OmniWM integration | macOS 27.0 arm64, OmniWM 0.6.9 / IPC protocol 15 | IPC enabled; Rill becomes ready with 9 workspaces; one owned subscription; empty-workspace switch observed in 80.2 ms and restored in 104.3 ms; explicit refresh accepted | PASS | `/tmp/rill-omniwm-version.json`; `/tmp/rill-omniwm-workspaces.json`; `/tmp/rill-omniwm-live-status.json`; `docs/user/omniwm.md` |
+| User visual validation | Current macOS desktop, updated Debug Rill app | OmniWM workspace bar renders and behaves correctly; user reported “super! je viens de valider!” | PASS (user-reported) | User confirmation on 2026-09-25 |
 | Signing/notarization/Gatekeeper/publication | Owner credentials and destination | Required external inputs unavailable | NOT RUN | `docs/release-evidence.md` |
 
 ## Remaining work and risks
 
-Local packaging and user documentation are prepared. Signing, notarization, quarantine/clean-user install, login-item, upgrade/uninstall and publication checks remain open.
+Local packaging and user documentation are prepared. OmniWM is covered by fixtures plus real OmniWM 0.6.9/protocol 15 startup, query, subscription, focus, restoration and refresh evidence. Signing, notarization, quarantine/clean-user install, login-item, upgrade/uninstall and publication checks remain open.
 
 ## Next agent handoff
 
-- Exact next action: confirm prerequisites and begin task 1.
-- Artifacts consumed by downstream phases: planned outputs listed above; none implemented yet.
-- Cleanup / test-environment changes: none.
-- Completion date / evidence reviewer: not completed.
+- Exact next action: continue the signing/notarization and clean-install release gates when owner inputs are available.
+- Artifacts consumed by downstream phases: release scripts/docs plus `Sources/RillProviders/OmniWMProvider.swift`, `Examples/omniwm/`, fixtures and provider tests.
+- Cleanup / test-environment changes: with user approval, `ipcEnabled` was changed from `false` to `true` in `~/.config/omniwm/settings.toml` and OmniWM was restarted. After isolated checks, the user's Rill configuration was temporarily switched from AeroSpace to OmniWM and the updated Debug app remains running for validation; the user confirmed the integration works.
+- Completion date / evidence reviewer: not completed; environment-specific release gates remain open.

@@ -6,5 +6,5 @@
 - Strict TOML configuration with transactional reload and last-good rollback.
 - Clock, frontmost application, battery, workspace and custom producer modules.
 - Bounded local IPC and bundled `rillctl` for status, displays, reload, diagnostics and events.
-- AeroSpace and yabai adapters, examples and recovery documentation.
+- AeroSpace, OmniWM and yabai adapters, examples and recovery documentation.
 - Unsigned local archive preparation; signing, notarization and publication remain owner-controlled gates.

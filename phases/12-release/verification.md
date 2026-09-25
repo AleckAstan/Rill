@@ -11,7 +11,7 @@ Use temporary configuration/runtime directories and controlled producers for des
 ## Acceptance checks
 
 - [ ] From a clean checkout, build/test/archive using documented commands and confirm no developer-local paths or signing secrets are required for unsigned validation.
-- [ ] Run the built rillctl validate against every distributable example and execute the standalone, generic, yabai and AeroSpace quickstarts on the documented versions.
+- [ ] Run the built rillctl validate against every distributable example and execute the standalone, generic, yabai, AeroSpace and OmniWM quickstarts on the documented versions.
 - [ ] Verify codesign, Gatekeeper assessment, notarization and stapling on the actual final artifact; record tool output and package checksum.
 - [ ] Install a quarantined artifact on a clean account/machine; confirm first launch, CLI discovery, permission-denied behavior and recovery instructions.
 - [ ] Verify opt-in login behavior, upgrade preserving existing config, and uninstall cleanup. Match every release.md gate to evidence before recording publication complete.
