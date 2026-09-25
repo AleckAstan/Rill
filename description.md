@@ -29,7 +29,7 @@ Deferred: QML/JavaScript/Swift execution as a UI language, arbitrary floating wi
 
 ## Current state
 
-Phases 01–06 are complete. Production Rill renders configurable multi-display bars on all four edges with native and custom modules, nonactivating AppKit/SwiftUI panels, notch-safe bounded slots and visual transactional reload. Command, NDJSON stream and local event providers share source-scoped state; the per-user IPC service powers runtime `rillctl` status, displays, reload and emit commands. Providers are shared across displays and generations; configured actions use literal arguments, bounded execution and visible failures. Phases 07 and 08 (window-manager adapters) are currently deferred; phase 09 is active, with live reload and hardware edge/screen validation still open. See [platform findings](docs/platform-feasibility.md).
+Phases 01–06 are complete. Production Rill renders configurable multi-display bars on all four edges with native and custom modules, nonactivating AppKit/SwiftUI panels, notch-safe bounded slots and visual transactional reload. Command, NDJSON stream and local event providers share source-scoped state; the per-user IPC service powers runtime `rillctl` status, displays, reload, diagnostics, emit and redacted diagnostics export. Providers are shared across displays and generations; configured actions use literal arguments, bounded execution and visible failures. Recovery/troubleshooting, performance methodology and local 0.1.0 packaging are prepared. Phases 07 and 08 (window-manager adapters) remain deferred; real desktop validation, signing, notarization and publication remain open. See [platform findings](docs/platform-feasibility.md).
 
 ## Decision policy
 
