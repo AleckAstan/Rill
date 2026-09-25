@@ -8,13 +8,24 @@ final class RuntimeContractsTests: XCTestCase {
             display: DisplayID("display"),
             focused: true,
             visible: true,
-            occupied: nil
+            occupied: nil,
+            applications: [
+                WorkspaceApplication(
+                    id: "app:finder",
+                    name: "Finder",
+                    bundleIdentifier: "com.apple.finder",
+                    focused: true,
+                    windowCount: 2
+                )
+            ]
         )
         let batch = ProviderStateBatch(source: ProviderID("yabai"), generation: 4, sequence: 9, value: [state])
         let decoded = try JSONDecoder().decode(ProviderStateBatch<[WorkspaceState]>.self, from: JSONEncoder().encode(batch))
         XCTAssertEqual(decoded, batch)
         XCTAssertNil(decoded.value.first?.occupied)
         XCTAssertEqual(decoded.value.first?.id.provider, ProviderID("yabai"))
+        XCTAssertEqual(decoded.value.first?.applications?.first?.name, "Finder")
+        XCTAssertEqual(decoded.value.first?.applications?.first?.windowCount, 2)
     }
 
     func testConfigurationRoundTripsStableIDsAndReferences() throws {

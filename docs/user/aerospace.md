@@ -1,6 +1,6 @@
 # AeroSpace integration
 
-Rill supports the documented AeroSpace CLI and the `exec-on-workspace-change` callback. The tested installation is AeroSpace `0.20.3-Beta`. The adapter queries all workspaces with JSON output, reads the focused window, counts workspace windows, and focuses a workspace with one literal `workspace` argument.
+Rill supports the documented AeroSpace CLI and the `exec-on-workspace-change` callback. The tested installation is AeroSpace `0.20.3-Beta`. The adapter queries all workspaces and windows with JSON output, reads the focused window, groups applications by workspace, and focuses a workspace with one literal `workspace` argument.
 
 ## Configuration
 
@@ -21,7 +21,7 @@ provider = "aerospace"
 placeholder = "AeroSpace…"
 ```
 
-Workspace names are opaque strings. Names containing spaces, punctuation, accents or non-numeric values remain unchanged and are passed as one argument when the workspace button is clicked. Empty workspaces are retained and show `occupied = false`; if a manager omits occupancy, Rill keeps it unknown.
+Workspace names are opaque strings. Names containing spaces, punctuation, accents or non-numeric values remain unchanged and are passed as one argument when the workspace button is clicked. Empty workspaces are retained and show `occupied = false`. Each occupied workspace shows one native macOS icon per application, and the tooltip includes its window count.
 
 ## Callback
 

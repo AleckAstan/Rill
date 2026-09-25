@@ -14,13 +14,38 @@ final class AerospaceProviderTests: XCTestCase {
         ]
         let snapshot = AerospaceNormalizer.snapshot(
             providerID: ProviderID("aerospace"), workspaces: records,
-            window: .init(appName: "Fixture App", windowTitle: "Fixture title"),
-            occupied: ["1": true, "Media & TV": false]
+            window: .init(
+                windowID: 42,
+                workspace: nil,
+                appName: "Fixture App",
+                bundleIdentifier: nil,
+                windowTitle: "Fixture title"
+            ),
+            windows: [
+                .init(
+                    windowID: 42,
+                    workspace: "1",
+                    appName: "Fixture App",
+                    bundleIdentifier: "dev.rill.fixture",
+                    windowTitle: nil
+                ),
+                .init(
+                    windowID: 43,
+                    workspace: "1",
+                    appName: "Fixture App",
+                    bundleIdentifier: "dev.rill.fixture",
+                    windowTitle: nil
+                )
+            ]
         )
         XCTAssertEqual(snapshot.workspaces.map(\.name), ["1", "Media & TV", "équipe", ""])
         XCTAssertEqual(snapshot.workspaces[1].id, WorkspaceID(provider: ProviderID("aerospace"), rawID: "Media & TV"))
         XCTAssertEqual(snapshot.workspaces[1].occupied, false)
-        XCTAssertNil(snapshot.workspaces[2].occupied)
+        XCTAssertEqual(snapshot.workspaces[2].occupied, false)
+        XCTAssertEqual(snapshot.workspaces[0].applications?.first?.name, "Fixture App")
+        XCTAssertEqual(snapshot.workspaces[0].applications?.first?.windowCount, 2)
+        XCTAssertEqual(snapshot.workspaces[0].applications?.first?.focused, true)
+        XCTAssertEqual(snapshot.workspaces[1].applications, [])
         XCTAssertEqual(snapshot.focusedWindow?.appName, "Fixture App")
     }
 
@@ -29,6 +54,9 @@ final class AerospaceProviderTests: XCTestCase {
         let spec = ProviderSpec(id: ProviderID("aerospace"), kind: .aerospace, executable: executable, timeoutMS: 1000, maxOutputBytes: 65536)
         let snapshot = try AerospaceCommandRunner().snapshot(spec: spec)
         XCTAssertEqual(snapshot.workspaces.count, 4)
+        XCTAssertEqual(snapshot.workspaces[0].applications?.first?.name, "Fixture App")
+        XCTAssertEqual(snapshot.workspaces[0].applications?.first?.windowCount, 2)
+        XCTAssertEqual(snapshot.workspaces[2].applications?.first?.bundleIdentifier, "com.apple.finder")
         try AerospaceCommandRunner().focus(spec: spec, workspace: WorkspaceID(provider: spec.id, rawID: "Media & TV"))
     }
 }

@@ -50,6 +50,28 @@ public enum ProviderHealth: String, Codable, Sendable, CaseIterable {
     case starting, ready, stale, unavailable, failed
 }
 
+public struct WorkspaceApplication: Codable, Hashable, Sendable {
+    public let id: String
+    public let name: String
+    public let bundleIdentifier: String?
+    public let focused: Bool
+    public let windowCount: Int
+
+    public init(
+        id: String,
+        name: String,
+        bundleIdentifier: String? = nil,
+        focused: Bool = false,
+        windowCount: Int = 1
+    ) {
+        self.id = id
+        self.name = name
+        self.bundleIdentifier = bundleIdentifier
+        self.focused = focused
+        self.windowCount = windowCount
+    }
+}
+
 public struct WorkspaceState: Codable, Hashable, Sendable {
     public let id: WorkspaceID
     public let name: String
@@ -57,6 +79,7 @@ public struct WorkspaceState: Codable, Hashable, Sendable {
     public let focused: Bool
     public let visible: Bool
     public let occupied: Bool?
+    public let applications: [WorkspaceApplication]?
 
     public init(
         id: WorkspaceID,
@@ -64,10 +87,12 @@ public struct WorkspaceState: Codable, Hashable, Sendable {
         display: DisplayID? = nil,
         focused: Bool = false,
         visible: Bool = false,
-        occupied: Bool? = nil
+        occupied: Bool? = nil,
+        applications: [WorkspaceApplication]? = nil
     ) {
         self.id = id; self.name = name; self.display = display
         self.focused = focused; self.visible = visible; self.occupied = occupied
+        self.applications = applications
     }
 }
 

@@ -67,11 +67,14 @@ The complete copyable configuration is in
 
 ## Runtime behavior
 
-At startup Rill runs `omniwmctl query workspaces --format json` and
+At startup Rill runs `omniwmctl query workspaces --format json`,
+`omniwmctl query workspace-bar --format json`, and
 `omniwmctl query focused-window --format json`. It derives occupancy from
 OmniWM's window counts, uses `isCurrent` for the interaction workspace, and
-uses the display name as the visible label. Clicking a workspace passes its raw
-name as one literal argument to `omniwmctl workspace focus-name`.
+uses the display name as the visible label. The workspace-bar projection adds
+one native macOS icon per managed application to each workspace button; its
+tooltip includes app names and window counts. Clicking a workspace passes its
+raw name as one literal argument to `omniwmctl workspace focus-name`.
 
 Rill owns an `omniwmctl subscribe workspace-bar,focus --reconnect` process,
 coalesces event bursts for 50 ms, and re-queries authoritative state. A
