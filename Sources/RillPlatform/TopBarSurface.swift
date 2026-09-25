@@ -384,6 +384,17 @@ private struct ModuleView: View {
                 standardContent
             }
         }
+        .padding(.horizontal, module.style?.padding ?? theme.resolvedModulePadding)
+        .padding(.vertical, theme.resolvedModuleVerticalPadding)
+        .background(Color(hex: module.style?.background ?? theme.resolvedModuleBackground))
+        .clipShape(RoundedRectangle(cornerRadius: theme.resolvedModuleCornerRadius))
+        .overlay {
+            RoundedRectangle(cornerRadius: theme.resolvedModuleCornerRadius)
+                .stroke(
+                    Color(hex: theme.resolvedBorderColor),
+                    lineWidth: theme.resolvedBorderWidth
+                )
+        }
     }
 
     private var standardContent: some View {
@@ -402,7 +413,7 @@ private struct ModuleView: View {
     }
 
     private var workspaceContent: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: theme.resolvedWorkspaceSpacing) {
             if let providerID = module.provider, !visibleWorkspaces.isEmpty {
                 ForEach(visibleWorkspaces, id: \.id) { workspace in
                     Button {
@@ -414,13 +425,36 @@ private struct ModuleView: View {
                                 .fontWeight(workspace.focused ? .semibold : .regular)
                             if let applications = workspace.applications {
                                 ForEach(applications, id: \.id) { application in
-                                    WorkspaceApplicationIcon(application: application)
+                                    WorkspaceApplicationIcon(
+                                        application: application,
+                                        size: theme.resolvedApplicationIconSize
+                                    )
                                 }
                             }
                         }
-                        .foregroundStyle(workspace.focused ? Color(hex: theme.accent) : Color(hex: theme.foreground))
+                        .foregroundStyle(
+                            workspace.focused
+                                ? Color(hex: module.style?.accent ?? theme.accent)
+                                : Color(hex: module.style?.foreground ?? theme.foreground)
+                        )
                         .opacity(workspace.occupied == false && !workspace.focused ? 0.55 : 1)
-                        .padding(.horizontal, module.style?.padding ?? 2)
+                        .padding(.horizontal, theme.resolvedWorkspacePadding)
+                        .padding(.vertical, 2)
+                        .background(
+                            Color(
+                                hex: workspace.focused
+                                    ? theme.resolvedFocusedWorkspaceBackground
+                                    : theme.resolvedWorkspaceBackground
+                            )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: theme.resolvedWorkspaceCornerRadius))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: theme.resolvedWorkspaceCornerRadius)
+                                .stroke(
+                                    Color(hex: theme.resolvedBorderColor),
+                                    lineWidth: theme.resolvedBorderWidth
+                                )
+                        }
                     }
                     .buttonStyle(.plain)
                     .focusable()
@@ -471,8 +505,6 @@ private struct ModuleView: View {
             .truncationMode(.tail)
             .font(font)
             .foregroundStyle(foreground)
-            .padding(.horizontal, module.style?.padding ?? 0)
-            .background(Color(hex: module.style?.background ?? "#00000000"))
             .accessibilityIdentifier("rill.module.\(module.id.rawValue)")
     }
 
@@ -542,6 +574,7 @@ private struct ModuleView: View {
 
 private struct WorkspaceApplicationIcon: View {
     let application: WorkspaceApplication
+    let size: Double
 
     var body: some View {
         Group {
@@ -555,7 +588,7 @@ private struct WorkspaceApplicationIcon: View {
             }
         }
         .scaledToFit()
-        .frame(width: 16, height: 16)
+        .frame(width: size, height: size)
         .accessibilityLabel(accessibilityLabel)
     }
 

@@ -31,6 +31,7 @@ IDs are 1–64 characters, start with an ASCII letter or digit, and then use let
 
 | Key | Type | Default | Bounds |
 | --- | --- | --- | --- |
+| `preset` | string | `segmented` | `flat` or `segmented` |
 | `font` | string | `SF Pro Text` | 1–128 characters |
 | `font_size` | number | `13` | 8–72 |
 | `foreground` | color | `#F2F2F7FF` | `#RRGGBB` or `#RRGGBBAA` |
@@ -41,7 +42,24 @@ IDs are 1–64 characters, start with an ASCII letter or digit, and then use let
 | `spacing` | number | `10` | 0–64 |
 | `animation_ms` | integer | `160` | 0–5000 |
 
-All numeric values must be finite.
+`flat` keeps modules and workspace states transparent, matching a minimal continuous bar. `segmented` gives each module a subtle capsule and gives the focused workspace a stronger capsule. Explicit visual tokens override the selected preset:
+
+| Key | Segmented default | Flat default | Bounds |
+| --- | --- | --- | --- |
+| `module_background` | `#2A2F39FF` | transparent | color |
+| `workspace_background` | transparent | transparent | color |
+| `focused_workspace_background` | `#3B4252FF` | transparent | color |
+| `border_color` | `#FFFFFF18` | transparent | color |
+| `border_width` | `1` | `0` | 0–8 |
+| `module_corner_radius` | `5` | `0` | 0–32 |
+| `workspace_corner_radius` | `4` | `0` | 0–32 |
+| `module_padding` | `8` | `0` | 0–64 |
+| `module_vertical_padding` | `4` | `0` | 0–32 |
+| `workspace_padding` | `5` | `2` | 0–64 |
+| `workspace_spacing` | `4` | `6` | 0–64 |
+| `application_icon_size` | `16` | `16` | 8–32 |
+
+All numeric values must be finite. Module-level `style.background`, `style.padding`, `style.foreground`, and `style.accent` override the corresponding global presentation for that module.
 
 ## Surfaces
 

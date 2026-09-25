@@ -428,7 +428,13 @@ public struct ProviderSpec: Codable, Sendable, Equatable {
     }
 }
 
+public enum ThemePreset: String, Codable, Hashable, Sendable, CaseIterable {
+    case flat
+    case segmented
+}
+
 public struct ThemeSpec: Codable, Hashable, Sendable {
+    public var preset: ThemePreset
     public var font: String
     public var fontSize: Double
     public var foreground: String
@@ -438,15 +444,40 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
     public var padding: Double
     public var spacing: Double
     public var animationMS: Int
+    public var moduleBackground: String?
+    public var workspaceBackground: String?
+    public var focusedWorkspaceBackground: String?
+    public var borderColor: String?
+    public var borderWidth: Double?
+    public var moduleCornerRadius: Double?
+    public var workspaceCornerRadius: Double?
+    public var modulePadding: Double?
+    public var moduleVerticalPadding: Double?
+    public var workspacePadding: Double?
+    public var workspaceSpacing: Double?
+    public var applicationIconSize: Double?
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case font, foreground, background, accent, padding, spacing
+        case preset, font, foreground, background, accent, padding, spacing
         case fontSize = "font_size"
         case cornerRadius = "corner_radius"
         case animationMS = "animation_ms"
+        case moduleBackground = "module_background"
+        case workspaceBackground = "workspace_background"
+        case focusedWorkspaceBackground = "focused_workspace_background"
+        case borderColor = "border_color"
+        case borderWidth = "border_width"
+        case moduleCornerRadius = "module_corner_radius"
+        case workspaceCornerRadius = "workspace_corner_radius"
+        case modulePadding = "module_padding"
+        case moduleVerticalPadding = "module_vertical_padding"
+        case workspacePadding = "workspace_padding"
+        case workspaceSpacing = "workspace_spacing"
+        case applicationIconSize = "application_icon_size"
     }
 
     public init(
+        preset: ThemePreset = .segmented,
         font: String = "SF Pro Text",
         fontSize: Double = 13,
         foreground: String = "#F2F2F7FF",
@@ -455,8 +486,21 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
         cornerRadius: Double = 10,
         padding: Double = 8,
         spacing: Double = 10,
-        animationMS: Int = 160
+        animationMS: Int = 160,
+        moduleBackground: String? = nil,
+        workspaceBackground: String? = nil,
+        focusedWorkspaceBackground: String? = nil,
+        borderColor: String? = nil,
+        borderWidth: Double? = nil,
+        moduleCornerRadius: Double? = nil,
+        workspaceCornerRadius: Double? = nil,
+        modulePadding: Double? = nil,
+        moduleVerticalPadding: Double? = nil,
+        workspacePadding: Double? = nil,
+        workspaceSpacing: Double? = nil,
+        applicationIconSize: Double? = nil
     ) {
+        self.preset = preset
         self.font = font
         self.fontSize = fontSize
         self.foreground = foreground
@@ -466,10 +510,23 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
         self.padding = padding
         self.spacing = spacing
         self.animationMS = animationMS
+        self.moduleBackground = moduleBackground
+        self.workspaceBackground = workspaceBackground
+        self.focusedWorkspaceBackground = focusedWorkspaceBackground
+        self.borderColor = borderColor
+        self.borderWidth = borderWidth
+        self.moduleCornerRadius = moduleCornerRadius
+        self.workspaceCornerRadius = workspaceCornerRadius
+        self.modulePadding = modulePadding
+        self.moduleVerticalPadding = moduleVerticalPadding
+        self.workspacePadding = workspacePadding
+        self.workspaceSpacing = workspaceSpacing
+        self.applicationIconSize = applicationIconSize
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.strictContainer(keyedBy: CodingKeys.self)
+        preset = try container.decodeIfPresent(ThemePreset.self, forKey: .preset) ?? .segmented
         font = try container.decodeIfPresent(String.self, forKey: .font) ?? "SF Pro Text"
         fontSize = try container.decodeIfPresent(Double.self, forKey: .fontSize) ?? 13
         foreground = try container.decodeIfPresent(String.self, forKey: .foreground) ?? "#F2F2F7FF"
@@ -479,6 +536,66 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
         padding = try container.decodeIfPresent(Double.self, forKey: .padding) ?? 8
         spacing = try container.decodeIfPresent(Double.self, forKey: .spacing) ?? 10
         animationMS = try container.decodeIfPresent(Int.self, forKey: .animationMS) ?? 160
+        moduleBackground = try container.decodeIfPresent(String.self, forKey: .moduleBackground)
+        workspaceBackground = try container.decodeIfPresent(String.self, forKey: .workspaceBackground)
+        focusedWorkspaceBackground = try container.decodeIfPresent(String.self, forKey: .focusedWorkspaceBackground)
+        borderColor = try container.decodeIfPresent(String.self, forKey: .borderColor)
+        borderWidth = try container.decodeIfPresent(Double.self, forKey: .borderWidth)
+        moduleCornerRadius = try container.decodeIfPresent(Double.self, forKey: .moduleCornerRadius)
+        workspaceCornerRadius = try container.decodeIfPresent(Double.self, forKey: .workspaceCornerRadius)
+        modulePadding = try container.decodeIfPresent(Double.self, forKey: .modulePadding)
+        moduleVerticalPadding = try container.decodeIfPresent(Double.self, forKey: .moduleVerticalPadding)
+        workspacePadding = try container.decodeIfPresent(Double.self, forKey: .workspacePadding)
+        workspaceSpacing = try container.decodeIfPresent(Double.self, forKey: .workspaceSpacing)
+        applicationIconSize = try container.decodeIfPresent(Double.self, forKey: .applicationIconSize)
+    }
+
+    public var resolvedModuleBackground: String {
+        moduleBackground ?? (preset == .segmented ? "#2A2F39FF" : "#00000000")
+    }
+
+    public var resolvedWorkspaceBackground: String {
+        workspaceBackground ?? "#00000000"
+    }
+
+    public var resolvedFocusedWorkspaceBackground: String {
+        focusedWorkspaceBackground ?? (preset == .segmented ? "#3B4252FF" : "#00000000")
+    }
+
+    public var resolvedBorderColor: String {
+        borderColor ?? (preset == .segmented ? "#FFFFFF18" : "#00000000")
+    }
+
+    public var resolvedBorderWidth: Double {
+        borderWidth ?? (preset == .segmented ? 1 : 0)
+    }
+
+    public var resolvedModuleCornerRadius: Double {
+        moduleCornerRadius ?? (preset == .segmented ? 5 : 0)
+    }
+
+    public var resolvedWorkspaceCornerRadius: Double {
+        workspaceCornerRadius ?? (preset == .segmented ? 4 : 0)
+    }
+
+    public var resolvedModulePadding: Double {
+        modulePadding ?? (preset == .segmented ? 8 : 0)
+    }
+
+    public var resolvedModuleVerticalPadding: Double {
+        moduleVerticalPadding ?? (preset == .segmented ? 4 : 0)
+    }
+
+    public var resolvedWorkspacePadding: Double {
+        workspacePadding ?? (preset == .segmented ? 5 : 2)
+    }
+
+    public var resolvedWorkspaceSpacing: Double {
+        workspaceSpacing ?? (preset == .segmented ? 4 : 6)
+    }
+
+    public var resolvedApplicationIconSize: Double {
+        applicationIconSize ?? 16
     }
 }
 
@@ -622,6 +739,32 @@ public extension AppConfiguration {
         validateFinite(theme.spacing, path: "theme.spacing", range: 0...64)
         if !(0...5_000).contains(theme.animationMS) {
             append("theme.animation_ms", "Expected 0...5000")
+        }
+        if let value = theme.moduleBackground { validateColor(value, path: "theme.module_background") }
+        if let value = theme.workspaceBackground { validateColor(value, path: "theme.workspace_background") }
+        if let value = theme.focusedWorkspaceBackground {
+            validateColor(value, path: "theme.focused_workspace_background")
+        }
+        if let value = theme.borderColor { validateColor(value, path: "theme.border_color") }
+        if let value = theme.borderWidth { validateFinite(value, path: "theme.border_width", range: 0...8) }
+        if let value = theme.moduleCornerRadius {
+            validateFinite(value, path: "theme.module_corner_radius", range: 0...32)
+        }
+        if let value = theme.workspaceCornerRadius {
+            validateFinite(value, path: "theme.workspace_corner_radius", range: 0...32)
+        }
+        if let value = theme.modulePadding { validateFinite(value, path: "theme.module_padding", range: 0...64) }
+        if let value = theme.moduleVerticalPadding {
+            validateFinite(value, path: "theme.module_vertical_padding", range: 0...32)
+        }
+        if let value = theme.workspacePadding {
+            validateFinite(value, path: "theme.workspace_padding", range: 0...64)
+        }
+        if let value = theme.workspaceSpacing {
+            validateFinite(value, path: "theme.workspace_spacing", range: 0...64)
+        }
+        if let value = theme.applicationIconSize {
+            validateFinite(value, path: "theme.application_icon_size", range: 8...32)
         }
 
         let moduleIDs = Set(modules.map(\.id))
