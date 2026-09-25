@@ -82,6 +82,8 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
     }
     private var configurationStatus = "Configuration has not loaded."
     private var lastConfigurationError: String?
+    private var activeConfigurationPath: String?
+    private var activeGeneration: UInt64 = 0
     private var terminationInProgress = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -92,9 +94,15 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
         let title = NSMenuItem(title: "Rill", action: nil, keyEquivalent: "")
         menu.addItem(title)
         menu.addItem(.separator())
+        let openConfig = NSMenuItem(title: "Open Configuration", action: #selector(openConfiguration), keyEquivalent: "o")
+        openConfig.target = self
+        menu.addItem(openConfig)
         let diagnostics = NSMenuItem(title: "Diagnostics", action: #selector(showDiagnostics), keyEquivalent: "d")
         diagnostics.target = self
         menu.addItem(diagnostics)
+        let exportDiagnostics = NSMenuItem(title: "Export Redacted Diagnostics…", action: #selector(exportDiagnostics), keyEquivalent: "e")
+        exportDiagnostics.target = self
+        menu.addItem(exportDiagnostics)
         let reload = NSMenuItem(title: "Reload Configuration", action: #selector(reloadConfiguration), keyEquivalent: "r")
         reload.target = self
         menu.addItem(reload)
@@ -163,6 +171,43 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
         window = panel
     }
 
+    @objc private func openConfiguration() {
+        let url = activeConfigurationPath.map(URL.init(fileURLWithPath:))
+            ?? ConfigurationResolver().defaultConfigurationURL
+        NSWorkspace.shared.open(FileManager.default.fileExists(atPath: url.path) ? url : url.deletingLastPathComponent())
+    }
+
+    @objc private func exportDiagnostics() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "rill-diagnostics.json"
+        panel.begin { [weak self] response in
+            guard response == .OK, let url = panel.url, let self else { return }
+            do {
+                try self.redactedDiagnosticsData().write(to: url, options: .atomic)
+                self.configurationStatus = "Redacted diagnostics exported to \(url.path)."
+            } catch {
+                self.configurationStatus = "Diagnostics export failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func redactedDiagnosticsData() throws -> Data {
+        let providers = moduleRuntime.store.providerHealth.reduce(into: [String: String]()) { result, item in
+            result[item.key.rawValue] = item.value
+        }
+        let object: [String: Any] = [
+            "schema_version": 1,
+            "app": "Rill",
+            "configuration_path_present": activeConfigurationPath != nil,
+            "generation": activeGeneration,
+            "provider_health": providers,
+            "visible_panel_count": NSApp.windows.compactMap { $0 as? RillPanel }.filter(\.isVisible).count,
+            "configuration_error_present": lastConfigurationError != nil,
+            "note": "Window titles, script output, workspace names and arbitrary module data are omitted."
+        ]
+        return try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys])
+    }
+
     @objc private func quit() { NSApp.terminate(nil) }
 
     @objc private func reloadConfiguration() {
@@ -178,6 +223,7 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
             watcher = nil
             let resolution = try ConfigurationResolver().resolve()
             let snapshot = try ConfigurationParser().load(resolution)
+            activeConfigurationPath = resolution.source.fileURL?.path
             let result = await coordinator.apply(
                 configuration: snapshot.configuration,
                 source: snapshot.source
@@ -186,6 +232,7 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
                 ? "Configuration generation \(result.generation) is active."
                 : result.diagnostics.map(\.description).joined(separator: "\n")
             lastConfigurationError = result.applied ? nil : configurationStatus
+            if result.applied { activeGeneration = result.generation }
             if result.applied { await generationGate.set(result.generation) }
             if case .file(let url) = resolution.source {
                 let watcher = ConfigurationWatcher(url: url, generation: result.generation) { [weak self] update in
@@ -217,6 +264,7 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
                 ? "Configuration generation \(result.generation) is active."
                 : result.diagnostics.map(\.description).joined(separator: "\n")
             lastConfigurationError = result.applied ? nil : configurationStatus
+            if result.applied { activeGeneration = result.generation }
             if result.applied { await generationGate.set(result.generation) }
         case .failure(let error):
             let generation = await coordinator.snapshot?.generation ?? 0
@@ -261,6 +309,20 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
                 "configuration_error": lastConfigurationError.map(JSONValue.string) ?? .null,
                 "providers": .object(providers),
                 "workspaces": .object(workspaces)
+            ]))
+        case "diagnostics":
+            let providers = Dictionary(uniqueKeysWithValues: moduleRuntime.store.providerHealth.map {
+                ($0.key.rawValue, JSONValue.string($0.value))
+            })
+            return .init(requestID: request.requestID, result: .object([
+                "schema_version": .number(1),
+                "app": .string("Rill"),
+                "configuration_path_present": .bool(activeConfigurationPath != nil),
+                "generation": .number(Double(activeGeneration)),
+                "provider_health": .object(providers),
+                "visible_panel_count": .number(Double(NSApp.windows.compactMap { $0 as? RillPanel }.filter(\.isVisible).count)),
+                "configuration_error_present": .bool(lastConfigurationError != nil),
+                "redaction": .string("Window titles, script output, workspace names and arbitrary module data are omitted.")
             ]))
         case "displays":
             let displays: [JSONValue] = ScreenInventory.descriptors().map { display in

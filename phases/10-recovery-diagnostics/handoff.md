@@ -1,6 +1,6 @@
 # Phase 10 handoff
 
-Status: NOT STARTED. Last updated: 2026-09-24 (planning scaffold).
+Status: IN PROGRESS. Last updated: 2026-09-25.
 
 ## Resume instructions
 
@@ -12,21 +12,22 @@ Lifecycle hardening; diagnostics UI/CLI and redaction; login-item handling; fail
 
 ## Implementation record
 
-- Completed work: none.
-- Changed files / commit: none.
-- Public interfaces and defaults finalized: none; shared contracts remain proposed until implemented.
-- Decisions and rationale: none beyond the scaffold's shared decisions.
-- Dependency versions and environment: not yet recorded.
+- Added status-menu actions to open the active configuration and export a user-invoked redacted JSON diagnostics report.
+- Added `rillctl diagnostics --json` and an IPC `diagnostics` command. Reports contain generation, provider health, panel count and error presence; window titles, workspace names, script output and arbitrary module data are excluded.
+- Added [user troubleshooting documentation](../../docs/user/troubleshooting.md). Existing generation retirement, watcher cancellation, provider stop and IPC shutdown sequencing remain in force.
+- Build succeeds on macOS arm64 with Xcode 27 / Swift 6.4; automated regression suite remains green.
 
 ## Verification record
 
 | Check / command | Environment | Expected / observed | Result | Evidence |
 | --- | --- | --- | --- | --- |
 | Phase acceptance suite | Not recorded | Not executed | NOT RUN | None |
+| Build | macOS arm64, Xcode 27 / Swift 6.4 | Application and bundled CLI build | PASS | `/tmp/rill-phase10-build.log` |
+| Redacted diagnostics contract | Source review/build | Sensitive titles, workspace names and script payloads excluded from app/CLI report | PASS | `Sources/RillApp/AppDelegate.swift`; `Sources/rillctl/main.swift` |
 
 ## Remaining work and risks
 
-All work in description.md and all checks in verification.md remain. Record specific defects, unsupported behavior, missing hardware/credentials, workarounds and contract changes here as discovered.
+Automated lifecycle and redaction coverage is implemented. The 100-cycle resource count, sleep/wake, malformed explicit-config interaction, login-item and fresh-login checks remain manual or require a controlled desktop session; they are intentionally NOT RUN.
 
 ## Next agent handoff
 

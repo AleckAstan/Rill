@@ -50,6 +50,9 @@ struct RillCTL {
         case "status":
             guard Array(arguments.dropFirst()) == ["--json"] else { throw CLIError.usage("status requires --json") }
             try runtime(command: "status")
+        case "diagnostics":
+            guard Array(arguments.dropFirst()) == ["--json"] else { throw CLIError.usage("diagnostics requires --json") }
+            try runtime(command: "diagnostics")
         case "displays":
             guard Array(arguments.dropFirst()) == ["--json"] else { throw CLIError.usage("displays requires --json") }
             try runtime(command: "displays")
@@ -150,6 +153,7 @@ struct RillCTL {
           rillctl validate --config PATH    Parse and validate without executing commands
           rillctl reload                    Reload the active configuration
           rillctl status --json             Show generation, provider health and errors
+          rillctl diagnostics --json        Export-safe redacted runtime diagnostics
           rillctl displays --json           List stable display identifiers
           rillctl emit --source ID --name NAME --data JSON
           rillctl --help                    Show this help

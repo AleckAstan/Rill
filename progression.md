@@ -1,6 +1,6 @@
 # Release progression
 
-Target: **Rill 0.1.0**. Planning scaffold: **COMPLETE**. Implementation: **IN PROGRESS**. Active phase: **09**. Phases 07–08 are deferred by the user while edge-surface work proceeds.
+Target: **Rill 0.1.0**. Planning scaffold: **COMPLETE**. Implementation: **IN PROGRESS**. Active phase: **10**. Phases 07–08 are deferred by the user while edge-surface recovery work proceeds.
 
 This is the authoritative tracker. Source paths and commands in the handoffs are planned until their phase implements them. No build, integration or platform test has passed merely because it appears in this roadmap.
 
@@ -15,7 +15,7 @@ This is the authoritative tracker. Source paths and commands in the handoffs are
 | 07 | [Integrate yabai events and workspace state](phases/07-yabai/description.md) | 06 | IN PROGRESS | Deferred by user; [Checks](phases/07-yabai/verification.md) · [Handoff](phases/07-yabai/handoff.md) |
 | 08 | [Integrate AeroSpace events and workspace state](phases/08-aerospace/description.md) | 06 | IN PROGRESS | Deferred by user; [Checks](phases/08-aerospace/verification.md) · [Handoff](phases/08-aerospace/handoff.md) |
 | 09 | [Deliver all-edge placement and reusable surfaces](phases/09-edge-surfaces/description.md) | 04, 05, 06 | IN PROGRESS | [Checks](phases/09-edge-surfaces/verification.md) · [Handoff](phases/09-edge-surfaces/handoff.md) |
-| 10 | [Harden reload, lifecycle and diagnostics](phases/10-recovery-diagnostics/description.md) | 07, 08, 09 | NOT STARTED | [Checks](phases/10-recovery-diagnostics/verification.md) · [Handoff](phases/10-recovery-diagnostics/handoff.md) |
+| 10 | [Harden reload, lifecycle and diagnostics](phases/10-recovery-diagnostics/description.md) | 07, 08, 09 | IN PROGRESS | [Checks](phases/10-recovery-diagnostics/verification.md) · [Handoff](phases/10-recovery-diagnostics/handoff.md) |
 | 11 | [Verify accessibility, animation and performance](phases/11-quality-performance/description.md) | 10 | NOT STARTED | [Checks](phases/11-quality-performance/verification.md) · [Handoff](phases/11-quality-performance/handoff.md) |
 | 12 | [Package, document and release 0.1.0](phases/12-release/description.md) | 11 | NOT STARTED | [Checks](phases/12-release/verification.md) · [Handoff](phases/12-release/handoff.md) |
 
