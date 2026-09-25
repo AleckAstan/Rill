@@ -2,6 +2,31 @@ import Darwin
 import XCTest
 
 final class NativeModuleValueTests: XCTestCase {
+    @MainActor
+    func testApplicationMenuFactoryPreservesHierarchySeparatorsAndDisabledItems() {
+        let entries = [
+            ApplicationMenuEntry(
+                title: "File",
+                enabled: true,
+                isSeparator: false,
+                children: [
+                    .init(title: "New", enabled: true, isSeparator: false, children: [], actionID: 1),
+                    .separator,
+                    .init(title: "Unavailable", enabled: false, isSeparator: false, children: [], actionID: nil)
+                ],
+                actionID: nil
+            )
+        ]
+        let target = ApplicationMenuActionTarget(actions: [:]) { _ in }
+        let menu = ApplicationMenuFactory.makeMenu(entries: entries, target: target)
+
+        XCTAssertEqual(menu.items.map(\.title), ["File"])
+        XCTAssertEqual(menu.items[0].submenu?.items.count, 3)
+        XCTAssertEqual(menu.items[0].submenu?.items[0].title, "New")
+        XCTAssertTrue(menu.items[0].submenu?.items[1].isSeparatorItem == true)
+        XCTAssertFalse(menu.items[0].submenu?.items[2].isEnabled ?? true)
+    }
+
     func testClockFormattingUsesProvidedTimeZoneAndLocale() {
         let date = Date(timeIntervalSince1970: 0)
         let utc = ClockFormatter.string(

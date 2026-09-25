@@ -20,6 +20,7 @@ scripts/release.sh; signed/notarized package when credentials exist; docs/user/q
 - Added configurable `flat` and `segmented` theme presets. Segmented is the default and exposes bounded overrides for module/workspace backgrounds, focused state, borders, radii, spacing, padding and application icon size; module style overrides remain authoritative.
 - Added a native macOS `glass` preset. On macOS 26+ module capsules use SwiftUI `glassEffect` over a transparent panel; supported older systems receive a bounded translucent fallback.
 - Disabled SwiftUI's persistent visual focus ring on clickable bar modules and workspace buttons while retaining keyboard focusability and accessibility actions.
+- Added a native click menu to `frontmostApp`: it reads the active process's bounded `AXMenuBar` hierarchy, mirrors enabled items and submenus in `NSMenu`, dispatches selections with `AXPress`, requests Accessibility only on interaction, and preserves configured `on_click` as an override.
 - Signing, notarization, quarantine installation, owner license choice and publication remain blocked on owner credentials/decisions and are intentionally NOT RUN.
 
 ## Verification record
@@ -38,11 +39,13 @@ scripts/release.sh; signed/notarized package when credentials exist; docs/user/q
 | Segmented design preset | Current macOS desktop, AeroSpace-backed user configuration | Module capsules, focused-workspace state, borders, spacing and application icons render correctly; user reported “super! je valide le style segmented” | PASS (user-reported) | User confirmation on 2026-09-25 |
 | Flat design preset | Current macOS desktop, AeroSpace-backed user configuration | Transparent minimal module/workspace treatment renders correctly; user reported “super!” and requested returning to segmented | PASS (user-reported) | User confirmation on 2026-09-25 |
 | Native Liquid Glass preset | macOS 27 desktop, AeroSpace-backed user configuration | Native SwiftUI glass capsules render over the transparent surface and clickable elements no longer retain a focus ring; user reported “super!” | PASS (user-reported) | User confirmation on 2026-09-25 |
+| Frontmost application menu automated regression | macOS arm64, Xcode 27 / Swift 6.4 | Native menu hierarchy factory preserves submenus, separators and disabled items; 67 main tests and 6 IPC tests pass; Debug app builds | PASS | `/tmp/rill-frontmost-menu-tests.log`; `/tmp/rill-frontmost-menu-build.log` |
+| Frontmost application menu desktop interaction | Current macOS desktop with Accessibility permission | Click opens the active application's menu hierarchy and exposes its native actions; user reported “super! c'est valide” | PASS (user-reported) | User confirmation on 2026-09-25 |
 | Signing/notarization/Gatekeeper/publication | Owner credentials and destination | Required external inputs unavailable | NOT RUN | `docs/release-evidence.md` |
 
 ## Remaining work and risks
 
-Local packaging and user documentation are prepared. OmniWM is covered by fixtures plus real OmniWM 0.6.9/protocol 15 startup, query, subscription, focus, restoration and refresh evidence. Signing, notarization, quarantine/clean-user install, login-item, upgrade/uninstall and publication checks remain open.
+Local packaging and user documentation are prepared. OmniWM is covered by fixtures plus real OmniWM 0.6.9/protocol 15 startup, query, subscription, focus, restoration and refresh evidence. The frontmost application menu builds, has deterministic hierarchy coverage and was validated on the current macOS desktop. Signing, notarization, quarantine/clean-user install, login-item, upgrade/uninstall and publication checks remain open.
 
 ## Next agent handoff
 

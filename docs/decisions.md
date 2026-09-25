@@ -13,6 +13,7 @@
 | D09 | User-managed tiling gaps; no private desktop reservation API | Baseline constraint; prototype phase 01 |
 | D10 | All four edges ship in 0.1; richer floating surfaces follow later | Release scope |
 | D11 | Native data providers are event-driven and shared across displays; click actions use direct executable/argument invocation with bounded resources and no implicit shell | Implemented and accepted in phase 05 |
+| D12 | The frontmost-app module exposes the active application's native menu hierarchy on click through public macOS Accessibility APIs; an explicit `on_click` overrides this behavior | Implemented during phase 12 refinement; requires user-granted Accessibility access |
 
 Append evidence, alternatives, consequences and date when accepting or changing a decision. Update every affected contract, example and phase before changing a public interface. No branding availability, license choice, developer account or release destination has been established.
 
@@ -39,3 +40,7 @@ D11 uses `NSWorkspace` activation notifications for the frontmost application, a
 ## Phase 06 generic-provider evidence — 2026-09-25
 
 D07 uses a per-user Unix socket with owned `0700` runtime directory, `0600` socket, peer UID validation, bounded newline JSON frames and two-second deadlines. Command, stream and event inputs converge on one source-scoped module store. Process output, frames and stderr are bounded; generations reject late data; updates coalesce over 50 ms; reload and shutdown own producer cancellation. No received data defines an executable or action.
+
+## Frontmost application menu refinement — 2026-09-25
+
+D12 reads the currently active process's `AXMenuBar` only when its Rill module is clicked, bounds traversal to eight levels and 1,000 items, mirrors enabled state and hierarchy in a native `NSMenu`, and dispatches selected leaves with `AXPress`. Rill requests Accessibility access only on this interaction, reports denied/unavailable/action failures on the module, and retains the phase-05 configured `on_click` behavior as an explicit override.

@@ -9,5 +9,6 @@ Reviewed 2026-09-24. These are inspiration and API references, not evidence that
 - [AeroSpace commands](https://nikitabobko.github.io/AeroSpace/commands): consult when implementing and versioning CLI queries and actions.
 - [OmniWM](https://github.com/OmniNull/OmniWM) and its [CLI reference](https://omniwm.app/reference/cli/overview/): versioned workspace queries, subscriptions and focus actions used by the optional OmniWM adapter. Reviewed against upstream commit `df8890e` on 2026-09-25; real installed-version validation remains separate evidence.
 - [Apple NSPanel](https://developer.apple.com/documentation/appkit/nspanel) and [NSScreen.visibleFrame](https://developer.apple.com/documentation/appkit/nsscreen/visibleframe): starting references for native panels and system-aware screen geometry. Actual window behavior requires the feasibility prototype and device checks.
+- [Apple Accessibility](https://developer.apple.com/documentation/applicationservices/axuielement) and [NSMenu](https://developer.apple.com/documentation/appkit/nsmenu): public APIs used to mirror and invoke the frontmost application's menu-bar actions from its Rill module.
 
 Do not copy upstream assets or code without checking and preserving their license obligations. The project's own license remains an owner decision before publication.

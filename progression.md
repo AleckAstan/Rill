@@ -87,3 +87,7 @@ User flat-design validation update: the `flat` preset was loaded with the same l
 2026-09-25 glass interaction update: clickable modules and workspace buttons retain keyboard/accessibility focus but suppress SwiftUI's persistent visual focus ring, which conflicted with the bar's native glass chrome.
 
 User native-design validation update: the `glass` preset and focus-ring correction were loaded on macOS 27 with AeroSpace and explicitly approved by the user on 2026-09-25.
+
+2026-09-25 frontmost-menu update: clicking the `frontmostApp` module now mirrors the active application's bounded Accessibility menu hierarchy in a native macOS menu and invokes selected items with `AXPress`. Accessibility access is requested only on interaction, failures remain visible, and an explicit configured `on_click` retains priority.
+
+User frontmost-menu validation update: the native active-application menu was exercised on the current macOS desktop and explicitly approved by the user on 2026-09-25.

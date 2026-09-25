@@ -290,6 +290,7 @@ struct BarSurfaceView: View {
     let notchExclusion: CGRect?
     @ObservedObject var store: NativeModuleStore
     let performAction: (ModuleID, ActionSpec) -> Void
+    let showFrontmostApplicationMenu: (ModuleID) -> Void
     let focusWorkspace: (ModuleID, ProviderID, WorkspaceID) -> Void
 
     var body: some View {
@@ -333,6 +334,7 @@ struct BarSurfaceView: View {
                         theme: theme,
                         store: store,
                         performAction: performAction,
+                        showFrontmostApplicationMenu: showFrontmostApplicationMenu,
                         focusWorkspace: focusWorkspace
                     )
                 }
@@ -357,6 +359,7 @@ struct BarSurfaceView: View {
                         theme: theme,
                         store: store,
                         performAction: performAction,
+                        showFrontmostApplicationMenu: showFrontmostApplicationMenu,
                         focusWorkspace: focusWorkspace
                     )
                 }
@@ -374,6 +377,7 @@ private struct ModuleView: View {
     let theme: ThemeSpec
     @ObservedObject var store: NativeModuleStore
     let performAction: (ModuleID, ActionSpec) -> Void
+    let showFrontmostApplicationMenu: (ModuleID) -> Void
     let focusWorkspace: (ModuleID, ProviderID, WorkspaceID) -> Void
 
     var body: some View {
@@ -395,12 +399,20 @@ private struct ModuleView: View {
                     .focusable()
                     .focusEffectDisabled()
                     .accessibilityHint("Runs the configured action")
+            } else if module.kind == .frontmostApp {
+                Button { showFrontmostApplicationMenu(module.id) } label: { decoratedContent }
+                    .buttonStyle(.plain)
+                    .focusable()
+                    .focusEffectDisabled()
+                    .accessibilityHint("Shows the frontmost application's menu")
             } else { decoratedContent }
         }
         .help(helpText)
         .accessibilityLabel(presentation.text)
         .accessibilityValue(accessibilityValue)
-        .accessibilityAddTraits(module.onClick == nil ? .isStaticText : .isButton)
+        .accessibilityAddTraits(
+            module.onClick != nil || module.kind == .frontmostApp ? .isButton : .isStaticText
+        )
     }
 
     private var workspaceContent: some View {
@@ -545,6 +557,7 @@ private struct ModuleView: View {
     private var helpText: String {
         if let failure = store.actionFailures[module.id] { return failure }
         if module.onClick != nil { return "Runs the configured action" }
+        if module.kind == .frontmostApp { return "Shows the frontmost application's menu" }
         return presentation.tooltip ?? module.id.rawValue
     }
 
@@ -755,6 +768,9 @@ final class SurfaceResource: NSObject, ManagedConfigurationResource, @unchecked 
                     store: moduleRuntime.store,
                     performAction: { [weak moduleRuntime] moduleID, action in
                         moduleRuntime?.performAction(moduleID: moduleID, action: action)
+                    },
+                    showFrontmostApplicationMenu: { [weak moduleRuntime] moduleID in
+                        moduleRuntime?.showFrontmostApplicationMenu(moduleID: moduleID)
                     },
                     focusWorkspace: { [weak moduleRuntime] moduleID, providerID, workspaceID in
                         moduleRuntime?.focusWorkspace(moduleID: moduleID, providerID: providerID, workspace: workspaceID)
