@@ -1,6 +1,8 @@
 # Surface placement
 
-Rill bars can be placed on the top, bottom, left or right edge of each selected display. Horizontal surfaces use `start`, `center` and `end` groups from left to right. Vertical surfaces use the same groups from top to bottom and keep module text upright.
+Rill bars can be placed on the top, bottom, left or right edge of each selected display. Horizontal surfaces use `start`, `center` and `end` groups from left to right. Vertical surfaces use the same groups from top to bottom. Clock and plain-text modules turn their labels along the edge.
+
+On a vertical surface, the workspace module gives each space a full-width capsule: its number is above its application icons, and multiple icons run downward. The capsule's vertical inset uses `theme.workspace_padding`, the same value used for its horizontal inset on a top or bottom bar. The `start` group scrolls vertically if its modules cannot fit above `center` and `end`.
 
 ```toml
 [[surfaces]]

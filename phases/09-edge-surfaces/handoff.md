@@ -1,6 +1,6 @@
 # Phase 09 handoff
 
-Status: IN PROGRESS. Last updated: 2026-09-25.
+Status: IN PROGRESS. Last updated: 2026-09-26.
 
 ## Resume instructions
 
@@ -17,6 +17,9 @@ All-edge LayoutEngine and panel support; Examples/edges/; geometry/collision fix
 - Added [`Examples/edges/rill/config.toml`](../../Examples/edges/rill/config.toml), [`docs/user/surfaces.md`](../../docs/user/surfaces.md) and [`docs/future-surfaces.md`](../../docs/future-surfaces.md).
 - Display-selector collision validation now rejects any same-edge pair that can resolve to the same physical display (`all` with any selector, `primary` with `id:*`, and identical explicit IDs), while allowing disjoint explicit display IDs. The relation is covered by core tests and documented for users.
 - AeroSpace is the active demo manager; yabai remains stopped while its SIP-dependent work is deferred.
+- User-observed right-edge rendering exposed that the workspace strip stayed horizontal and clock/date labels collapsed to ellipses; compact status icons also lost usable width to horizontal padding. The first correction stacked whole horizontal workspace capsules vertically and turned text/clock labels, but the user confirmed the workspace content was still wrong.
+- The follow-up correction lays out each vertical workspace as number above a column of application icons, fills the available 32-point bar width, and maps horizontal workspace padding to the vertical axis. The focused application name remains in hover help instead of being squeezed into the capsule. Vertical bars now give their `start` group the height remaining above `center` and `end`, with scrolling when needed; fixed one-third slots had cut off nine taller workspaces. The active Debug app was rebuilt and relaunched with the right-edge configuration.
+- The user's active configuration was restored to top `menuBarArea` for a visual regression check before commit. Offline validation and live reload succeeded; generation 3 reports two visible panels, no configuration error, and ready extension, Hello and OmniWM health. The user confirmed the top layout is good and authorized the commit.
 
 ## Verification record
 
@@ -27,10 +30,14 @@ All-edge LayoutEngine and panel support; Examples/edges/; geometry/collision fix
 | Production build | macOS arm64, Xcode 27 / Swift 6.4 | `scripts/build.sh` succeeds and bundled `rillctl` is present | PASS | `/tmp/rill-phase9-build.log` |
 | Four-edge rendered smoke | macOS arm64, one display | Top, bottom, left and right panels are visible with no key/main activation; frames remain inside the display | PASS | `evidence/four-edge-smoke.json` |
 | Configuration validation | Bundled `rillctl` | Four-edge example parses and validates; selector collision relation has unit coverage | PASS | `Examples/edges/rill/config.toml`; `Tests/RillCoreTests/RuntimeContractsTests.swift` |
+| Initial right-edge workspace correction | macOS 27, arm64; user inspected the relaunched app | Workspace capsules became a vertical list but their internals stayed horizontal | FAIL | User feedback in conversation, 2026-09-26 |
+| Vertical workspace content and adaptive start height | macOS 27, arm64; updated Debug app relaunched | Number above icons in a full-width capsule; icons stack downward and start content scrolls if needed | PENDING USER RECHECK | `Sources/RillPlatform/TopBarSurface.swift`; `./scripts/build.sh` and `./scripts/test.sh` pass; active app reports extension, OmniWM and Hello ready |
+| Right-edge panel smoke | macOS 27, arm64; active right-edge configuration, `--smoke-report` and `--snapshots` | One visible 32-point side panel and one independent top notch panel, neither key nor main | PASS for panel placement only | Temporary smoke report 2026-09-26; glass bar bitmap was not visually inspectable, so workspace rendering still needs user observation |
+| Top layout after vertical changes | macOS 27, arm64; active user configuration restored to `menuBarArea` | User reports the top rendering is good; extension, Hello and OmniWM remain ready | PASS (user-reported) | Conversation confirmation, 2026-09-26; live `rillctl status --json` |
 
 ## Remaining work and risks
 
-The automated geometry/configuration portion is implemented. The live reload sequence, narrow/tall overflow, Dock/rotation variants, and display disconnect/reconnect checks remain unperformed and keep the phase incomplete. No hardware evidence was inferred from unit geometry.
+The automated geometry/configuration portion is implemented. The live reload sequence, narrow/tall overflow, Dock/rotation variants, and display disconnect/reconnect checks remain unperformed and keep the phase incomplete. The revised right-edge workspace content has been relaunched but awaits user visual confirmation and click/scroll observation. No hardware evidence was inferred from unit geometry.
 
 ## Next agent handoff
 
