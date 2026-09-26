@@ -45,6 +45,8 @@ IDs are 1–64 characters, start with an ASCII letter or digit, and then use let
 | `spacing` | number | `10` | 0–64 |
 | `animation_ms` | integer | `160` | 0–5000; `0` disables workspace focus motion |
 
+On horizontal bars, `padding` also gives each clipped module group an inner left/right margin. This leaves room for glass effects and the focused workspace's motion at the screen and notch boundaries.
+
 `flat` keeps modules and workspace states transparent, matching a minimal continuous bar. `segmented` gives each module a subtle capsule and gives the focused workspace a stronger capsule. `glass` uses SwiftUI's native Liquid Glass effect on macOS 26 or newer over a transparent bar; workspace lists use one glass capsule per space instead of an enclosing group capsule, and default text follows the current light/dark appearance. macOS 14–25 receive a translucent fallback with the same geometry. Explicit visual tokens override the selected preset:
 
 When the focused workspace changes, a single capsule indicator glides between workspace buttons, like a native tab-bar selection, while the color and a subtle horizontal emphasis interpolate with it. The native spring is derived from `animation_ms`. The transition is automatically disabled when macOS Reduce Motion is enabled, and can also be disabled in the configuration with `animation_ms = 0`.
