@@ -47,14 +47,14 @@ IDs are 1–64 characters, start with an ASCII letter or digit, and then use let
 
 On horizontal bars, `padding` also gives each clipped module group an inner left/right margin. This leaves room for glass effects and the focused workspace's motion at the screen and notch boundaries.
 
-`flat` keeps modules and workspace states transparent, matching a minimal continuous bar. `segmented` gives each module a subtle capsule and gives the focused workspace a stronger capsule. `glass` uses SwiftUI's native Liquid Glass effect on macOS 26 or newer over a transparent bar; workspace lists use one glass capsule per space instead of an enclosing group capsule, and default text follows the current light/dark appearance. macOS 14–25 receive a translucent fallback with the same geometry. Explicit visual tokens override the selected preset:
+`flat` keeps modules and workspace states transparent, matching a minimal continuous bar. `segmented` gives each module a subtle capsule and gives the focused workspace a stronger capsule. `glass` uses SwiftUI's native Liquid Glass effect on macOS 26 or newer over a transparent bar; its untinted default follows the system's Liquid Glass appearance choice. Workspace lists use one glass capsule per space instead of an enclosing group capsule, and default text follows the current light/dark appearance. macOS 14–25 receive a translucent fallback with the same geometry. An explicit `module_background` or module `style.background` tints glass modules on macOS 26+ and fills fallback capsules on older systems. The focused workspace keeps its separate `focused_workspace_background` fill. Explicit visual tokens override the selected preset:
 
 When the focused workspace changes, a single capsule indicator glides between workspace buttons, like a native tab-bar selection, while the color and a subtle horizontal emphasis interpolate with it. The native spring is derived from `animation_ms`. The transition is automatically disabled when macOS Reduce Motion is enabled, and can also be disabled in the configuration with `animation_ms = 0`.
 
 | Key | Segmented | Flat | Glass | Bounds |
 | --- | --- | --- | --- | --- |
 | `surface_background` | `background` | `background` | transparent | color |
-| `module_background` | `#2A2F39FF` | transparent | `#FFFFFF14` tint/fallback | color |
+| `module_background` | `#2A2F39FF` | transparent | system glass without tint; `#FFFFFF14` fallback | color |
 | `workspace_background` | transparent | transparent | transparent | color |
 | `focused_workspace_background` | `#3B4252FF` | transparent | `#FFFFFFD9` | color |
 | `border_color` | `#FFFFFF18` | transparent | `#FFFFFF20` fallback | color |
@@ -83,7 +83,6 @@ preset = "glass"
 surface_background = "#00000000"
 surface_material = "none"
 adaptive_text = true
-module_background = "#FFFFFF14"
 workspace_background = "#00000000"
 focused_workspace_background = "#FFFFFFD9"
 border_color = "#FFFFFF20"

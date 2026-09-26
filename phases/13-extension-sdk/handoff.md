@@ -52,6 +52,13 @@ fixtures, docs and evidence.
 - Added architecture, migration/protocol/security, authoring, accessibility
   and troubleshooting documentation. `rillctl status/diagnostics` now includes
   extension health. The app now honors its documented `--config` argument.
+- After user comparison of clear and frosted system appearances, removed the
+  implicit tint from macOS 26+ glass modules and replaced the notch panel's
+  classic regular material with untinted native Liquid Glass. An explicit
+  module or theme background remains an opt-in tint; macOS 14–25 retains the
+  translucent fallback. The active user's explicit `module_background` was
+  removed after a timestamped configuration backup. The focused workspace's
+  separate fill was left unchanged.
 
 ## Verification record
 
@@ -75,6 +82,7 @@ notched hardware, VoiceOver and Reduce Motion observations were not performed.
 | Full initial-node VoiceOver, keyboard, increased-size/overflow and Reduce Motion audit | Real assistive/manual session required | NOT RUN | None |
 | Actual notched-hardware compact/expanded/dismissed, clicks, fullscreen, Spaces, sleep/wake, menu reveal and frame pacing | Real notched hardware required | NOT RUN | None |
 | Extension idle CPU/memory, update latency and expansion/collapse pacing against phase-11 method | Instruments/soak session and stability limits required | NOT RUN | None |
+| System glass appearance integration | macOS 27 arm64; active top configuration after removing explicit module tint | `./scripts/build.sh` and `./scripts/test.sh` pass (80 app tests, 6 IPC tests); relaunched app has two panels, no config error and ready extension/Hello/OmniWM. Clear/frosted visual comparison still needs user observation. | PARTIAL PASS | Current session build/test and `rillctl status/diagnostics`, 2026-09-26 |
 
 An informational 1.2-second startup smoke measured 1.35 s wall, 0.15 s user,
 0.04 s system, 70,287,360-byte maximum RSS and 23,724,920-byte peak memory
@@ -86,7 +94,8 @@ pacing measurement and does not satisfy the performance acceptance check.
 The API remains experimental. Required manual acceptance is incomplete:
 multi-display/four-edge runtime observation; full semantic accessibility and
 overflow audit; exact reload process-count observation; real notch behavior;
-and extension-specific CPU, memory, latency and frame-pacing limits. The local
+and extension-specific CPU, memory, latency and frame-pacing limits. The new
+native-glass appearance also awaits a user visual check in both OS modes. The local
 trust checks do not sandbox an accepted executable; documentation states this
 explicitly. The public-AppKit notch strategy may need geometry/fullscreen
 changes after hardware observation.
@@ -99,8 +108,10 @@ changes after hardware observation.
 - Artifacts: `Packages/RillExtensionKit/`, `Sources/RillExtensions/`,
   `Examples/extensions/`, `docs/extensions.md`, `docs/user/extensions.md`, and
   `evidence/extension-smoke.json`.
-- Cleanup / test-environment changes: no personal configuration was changed;
-  smoke panels terminated automatically. SwiftPM build products exist under
+- Cleanup / test-environment changes: the active personal configuration now
+  omits the former `module_background = "#FFFFFF14"` override; its pre-change
+  backup is `~/.config/rill/config.toml.before-native-glass-20260926-155625`.
+  Smoke panels terminated automatically. SwiftPM build products exist under
   package-local `.build` directories and are ignored.
 - Completion date / evidence reviewer: incomplete; owner/manual evidence still
   required.
