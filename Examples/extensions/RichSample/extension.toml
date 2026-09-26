@@ -1,0 +1,14 @@
+[extension]
+api_version = 2
+id = "dev.rill.sample.rich"
+name = "Rill Rich SDK Sample"
+executable = "./.build/release/RillRichSample"
+requested_capabilities = ["actions", "host.appearance"]
+
+[[extension.contributions]]
+id = "rich-bar"
+kind = "module"
+
+[[extension.contributions]]
+id = "rich-notch"
+kind = "notchWidget"

@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import TOMLDecoder
 
 public enum ConfigurationSource: Sendable, Equatable {
@@ -148,7 +149,8 @@ public struct ConfigurationParser: Sendable {
             throw ConfigurationLoadError([diagnostic(for: error)])
         }
 
-        let resolved = try resolvePlugins(in: resolveRelativePaths(in: decoded, source: source), source: source)
+        let relative = resolveRelativePaths(in: decoded, source: source)
+        let resolved = try resolveExtensions(in: resolvePlugins(in: relative, source: source), source: source)
         let diagnostics = resolved.validate()
         guard diagnostics.isEmpty else {
             throw ConfigurationLoadError(diagnostics)
@@ -212,7 +214,68 @@ public struct ConfigurationParser: Sendable {
         for index in result.plugins.indices {
             result.plugins[index].path = resolve(result.plugins[index].path, relativeTo: baseURL)
         }
+        for index in result.extensions.indices {
+            result.extensions[index].path = resolve(result.extensions[index].path, relativeTo: baseURL)
+        }
         return result
+    }
+
+    private func resolveExtensions(
+        in configuration: AppConfiguration,
+        source: ConfigurationSource
+    ) throws -> AppConfiguration {
+        guard !configuration.extensions.isEmpty else { return configuration }
+        var result = configuration
+        for index in result.extensions.indices {
+            let package = URL(fileURLWithPath: result.extensions[index].path, isDirectory: true).standardizedFileURL
+            let field = "extensions[\(index)].path"
+            try validateTrustedExtensionItem(package, field: field, requiresExecutable: false)
+            let manifestURL = package.appendingPathComponent("extension.toml")
+            try validateTrustedExtensionItem(manifestURL, field: field, requiresExecutable: false)
+            let text: String
+            do { text = try String(contentsOf: manifestURL, encoding: .utf8) }
+            catch { throw ConfigurationLoadError([.init(path: field, message: "Cannot read extension manifest at \(manifestURL.path): \(error.localizedDescription)")]) }
+            let file: ExtensionManifestFile
+            do { file = try TOMLDecoder().decode(ExtensionManifestFile.self, from: text) }
+            catch { throw ConfigurationLoadError([.init(path: field, message: "Invalid extension manifest at \(manifestURL.path): \(error)")]) }
+            let manifest = file.extension
+            guard manifest.apiVersion == RillExtensionAPI.version else {
+                throw ConfigurationLoadError([.init(path: field, message: "Extension '\(result.extensions[index].id)' uses unsupported API version \(manifest.apiVersion); expected \(RillExtensionAPI.version)")])
+            }
+            guard manifest.id == result.extensions[index].id else {
+                throw ConfigurationLoadError([.init(path: field, message: "Extension manifest ID '\(manifest.id)' does not match configured ID '\(result.extensions[index].id)'")])
+            }
+            let executable = URL(fileURLWithPath: resolve(manifest.executable, relativeTo: package))
+            try validateTrustedExtensionItem(executable, field: field, requiresExecutable: true)
+            result.extensions[index].name = manifest.name
+            result.extensions[index].executable = executable.path
+            result.extensions[index].args = manifest.args
+            result.extensions[index].requestedCapabilities = manifest.requestedCapabilities
+            result.extensions[index].contributions = manifest.contributions
+        }
+        return result
+    }
+
+    private func validateTrustedExtensionItem(
+        _ url: URL,
+        field: String,
+        requiresExecutable: Bool
+    ) throws {
+        let attributes: [FileAttributeKey: Any]
+        do { attributes = try FileManager.default.attributesOfItem(atPath: url.path) }
+        catch { throw ConfigurationLoadError([.init(path: field, message: "Missing extension item \(url.path)")]) }
+        if attributes[.type] as? FileAttributeType == .typeSymbolicLink {
+            throw ConfigurationLoadError([.init(path: field, message: "Extension package, manifest and executable must not be symbolic links: \(url.path)")])
+        }
+        if let owner = attributes[.ownerAccountID] as? NSNumber, owner.uint32Value != getuid() {
+            throw ConfigurationLoadError([.init(path: field, message: "Extension item is not owned by the current user: \(url.path)")])
+        }
+        if let permissions = attributes[.posixPermissions] as? NSNumber, permissions.intValue & 0o022 != 0 {
+            throw ConfigurationLoadError([.init(path: field, message: "Extension item is group/other writable: \(url.path)")])
+        }
+        if requiresExecutable && !FileManager.default.isExecutableFile(atPath: url.path) {
+            throw ConfigurationLoadError([.init(path: field, message: "Extension executable is not executable: \(url.path)")])
+        }
     }
 
     private func resolvePlugins(
@@ -270,6 +333,44 @@ public struct ConfigurationParser: Sendable {
 
 private struct PluginManifestFile: Decodable {
     let plugin: PluginManifest
+}
+
+private struct ExtensionManifestFile: Decodable {
+    let `extension`: ExtensionManifest
+
+    enum CodingKeys: String, CodingKey, CaseIterable { case `extension` }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.strictContainer(keyedBy: CodingKeys.self)
+        `extension` = try container.decode(ExtensionManifest.self, forKey: .extension)
+    }
+}
+
+private struct ExtensionManifest: Decodable {
+    let apiVersion: Int
+    let id: String
+    let name: String
+    let executable: String
+    let args: [String]
+    let requestedCapabilities: [RillExtensionCapability]
+    let contributions: [ExtensionContributionSpec]
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case apiVersion = "api_version"
+        case id, name, executable, args, contributions
+        case requestedCapabilities = "requested_capabilities"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.strictContainer(keyedBy: CodingKeys.self)
+        apiVersion = try container.decode(Int.self, forKey: .apiVersion)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        executable = try container.decode(String.self, forKey: .executable)
+        args = try container.decodeIfPresent([String].self, forKey: .args) ?? []
+        requestedCapabilities = try container.decodeIfPresent([RillExtensionCapability].self, forKey: .requestedCapabilities) ?? []
+        contributions = try container.decode([ExtensionContributionSpec].self, forKey: .contributions)
+    }
 }
 
 private struct PluginManifest: Decodable {
@@ -387,6 +488,8 @@ public enum ManagedResourceDescriptor: Hashable, Sendable {
     case provider(ProviderID)
     case surface(SurfaceID)
     case module(ModuleID)
+    case uiExtension(String)
+    case notchWidget(String)
 }
 
 public protocol ManagedConfigurationResource: Sendable {
@@ -426,8 +529,10 @@ public actor ConfigurationCoordinator {
         let generation = (activeSnapshot?.generation ?? 0) + 1
         let descriptors =
             configuration.providers.map { ManagedResourceDescriptor.provider($0.id) } +
+            configuration.extensions.map { ManagedResourceDescriptor.uiExtension($0.id) } +
             configuration.modules.map { ManagedResourceDescriptor.module($0.id) } +
-            configuration.surfaces.map { ManagedResourceDescriptor.surface($0.id) }
+            configuration.surfaces.map { ManagedResourceDescriptor.surface($0.id) } +
+            configuration.notchWidgets.map { ManagedResourceDescriptor.notchWidget($0.id) }
         var staged: [any ManagedConfigurationResource] = []
 
         do {

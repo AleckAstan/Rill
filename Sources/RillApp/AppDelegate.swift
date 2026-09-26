@@ -33,6 +33,7 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
     private var watcher: ConfigurationWatcher?
     private var ipcServer: IPCServer?
     private let moduleRuntime = NativeModuleRuntime()
+    private let extensionRuntime = ExtensionRuntimeStore()
     private let generationGate = ActiveGenerationGate()
     private let providerInvalidations = ProviderInvalidationCenter()
     private lazy var coordinator = ConfigurationCoordinator { descriptor, configuration, generation in
@@ -42,7 +43,8 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
                 surfaceID: surfaceID,
                 configuration: configuration,
                 generation: generation,
-                moduleRuntime: self.moduleRuntime
+                moduleRuntime: self.moduleRuntime,
+                extensionRuntime: self.extensionRuntime
             )
         case .module(let moduleID):
             guard let module = configuration.modules.first(where: { $0.id == moduleID }) else {
@@ -89,6 +91,13 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
             return await GenericProviderResource(spec: provider, generation: generation, runtime: self.moduleRuntime) {
                 [generationGate = self.generationGate] candidate in await generationGate.accepts(candidate)
             }
+        case .uiExtension(let extensionID):
+            guard let spec = configuration.extensions.first(where: { $0.id == extensionID }) else {
+                return EmptyManagedResource()
+            }
+            return try await ExtensionHostResource(spec: spec, generation: generation, runtime: self.extensionRuntime)
+        case .notchWidget(let id):
+            return try await NotchWidgetResource(id: id, configuration: configuration, runtime: self.extensionRuntime)
         }
     }
     private var configurationStatus = "Configuration has not loaded."
@@ -232,7 +241,14 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
         do {
             await watcher?.stop()
             watcher = nil
-            let resolution = try ConfigurationResolver().resolve()
+            let arguments = ProcessInfo.processInfo.arguments
+            let explicitPath: String?
+            if let index = arguments.firstIndex(of: "--config"), arguments.indices.contains(index + 1) {
+                explicitPath = arguments[index + 1]
+            } else {
+                explicitPath = nil
+            }
+            let resolution = try ConfigurationResolver().resolve(explicitPath: explicitPath)
             let snapshot = try ConfigurationParser().load(resolution)
             activeConfigurationPath = resolution.source.fileURL?.path
             let result = await coordinator.apply(
@@ -314,16 +330,26 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
                     "items": .array(values)
                 ]))
             })
+            let extensions = Dictionary(uniqueKeysWithValues: extensionRuntime.health.map { id, health in
+                (id, JSONValue.object([
+                    "health": .string(health.rawValue),
+                    "diagnostic": extensionRuntime.diagnostics[id].map(JSONValue.string) ?? .null
+                ]))
+            })
             return .init(requestID: request.requestID, result: .object([
                 "running": .bool(true),
                 "generation": .number(Double(snapshot?.generation ?? 0)),
                 "configuration_error": lastConfigurationError.map(JSONValue.string) ?? .null,
                 "providers": .object(providers),
+                "extensions": .object(extensions),
                 "workspaces": .object(workspaces)
             ]))
         case "diagnostics":
             let providers = Dictionary(uniqueKeysWithValues: moduleRuntime.store.providerHealth.map {
                 ($0.key.rawValue, JSONValue.string($0.value))
+            })
+            let extensions = Dictionary(uniqueKeysWithValues: extensionRuntime.health.map {
+                ($0.key, JSONValue.string($0.value.rawValue))
             })
             return .init(requestID: request.requestID, result: .object([
                 "schema_version": .number(1),
@@ -331,6 +357,7 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
                 "configuration_path_present": .bool(activeConfigurationPath != nil),
                 "generation": .number(Double(activeGeneration)),
                 "provider_health": .object(providers),
+                "extension_health": .object(extensions),
                 "visible_panel_count": .number(Double(NSApp.windows.compactMap { $0 as? RillPanel }.filter(\.isVisible).count)),
                 "configuration_error_present": .bool(lastConfigurationError != nil),
                 "redaction": .string("Window titles, script output, workspace names and arbitrary module data are omitted.")
@@ -474,7 +501,7 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
                 }
                 passed = passed &&
                     !(record["label"] ?? "").isEmpty &&
-                    !(record["value"] ?? "").isEmpty
+                    (module.kind == .extensionModule || !(record["value"] ?? "").isEmpty)
                 if module.onClick != nil {
                     passed = passed &&
                         record["role"] == NSAccessibility.Role.button.rawValue &&

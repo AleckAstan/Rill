@@ -19,4 +19,4 @@ Prepare an archive and downloadable ZIP or DMG, checksum, provenance/build notes
 
 ## Beyond 0.1 (not gates)
 
-Composable floating widgets/popovers, richer layout trees, additional system/media providers, theme sharing, configuration tooling, and a carefully designed extension API. Preserve the core surface/provider separation so these can follow without replacing the bar runtime.
+Composable floating widgets/popovers, richer layout trees, additional system/media providers, theme sharing, configuration tooling, and a carefully designed extension API. Phase 13 implements an experimental out-of-process SDK, declarative renderer and notch-widget foundation; its remaining hardware/accessibility/performance validation is not a 0.1 gate. Preserve the core surface/provider separation so these can follow without replacing the bar runtime.

@@ -1,0 +1,43 @@
+schema_version = 2
+
+[theme]
+preset = "glass"
+font = "SF Pro Text"
+font_size = 13
+foreground = "#F2F2F7FF"
+background = "#00000000"
+accent = "#89B4FAFF"
+corner_radius = 10
+padding = 8
+spacing = 10
+animation_ms = 160
+
+[[extensions]]
+id = "dev.rill.sample.rich"
+path = "./RichSample"
+grant = ["actions", "host.appearance"]
+
+[[modules]]
+id = "rich"
+kind = "extension"
+extension = "dev.rill.sample.rich"
+contribution = "rich-bar"
+
+[[surfaces]]
+id = "main"
+kind = "bar"
+display = "all"
+edge = "top"
+top_placement = "menuBarArea"
+start = ["rich"]
+
+[[notch_widgets]]
+id = "sample-notch"
+extension = "dev.rill.sample.rich"
+contribution = "rich-notch"
+display = "primary"
+priority = 100
+collision = "highest_priority"
+compact_width = 240
+expanded_width = 440
+expanded_height = 220

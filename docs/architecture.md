@@ -11,6 +11,7 @@ Status: proposed starting design; phase 01 validates platform assumptions. All s
 - `Sources/RillPlatform/`: AppKit panel controllers, screen inventory, appearance/accessibility integration.
 - `Sources/RillModules/`: SwiftUI module renderers and module lifecycle.
 - `Sources/RillProviders/`: native information, process supervision, generic producers, yabai/AeroSpace/OmniWM adapters.
+- `Sources/RillExtensions/` and `Packages/RillExtensionKit/`: out-of-process UI-extension supervision, bounded protocol, native declarative renderer and experimental notch widgets.
 - `Sources/RillIPC/` and `Sources/rillctl/`: local transport, command parsing and replies.
 - `Tests/`: unit/integration fixtures and controllable fake producers; UI checks where useful.
 - `Examples/`, `docs/user/`, `scripts/`: distributable configs, user guides, build/release helpers.
@@ -42,6 +43,13 @@ loads plugin code or lets a package supply arbitrary SwiftUI. The public host
 API remains the versioned per-user `rillctl` IPC protocol. Manifest resolution
 is preparation work, so a missing/invalid package rolls back with the active
 generation intact.
+
+UI extensions use the separate experimental API v2. They are local
+user-trusted executables supervised per configuration generation and exchange
+only bounded, length-framed declarative trees and opaque actions. Rill owns all
+AppKit/SwiftUI objects. Extension manifests negotiate explicit capabilities;
+configuration validation performs ownership/mode checks without launching
+code. API-v1 provider plugins remain unchanged. See [extensions.md](extensions.md).
 
 User-configured commands run as the logged-in user. Use executable plus argument arrays, explicit timeouts and output bounds. Shell interpretation happens only when a user explicitly invokes a shell executable. Data received from providers never becomes code or implicit action. No root helper, SIP change or scripting addition is required by Rill's baseline; unavailable manager operations report capability errors.
 

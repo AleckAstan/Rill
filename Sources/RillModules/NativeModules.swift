@@ -904,7 +904,7 @@ public final class NativeModuleRuntime: NSObject {
                     health: .unavailable
                 )
             }
-        case .text, .separator:
+        case .text, .separator, .extensionModule:
             break
         }
     }
@@ -937,7 +937,7 @@ public final class NativeModuleRuntime: NSObject {
                 if workspaceModulesByProvider[provider]?.isEmpty == true { workspaceModulesByProvider[provider] = nil }
             }
             if mockReferences[module.id] == nil { store.mockModules[module.id] = nil }
-        case .text, .separator:
+        case .text, .separator, .extensionModule:
             break
         }
         store.actionFailures[module.id] = nil

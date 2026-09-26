@@ -127,6 +127,7 @@ public enum SurfaceKind: String, Codable, Sendable { case bar }
 public enum ProviderKind: String, Codable, Sendable { case yabai, aerospace, omniwm, event, command, stream, plugin }
 public enum ModuleKind: String, Codable, Sendable {
     case text, clock, frontmostApp, battery, wifi, volume, separator, workspaces, custom
+    case extensionModule = "extension"
 }
 public enum TopPlacement: String, Codable, Sendable { case menuBarArea, belowSystemUI }
 public enum SafeAreaPolicy: String, Codable, Sendable { case system }
@@ -332,9 +333,12 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
     public var onClick: ActionSpec?
     public var style: ModuleStyle?
     public var states: [String: ModuleStyle]
+    public var extensionID: String?
+    public var contribution: String?
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case id, kind, provider, text, format, placeholder, style, states
+        case id, kind, provider, text, format, placeholder, style, states, contribution
+        case extensionID = "extension"
         case onClick = "on_click"
     }
 
@@ -347,7 +351,9 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
         placeholder: String? = nil,
         onClick: ActionSpec? = nil,
         style: ModuleStyle? = nil,
-        states: [String: ModuleStyle] = [:]
+        states: [String: ModuleStyle] = [:],
+        extensionID: String? = nil,
+        contribution: String? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -358,6 +364,8 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
         self.onClick = onClick
         self.style = style
         self.states = states
+        self.extensionID = extensionID
+        self.contribution = contribution
     }
 
     public init(from decoder: Decoder) throws {
@@ -371,6 +379,8 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
         onClick = try container.decodeIfPresent(ActionSpec.self, forKey: .onClick)
         style = try container.decodeIfPresent(ModuleStyle.self, forKey: .style)
         states = try container.decodeIfPresent([String: ModuleStyle].self, forKey: .states) ?? [:]
+        extensionID = try container.decodeIfPresent(String.self, forKey: .extensionID)
+        contribution = try container.decodeIfPresent(String.self, forKey: .contribution)
     }
 }
 
@@ -454,6 +464,114 @@ public struct PluginSpec: Codable, Sendable, Equatable {
         let container = try decoder.strictContainer(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         path = try container.decode(String.self, forKey: .path)
+    }
+}
+
+public struct ExtensionContributionSpec: Codable, Hashable, Sendable {
+    public var id: String
+    public var kind: RillExtensionContributionKind
+
+    enum CodingKeys: String, CodingKey, CaseIterable { case id, kind }
+
+    public init(id: String, kind: RillExtensionContributionKind) {
+        self.id = id
+        self.kind = kind
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.strictContainer(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        kind = try container.decode(RillExtensionContributionKind.self, forKey: .kind)
+    }
+}
+
+/// A UI extension package. Only id/path/grant are user-authored; the loader
+/// fills the resolved manifest fields without running the executable.
+public struct ExtensionSpec: Codable, Sendable, Equatable {
+    public var id: String
+    public var path: String
+    public var grant: [RillExtensionCapability]
+    public var name: String?
+    public var executable: String?
+    public var args: [String]
+    public var requestedCapabilities: [RillExtensionCapability]
+    public var contributions: [ExtensionContributionSpec]
+
+    enum CodingKeys: String, CodingKey, CaseIterable { case id, path, grant }
+
+    public init(
+        id: String,
+        path: String,
+        grant: [RillExtensionCapability] = [],
+        name: String? = nil,
+        executable: String? = nil,
+        args: [String] = [],
+        requestedCapabilities: [RillExtensionCapability] = [],
+        contributions: [ExtensionContributionSpec] = []
+    ) {
+        self.id = id; self.path = path; self.grant = grant; self.name = name
+        self.executable = executable; self.args = args
+        self.requestedCapabilities = requestedCapabilities; self.contributions = contributions
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.strictContainer(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        path = try container.decode(String.self, forKey: .path)
+        grant = try container.decodeIfPresent([RillExtensionCapability].self, forKey: .grant) ?? []
+        name = nil; executable = nil; args = []; requestedCapabilities = []; contributions = []
+    }
+}
+
+public enum NotchCollisionPolicy: String, Codable, Sendable { case highestPriority = "highest_priority" }
+
+public struct NotchWidgetSpec: Codable, Sendable, Equatable {
+    public var id: String
+    public var extensionID: String
+    public var contribution: String
+    public var display: DisplaySelector
+    public var priority: Int
+    public var collision: NotchCollisionPolicy
+    public var compactWidth: Double
+    public var expandedWidth: Double
+    public var expandedHeight: Double
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case id, contribution, display, priority, collision
+        case extensionID = "extension"
+        case compactWidth = "compact_width"
+        case expandedWidth = "expanded_width"
+        case expandedHeight = "expanded_height"
+    }
+
+    public init(
+        id: String,
+        extensionID: String,
+        contribution: String,
+        display: DisplaySelector = .primary,
+        priority: Int = 0,
+        collision: NotchCollisionPolicy = .highestPriority,
+        compactWidth: Double = 220,
+        expandedWidth: Double = 420,
+        expandedHeight: Double = 180
+    ) {
+        self.id = id; self.extensionID = extensionID; self.contribution = contribution
+        self.display = display; self.priority = priority; self.collision = collision
+        self.compactWidth = compactWidth; self.expandedWidth = expandedWidth
+        self.expandedHeight = expandedHeight
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.strictContainer(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        extensionID = try container.decode(String.self, forKey: .extensionID)
+        contribution = try container.decode(String.self, forKey: .contribution)
+        display = try container.decodeIfPresent(DisplaySelector.self, forKey: .display) ?? .primary
+        priority = try container.decodeIfPresent(Int.self, forKey: .priority) ?? 0
+        collision = try container.decodeIfPresent(NotchCollisionPolicy.self, forKey: .collision) ?? .highestPriority
+        compactWidth = try container.decodeIfPresent(Double.self, forKey: .compactWidth) ?? 220
+        expandedWidth = try container.decodeIfPresent(Double.self, forKey: .expandedWidth) ?? 420
+        expandedHeight = try container.decodeIfPresent(Double.self, forKey: .expandedHeight) ?? 180
     }
 }
 
@@ -830,10 +948,13 @@ public struct AppConfiguration: Codable, Sendable, Equatable {
     public var modules: [ModuleSpec]
     public var providers: [ProviderSpec]
     public var plugins: [PluginSpec]
+    public var extensions: [ExtensionSpec]
+    public var notchWidgets: [NotchWidgetSpec]
 
     enum CodingKeys: String, CodingKey, CaseIterable {
         case schemaVersion = "schema_version"
-        case theme, surfaces, modules, providers, plugins
+        case theme, surfaces, modules, providers, plugins, extensions
+        case notchWidgets = "notch_widgets"
     }
 
     public init(
@@ -842,7 +963,9 @@ public struct AppConfiguration: Codable, Sendable, Equatable {
         surfaces: [SurfaceSpec] = [],
         modules: [ModuleSpec] = [],
         providers: [ProviderSpec] = [],
-        plugins: [PluginSpec] = []
+        plugins: [PluginSpec] = [],
+        extensions: [ExtensionSpec] = [],
+        notchWidgets: [NotchWidgetSpec] = []
     ) {
         self.schemaVersion = schemaVersion
         self.theme = theme
@@ -850,6 +973,8 @@ public struct AppConfiguration: Codable, Sendable, Equatable {
         self.modules = modules
         self.providers = providers
         self.plugins = plugins
+        self.extensions = extensions
+        self.notchWidgets = notchWidgets
     }
 
     public init(from decoder: Decoder) throws {
@@ -860,6 +985,8 @@ public struct AppConfiguration: Codable, Sendable, Equatable {
         modules = try container.decodeIfPresent([ModuleSpec].self, forKey: .modules) ?? []
         providers = try container.decodeIfPresent([ProviderSpec].self, forKey: .providers) ?? []
         plugins = try container.decodeIfPresent([PluginSpec].self, forKey: .plugins) ?? []
+        extensions = try container.decodeIfPresent([ExtensionSpec].self, forKey: .extensions) ?? []
+        notchWidgets = try container.decodeIfPresent([NotchWidgetSpec].self, forKey: .notchWidgets) ?? []
     }
 }
 
@@ -949,8 +1076,11 @@ public extension AppConfiguration {
             }
         }
 
-        if schemaVersion != 1 {
-            append("schema_version", "Unsupported schema version \(schemaVersion); expected 1")
+        if schemaVersion != 1 && schemaVersion != 2 {
+            append("schema_version", "Unsupported schema version \(schemaVersion); expected 1 or 2")
+        }
+        if schemaVersion == 1 && (!extensions.isEmpty || !notchWidgets.isEmpty || modules.contains(where: { $0.kind == .extensionModule })) {
+            append("schema_version", "UI extensions require schema_version = 2; provider plugins remain version 1 compatible")
         }
 
         validateIDs(surfaces.map(\.id), path: "surfaces")
@@ -965,6 +1095,65 @@ public extension AppConfiguration {
             }
             if !pluginIDs.insert(plugin.id).inserted { append("\(path).id", "Duplicate ID '\(plugin.id)'") }
             if plugin.path.isEmpty { append("\(path).path", "Plugin path must not be empty") }
+        }
+        var extensionIDs = Set<String>()
+        if extensions.count > 64 { append("extensions", "At most 64 UI extensions are supported") }
+        for (index, item) in extensions.enumerated() {
+            let path = "extensions[\(index)]"
+            if item.id.isEmpty || item.id.count > 64 || item.id.range(of: #"^[A-Za-z0-9][A-Za-z0-9._-]*$"#, options: .regularExpression) == nil {
+                append("\(path).id", "ID must be 1...64 ASCII letters, digits, dot, underscore, or hyphen")
+            }
+            if !extensionIDs.insert(item.id).inserted { append("\(path).id", "Duplicate ID '\(item.id)'") }
+            if item.path.isEmpty { append("\(path).path", "Extension path must not be empty") }
+            if let name = item.name, name.isEmpty || name.count > 128 {
+                append("\(path).path", "Manifest name must contain 1...128 characters")
+            }
+            if item.args.count > 64 || item.args.contains(where: { $0.count > 4_096 }) {
+                append("\(path).path", "Manifest args allow at most 64 values of 4096 characters")
+            }
+            if Set(item.grant).count != item.grant.count { append("\(path).grant", "Duplicate capability grant") }
+            if Set(item.requestedCapabilities).count != item.requestedCapabilities.count {
+                append("\(path).path", "Manifest contains duplicate requested capabilities")
+            }
+            let requested = Set(item.requestedCapabilities)
+            let granted = Set(item.grant)
+            for capability in requested.subtracting(granted) {
+                append("\(path).grant", "Manifest requests unauthorized capability '\(capability.rawValue)'")
+            }
+            if item.executable == nil { append("\(path).path", "Extension manifest was not resolved") }
+            var contributionIDs = Set<String>()
+            for contribution in item.contributions {
+                if contribution.id.isEmpty || contribution.id.count > 64 || contribution.id.range(of: #"^[A-Za-z0-9][A-Za-z0-9._-]*$"#, options: .regularExpression) == nil {
+                    append("\(path).path", "Manifest contribution IDs must use 1...64 safe ASCII characters")
+                }
+                if !contributionIDs.insert(contribution.id).inserted {
+                    append("\(path).path", "Manifest contains duplicate contribution ID '\(contribution.id)'")
+                }
+            }
+        }
+        var notchIDs = Set<String>()
+        if notchWidgets.count > 64 { append("notch_widgets", "At most 64 notch widgets are supported") }
+        for (index, widget) in notchWidgets.enumerated() {
+            let path = "notch_widgets[\(index)]"
+            if widget.id.isEmpty || widget.id.count > 64 || widget.id.range(of: #"^[A-Za-z0-9][A-Za-z0-9._-]*$"#, options: .regularExpression) == nil {
+                append("\(path).id", "ID must be 1...64 ASCII letters, digits, dot, underscore, or hyphen")
+            }
+            if !notchIDs.insert(widget.id).inserted { append("\(path).id", "Duplicate ID '\(widget.id)'") }
+            guard let item = extensions.first(where: { $0.id == widget.extensionID }) else {
+                append("\(path).extension", "Unknown extension '\(widget.extensionID)'"); continue
+            }
+            if !item.contributions.contains(where: { $0.id == widget.contribution && $0.kind == .notchWidget }) {
+                append("\(path).contribution", "Unknown notchWidget contribution '\(widget.contribution)'")
+            }
+            if !(-1_000...1_000).contains(widget.priority) { append("\(path).priority", "Expected -1000...1000") }
+            validateFinite(widget.compactWidth, path: "\(path).compact_width", range: 80...800)
+            validateFinite(widget.expandedWidth, path: "\(path).expanded_width", range: 160...1200)
+            validateFinite(widget.expandedHeight, path: "\(path).expanded_height", range: 60...800)
+        }
+        for left in notchWidgets.indices {
+            for right in notchWidgets.indices where right > left && notchWidgets[left].display.mayResolveSameDisplay(as: notchWidgets[right].display) && notchWidgets[left].priority == notchWidgets[right].priority {
+                append("notch_widgets[\(right)].priority", "Colliding notch widgets require distinct priorities")
+            }
         }
 
         if theme.font.isEmpty || theme.font.count > 128 { append("theme.font", "Expected 1...128 characters") }
@@ -1112,7 +1301,21 @@ public extension AppConfiguration {
             } else if module.kind != .text, module.text != nil {
                 append("\(path).text", "Only text modules accept text")
             }
-            if let providerID = module.provider {
+            if module.kind == .extensionModule {
+                guard let extensionID = module.extensionID,
+                      let item = extensions.first(where: { $0.id == extensionID }) else {
+                    append("\(path).extension", "Extension modules require a configured extension")
+                    continue
+                }
+                guard let contribution = module.contribution,
+                      item.contributions.contains(where: { $0.id == contribution && $0.kind == .module }) else {
+                    append("\(path).contribution", "Unknown module contribution '\(module.contribution ?? "")'")
+                    continue
+                }
+                if module.provider != nil { append("\(path).provider", "Extension modules do not accept provider") }
+            } else if module.extensionID != nil || module.contribution != nil {
+                append("\(path).extension", "Only extension modules accept extension/contribution")
+            } else if let providerID = module.provider {
                 guard let provider = providersByID[providerID] else {
                     append("\(path).provider", "Unknown provider '\(providerID.rawValue)'")
                     continue

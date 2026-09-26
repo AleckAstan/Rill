@@ -1,6 +1,6 @@
 # Configuration reference
 
-Rill 0.1 configuration is strict TOML with `schema_version = 1`. Unknown keys, unsupported versions, invalid values and unresolved references are errors. Rill never executes configured programs while parsing or validating.
+Rill 0.1 configuration is strict TOML with `schema_version = 1`. Experimental UI extensions opt in to `schema_version = 2`; all version-1 meanings remain unchanged. Unknown keys, unsupported versions, invalid values and unresolved references are errors. Rill never executes configured programs while parsing or validating.
 
 ## Location and commands
 
@@ -19,12 +19,14 @@ Paths inside a file resolve relative to that file's directory. Executables must 
 
 | Key | Type | Required | Default |
 | --- | --- | --- | --- |
-| `schema_version` | integer | Yes | None; only `1` is accepted |
+| `schema_version` | integer | Yes | `1`; use `2` only for UI extensions/notch widgets |
 | `theme` | table | No | Theme defaults below |
 | `surfaces` | array of tables | No | Empty |
 | `modules` | array of tables | No | Empty |
 | `providers` | array of tables | No | Empty |
 | `plugins` | array of tables | No | Empty |
+| `extensions` | array of tables | No | Empty; requires schema 2 |
+| `notch_widgets` | array of tables | No | Empty; requires schema 2 |
 
 IDs are 1–64 characters, start with an ASCII letter or digit, and then use letters, digits, `.`, `_`, or `-`. IDs are unique within their type. Each module may belong to only one surface. Same-display-selector, same-edge surface overlap is rejected in version 1.
 
@@ -143,7 +145,7 @@ All providers require `id` and `kind`. Kinds are `yabai`, `aerospace`, `omniwm`,
 
 ## Modules and actions
 
-All modules require `id` and `kind`. Kinds are `text`, `clock`, `frontmostApp`, `battery`, `wifi`, `volume`, `separator`, `workspaces`, and `custom`. A `text` module requires its non-empty `text` value. `format` and `placeholder` are optional strings. `battery`, `wifi`, and `volume` render compact native SF Symbols and need no provider. `separator` draws an orientation-aware divider and has no data source. A `workspaces` module requires a `yabai`, `aerospace`, or `omniwm` provider. When its provider exposes application identities and a focused window, the focused workspace appends that application's name to its focused icon; the expanding selection capsule remains bounded by its surface slot and selects black or white text for contrast against its configured fill. A `custom` module requires an `event`, `command`, `stream`, or `plugin` provider.
+All modules require `id` and `kind`. Kinds are `text`, `clock`, `frontmostApp`, `battery`, `wifi`, `volume`, `separator`, `workspaces`, `custom`, and schema-2 `extension`. A `text` module requires its non-empty `text` value. `format` and `placeholder` are optional strings. `battery`, `wifi`, and `volume` render compact native SF Symbols and need no provider. `separator` draws an orientation-aware divider and has no data source. A `workspaces` module requires a `yabai`, `aerospace`, or `omniwm` provider. When its provider exposes application identities and a focused window, the focused workspace appends that application's name to its focused icon; the expanding selection capsule remains bounded by its surface slot and selects black or white text for contrast against its configured fill. A `custom` module requires an `event`, `command`, `stream`, or `plugin` provider. An `extension` module requires matching `extension` and `contribution` IDs declared by a validated v2 manifest; see [extension authoring](extensions.md).
 
 `on_click` accepts `executable`, optional `args = []`, and `timeout_ms = 5000` in the range 100–300000. It follows the same explicit executable-path rules. On `wifi`, `volume`, `battery`, and `frontmostApp`, an explicit action intentionally replaces the built-in native popover or application menu.
 

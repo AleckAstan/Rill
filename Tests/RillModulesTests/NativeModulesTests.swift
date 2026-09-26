@@ -97,6 +97,72 @@ final class NativeModuleValueTests: XCTestCase {
     }
 }
 
+final class ExtensionHostTests: XCTestCase {
+    @MainActor
+    func testRetiredGenerationCannotRemoveNewActionRouteOrPublishLateState() throws {
+        let runtime = ExtensionRuntimeStore()
+        var delivered = ""
+        runtime.register(extensionID: "reload", generation: 1, packageDirectory: FileManager.default.temporaryDirectory) { _, _ in
+            delivered = "old"
+        }
+        try runtime.publish(extensionID: "reload", generation: 1, contributionID: "module", presentation: .init(compact: .text("old")))
+        runtime.register(extensionID: "reload", generation: 2, packageDirectory: FileManager.default.temporaryDirectory) { _, _ in
+            delivered = "new"
+        }
+        try runtime.publish(extensionID: "reload", generation: 2, contributionID: "module", presentation: .init(compact: .text("new")))
+        try runtime.publish(extensionID: "reload", generation: 1, contributionID: "module", presentation: .init(compact: .text("late")))
+        runtime.unregister(extensionID: "reload", generation: 1)
+        runtime.perform(extensionID: "reload", contributionID: "module", actionID: "action")
+        XCTAssertEqual(delivered, "new")
+        XCTAssertEqual(runtime.presentations[.init(extensionID: "reload", contributionID: "module")]?.compact.text, "new")
+    }
+
+    @MainActor
+    func testCrashedExtensionIsRestartBoundedAndKeepsLastPresentation() async throws {
+        let runtime = ExtensionRuntimeStore()
+        let key = ExtensionContributionKey(extensionID: "crash", contributionID: "module")
+        runtime.register(extensionID: "crash", generation: 0, packageDirectory: FileManager.default.temporaryDirectory) { _, _ in }
+        try runtime.publish(extensionID: "crash", generation: 0, contributionID: "module", presentation: .init(compact: .text("last good")))
+        let spec = ExtensionSpec(
+            id: "crash",
+            path: FileManager.default.temporaryDirectory.path,
+            executable: "/bin/sh",
+            args: ["-c", "exit 17"],
+            contributions: [.init(id: "module", kind: .module)]
+        )
+        let host = try ExtensionHostResource(
+            spec: spec,
+            generation: 1,
+            runtime: runtime,
+            maximumLaunches: 1,
+            restartBaseDelay: .milliseconds(30)
+        )
+        await host.commit()
+        try await Task.sleep(for: .milliseconds(250))
+        XCTAssertEqual(runtime.health["crash"], .failed)
+        XCTAssertEqual(runtime.presentations[key]?.compact.text, "last good")
+        await host.stop()
+    }
+
+    @MainActor
+    func testHungExtensionStopsWithinGracePeriod() async throws {
+        let runtime = ExtensionRuntimeStore()
+        let spec = ExtensionSpec(
+            id: "hung",
+            path: FileManager.default.temporaryDirectory.path,
+            executable: "/bin/sh",
+            args: ["-c", "sleep 30"],
+            contributions: []
+        )
+        let host = try ExtensionHostResource(spec: spec, generation: 1, runtime: runtime)
+        await host.commit()
+        try await Task.sleep(for: .milliseconds(50))
+        let start = ContinuousClock.now
+        await host.stop()
+        XCTAssertLessThan(start.duration(to: .now), .seconds(1))
+    }
+}
+
 @MainActor
 final class NativeModuleLifecycleTests: XCTestCase {
     func testModuleInsertionAndRemovalReturnsLifecycleCountsToBaseline() async {

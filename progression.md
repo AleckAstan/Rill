@@ -1,6 +1,6 @@
 # Release progression
 
-Target: **Rill 0.1.0**. Planning scaffold: **COMPLETE**. Implementation: **IN PROGRESS**. Active phase: **12**. Phases 07–08 are deferred by the user while release preparation proceeds.
+Target: **Rill 0.1.0**. Planning scaffold: **COMPLETE**. Implementation: **IN PROGRESS**. Active phase: **13** by explicit user direction. Phases 07–08 and the external phase-12 release gates remain open.
 
 This is the authoritative tracker. Source paths and commands in the handoffs are planned until their phase implements them. No build, integration or platform test has passed merely because it appears in this roadmap.
 
@@ -18,6 +18,7 @@ This is the authoritative tracker. Source paths and commands in the handoffs are
 | 10 | [Harden reload, lifecycle and diagnostics](phases/10-recovery-diagnostics/description.md) | 07, 08, 09 | IN PROGRESS | [Checks](phases/10-recovery-diagnostics/verification.md) · [Handoff](phases/10-recovery-diagnostics/handoff.md) |
 | 11 | [Verify accessibility, animation and performance](phases/11-quality-performance/description.md) | 10 | IN PROGRESS | [Checks](phases/11-quality-performance/verification.md) · [Handoff](phases/11-quality-performance/handoff.md) |
 | 12 | [Package, document and release 0.1.0](phases/12-release/description.md) | 11 | IN PROGRESS | [Checks](phases/12-release/verification.md) · [Handoff](phases/12-release/handoff.md) |
+| 13 | [Build an extension SDK and notch-widget foundation](phases/13-extension-sdk/description.md) | 09, 10, 11, 12 | IN PROGRESS | Core implementation and automated evidence present; real notch/accessibility/performance checks open. [Checks](phases/13-extension-sdk/verification.md) · [Handoff](phases/13-extension-sdk/handoff.md) |
 
 ## Milestones
 
@@ -27,10 +28,11 @@ This is the authoritative tracker. Source paths and commands in the handoffs are
 - **Surface foundation:** 09 — top/bottom/left/right layouts and multiple displays.
 - **Release candidate:** 10–11 — recovery, diagnostics, accessibility and measured performance.
 - **Public 0.1.0:** 12 — documented, signed/notarized and published release with evidence.
+- **Post-0.1 extensibility:** 13 — out-of-process extension SDK, declarative native widgets and experimental notch surfaces.
 
 ## Dependency order
 
-01 → 02 → 03 → 04 → 05 → 06. Phases 07 and 08 each require 06 and are currently deferred. Phase 09 requires 04, 05 and 06 and is the active continuation. Phase 10 joins 07, 08 and 09; then 11 → 12. Use numerical order by default. No agent delegation is required by this roadmap.
+01 → 02 → 03 → 04 → 05 → 06. Phases 07 and 08 each require 06 and are currently deferred. Phase 09 requires 04, 05 and 06 and is the active continuation. Phase 10 joins 07, 08 and 09; then 11 → 12 → 13. Phase 13 is post-0.1 and must not advance ahead of the release gates without an explicit owner scope decision. Use numerical order by default. No agent delegation is required by this roadmap.
 
 ## Updating progress
 
@@ -129,3 +131,7 @@ User notch alignment validation update: the corrected layout was approved on the
 2026-09-26 Hello plugin deployment: the API-v1 Hello package was installed in the active `~/.config/rill` configuration and placed before the Wi-Fi status cluster. After relaunching the Debug app and explicitly reloading, generation 2 reports both `hello-source` and OmniWM ready. The user is now asked to visually verify the bar label and click popover.
 
 User plugin validation update: on the current macOS desktop, the user confirmed that “Hello Rill” is visible in the bar and its native Lorem Ipsum popover opens correctly. Recorded as user-reported PASS on 2026-09-26.
+
+2026-09-26 extension evolution planning: phase 13 is now defined for a post-0.1 extension SDK and experimental notch-widget foundation. It preserves API-v1 data plugins, proposes out-of-process Swift authoring through a bounded declarative native-rendering protocol, and explicitly excludes in-process code loading/marketplace work. It is NOT STARTED; phase 12 remains the active release phase.
+
+2026-09-26 phase-13 scope decision: the user explicitly requested implementation of phase 13 despite incomplete external/manual gates in phases 09–12. The phase is now active without reclassifying those prerequisites as complete. The separately buildable Swift SDK, strict schema/API-v2 manifest migration, framed protocol, bounded supervisor, declarative native renderer, bar integration, experimental notch panels, sample and documentation are implemented. SDK/app tests, crash/hang isolation, clean sample build/config validation and one-display automated rendering pass. Real notched-hardware behavior, full VoiceOver/keyboard/Reduce Motion audit and extension-specific performance/frame-pacing measurements remain open, so phase 13 stays IN PROGRESS.

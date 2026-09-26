@@ -131,6 +131,19 @@ final class TopBarGeometryTests: XCTestCase {
         XCTAssertTrue(DisplaySelection.select(.id(second.id), from: [first]).isEmpty)
     }
 
+    func testNotchWidgetCompactAndExpandedGeometryStayTopCentered() {
+        let screen = CGRect(x: 100, y: -200, width: 1512, height: 982)
+        let spec = NotchWidgetSpec(id: "test", extensionID: "extension", contribution: "notch")
+        let compact = NotchWidgetGeometry.frame(screen: screen, safeTopInset: 38, spec: spec, state: .compact)
+        let expanded = NotchWidgetGeometry.frame(screen: screen, safeTopInset: 38, spec: spec, state: .expanded)
+        XCTAssertEqual(compact.midX, screen.midX)
+        XCTAssertEqual(compact.maxY, screen.maxY)
+        XCTAssertEqual(compact.height, 38)
+        XCTAssertEqual(expanded.midX, screen.midX)
+        XCTAssertEqual(expanded.maxY, screen.maxY)
+        XCTAssertEqual(expanded.size, CGSize(width: 420, height: 180))
+    }
+
     private func assertDisjoint(
         _ lhs: CGRect,
         _ rhs: CGRect,
