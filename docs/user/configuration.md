@@ -42,31 +42,63 @@ IDs are 1–64 characters, start with an ASCII letter or digit, and then use let
 | `spacing` | number | `10` | 0–64 |
 | `animation_ms` | integer | `160` | 0–5000 |
 
-`flat` keeps modules and workspace states transparent, matching a minimal continuous bar. `segmented` gives each module a subtle capsule and gives the focused workspace a stronger capsule. `glass` uses SwiftUI's native Liquid Glass effect on macOS 26 or newer, over a transparent Rill surface; macOS 14–25 receive a translucent segmented fallback with the same geometry. Explicit visual tokens override the selected preset:
+`flat` keeps modules and workspace states transparent, matching a minimal continuous bar. `segmented` gives each module a subtle capsule and gives the focused workspace a stronger capsule. `glass` uses SwiftUI's native Liquid Glass effect on macOS 26 or newer over a transparent bar; workspace lists use one glass capsule per space instead of an enclosing group capsule, and default text follows the current light/dark appearance. macOS 14–25 receive a translucent fallback with the same geometry. Explicit visual tokens override the selected preset:
 
 | Key | Segmented | Flat | Glass | Bounds |
 | --- | --- | --- | --- | --- |
 | `surface_background` | `background` | `background` | transparent | color |
 | `module_background` | `#2A2F39FF` | transparent | `#FFFFFF14` tint/fallback | color |
 | `workspace_background` | transparent | transparent | transparent | color |
-| `focused_workspace_background` | `#3B4252FF` | transparent | `#FFFFFF24` | color |
+| `focused_workspace_background` | `#3B4252FF` | transparent | `#FFFFFFD9` | color |
 | `border_color` | `#FFFFFF18` | transparent | `#FFFFFF20` fallback | color |
 | `border_width` | `1` | `0` | `1` fallback | 0–8 |
-| `module_corner_radius` | `5` | `0` | `12` | 0–32 |
-| `workspace_corner_radius` | `4` | `0` | `9` | 0–32 |
-| `module_padding` | `8` | `0` | `9` | 0–64 |
-| `module_vertical_padding` | `4` | `0` | `5` | 0–32 |
-| `workspace_padding` | `5` | `2` | `6` | 0–64 |
-| `workspace_spacing` | `4` | `6` | `5` | 0–64 |
-| `application_icon_size` | `16` | `16` | `16` | 8–32 |
+| `module_corner_radius` | `5` | `0` | `7` | 0–32 |
+| `workspace_corner_radius` | `4` | `0` | `7` | 0–32 |
+| `module_padding` | `8` | `0` | `10` | 0–64 |
+| `module_vertical_padding` | `4` | `0` | `6` | 0–32 |
+| `workspace_padding` | `5` | `2` | `11` | 0–64 |
+| `workspace_vertical_padding` | `2` | `2` | `5` | 0–32 |
+| `workspace_content_spacing` | `4` | `4` | `4` | 0–32 |
+| `workspace_spacing` | `4` | `6` | `7` | 0–64 |
+| `workspace_min_height` | icon size | icon size | icon size (`18`) | 0–64 |
+| `empty_workspace_opacity` | `0.55` | `0.55` | `0.82` | 0–1 |
+| `application_icon_size` | `16` | `16` | `18` | 8–32 |
+| `surface_material` | `none` | `none` | `none` | `none`, `ultra_thin`, `thin`, `regular`, `thick` |
+| `adaptive_text` | `false` | `false` | `true` | boolean |
 
 All numeric values must be finite. Module-level `style.background`, `style.padding`, `style.foreground`, and `style.accent` override the corresponding global presentation for that module.
+
+The refined glass appearance can be reproduced without relying on implicit preset values:
+
+```toml
+[theme]
+preset = "glass"
+surface_background = "#00000000"
+surface_material = "none"
+adaptive_text = true
+module_background = "#FFFFFF14"
+workspace_background = "#00000000"
+focused_workspace_background = "#FFFFFFD9"
+border_color = "#FFFFFF20"
+border_width = 1
+module_corner_radius = 7
+workspace_corner_radius = 7
+module_padding = 10
+module_vertical_padding = 6
+workspace_padding = 11
+workspace_vertical_padding = 5
+workspace_content_spacing = 4
+workspace_spacing = 7
+workspace_min_height = 18
+empty_workspace_opacity = 0.82
+application_icon_size = 18
+```
 
 ## Surfaces
 
 Every surface requires `id`. `kind` accepts only `bar` and defaults to it. `display` is `primary` by default and accepts `primary`, `all`, or `id:<stable-id>`; the distributed starter explicitly uses `all`. `edge` accepts `top`, `bottom`, `left`, or `right` and defaults to `top`. `fullscreen` accepts `hide` or `show` and defaults to `hide`.
 
-`start`, `center`, and `end` are module-ID arrays. Their logical direction follows the edge orientation. A center group that cannot fit beside a display cutout will relocate into available content space in phase 04; if no region fits, it visibly clips at the content boundary rather than rendering under the cutout.
+`start`, `center`, and `end` are module-ID arrays. Their logical direction follows the edge orientation. On a notched display using `menuBarArea`, `center` is appended before `end` in one group aligned to the far right; center modules never move to the left of the notch. If that combined group is too wide, it clips at the right usable-region boundary rather than rendering under the cutout.
 
 For top surfaces, `top_placement` accepts:
 
@@ -93,9 +125,9 @@ All providers require `id` and `kind`. Kinds are `yabai`, `aerospace`, `omniwm`,
 
 ## Modules and actions
 
-All modules require `id` and `kind`. Kinds are `text`, `clock`, `frontmostApp`, `battery`, `workspaces`, and `custom`. A `text` module requires its non-empty `text` value. `format` and `placeholder` are optional strings. A `workspaces` module requires a `yabai`, `aerospace`, or `omniwm` provider. A `custom` module requires an `event`, `command`, or `stream` provider.
+All modules require `id` and `kind`. Kinds are `text`, `clock`, `frontmostApp`, `battery`, `wifi`, `volume`, `separator`, `workspaces`, and `custom`. A `text` module requires its non-empty `text` value. `format` and `placeholder` are optional strings. `battery`, `wifi`, and `volume` render compact native SF Symbols and need no provider. `separator` draws an orientation-aware divider and has no data source. A `workspaces` module requires a `yabai`, `aerospace`, or `omniwm` provider. A `custom` module requires an `event`, `command`, or `stream` provider.
 
-`on_click` accepts `executable`, optional `args = []`, and `timeout_ms = 5000` in the range 100–300000. It follows the same explicit executable-path rules.
+`on_click` accepts `executable`, optional `args = []`, and `timeout_ms = 5000` in the range 100–300000. It follows the same explicit executable-path rules. On `wifi`, `volume`, `battery`, and `frontmostApp`, an explicit action intentionally replaces the built-in native popover or application menu.
 
 `style` and entries in `states` accept `foreground`, `background`, `accent`, `font`, `font_size`, and `padding`. Numeric and color bounds match the theme. State names are exactly `normal`, `warning`, `error`, and `success`. Styling is declarative; it cannot define commands or arbitrary theme mutations.
 

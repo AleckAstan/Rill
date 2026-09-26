@@ -75,7 +75,25 @@ final class NativeModuleValueTests: XCTestCase {
             .full
         )
         XCTAssertEqual(BatterySnapshot.parse([["Current Capacity": 20]]), .unavailable)
-        XCTAssertEqual(BatterySnapshot.noBattery.presentation.text, "AC")
+        XCTAssertEqual(BatterySnapshot.noBattery.presentation.symbolName, "powerplug.fill")
+        XCTAssertEqual(low.presentation.symbolName, "battery.0percent")
+    }
+
+    func testNativeStatusSnapshotsUseSymbolsInsteadOfVisibleText() {
+        let presentations = [
+            WiFiSnapshot.connected(ssid: "Studio").presentation,
+            WiFiSnapshot.disconnected.presentation,
+            VolumeSnapshot.level(72).presentation,
+            VolumeSnapshot.muted.presentation
+        ]
+        XCTAssertTrue(presentations.allSatisfy { $0.text.isEmpty })
+        XCTAssertEqual(presentations.map(\.symbolName), [
+            "wifi",
+            "wifi.exclamationmark",
+            "speaker.wave.3.fill",
+            "speaker.slash.fill"
+        ])
+        XCTAssertEqual(presentations.first?.tooltip, "Wi-Fi: Studio")
     }
 }
 
@@ -86,21 +104,31 @@ final class NativeModuleLifecycleTests: XCTestCase {
         let clock = runtime.resource(for: .init(id: ModuleID("clock"), kind: .clock, format: "HH:mm:ss"))
         let frontmost = runtime.resource(for: .init(id: ModuleID("app"), kind: .frontmostApp))
         let battery = runtime.resource(for: .init(id: ModuleID("battery"), kind: .battery))
+        let wifi = runtime.resource(for: .init(id: ModuleID("wifi"), kind: .wifi))
+        let volume = runtime.resource(for: .init(id: ModuleID("volume"), kind: .volume))
 
         XCTAssertEqual(runtime.lifecycleCounts.clock, 0)
         await clock.commit()
         await frontmost.commit()
         await battery.commit()
+        await wifi.commit()
+        await volume.commit()
         XCTAssertEqual(runtime.lifecycleCounts.clock, 1)
         XCTAssertEqual(runtime.lifecycleCounts.frontmost, 1)
         XCTAssertEqual(runtime.lifecycleCounts.battery, 1)
+        XCTAssertEqual(runtime.lifecycleCounts.wifi, 1)
+        XCTAssertEqual(runtime.lifecycleCounts.volume, 1)
 
         await clock.stop()
         await frontmost.stop()
         await battery.stop()
+        await wifi.stop()
+        await volume.stop()
         XCTAssertEqual(runtime.lifecycleCounts.clock, 0)
         XCTAssertEqual(runtime.lifecycleCounts.frontmost, 0)
         XCTAssertEqual(runtime.lifecycleCounts.battery, 0)
+        XCTAssertEqual(runtime.lifecycleCounts.wifi, 0)
+        XCTAssertEqual(runtime.lifecycleCounts.volume, 0)
     }
 
     func testOverlappingGenerationsDoNotStopSharedProviderEarly() async {

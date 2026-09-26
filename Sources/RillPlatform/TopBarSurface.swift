@@ -96,6 +96,7 @@ public struct HorizontalSlotFrames: Equatable, Sendable {
     public let start: CGRect
     public let center: CGRect
     public let end: CGRect
+    public let centerJoinsEnd: Bool
 }
 
 public struct VerticalSlotFrames: Equatable, Sendable {
@@ -126,7 +127,8 @@ public enum BarLayoutEngine {
             return .init(
                 start: CGRect(x: content.minX, y: 0, width: third, height: content.height),
                 center: CGRect(x: content.minX + third, y: 0, width: third, height: content.height),
-                end: CGRect(x: content.minX + 2 * third, y: 0, width: content.width - 2 * third, height: content.height)
+                end: CGRect(x: content.minX + 2 * third, y: 0, width: content.width - 2 * third, height: content.height),
+                centerJoinsEnd: false
             )
         }
 
@@ -144,19 +146,11 @@ public enum BarLayoutEngine {
         )
         guard left.width > 0, right.width > 0 else { return nil }
 
-        if left.width >= right.width {
-            let half = left.width / 2
-            return .init(
-                start: CGRect(x: left.minX, y: 0, width: half, height: left.height),
-                center: CGRect(x: left.minX + half, y: 0, width: left.width - half, height: left.height),
-                end: right
-            )
-        }
-        let half = right.width / 2
         return .init(
             start: left,
-            center: CGRect(x: right.minX, y: 0, width: half, height: right.height),
-            end: CGRect(x: right.minX + half, y: 0, width: right.width - half, height: right.height)
+            center: right,
+            end: right,
+            centerJoinsEnd: true
         )
     }
 
@@ -290,6 +284,7 @@ struct BarSurfaceView: View {
     let notchExclusion: CGRect?
     @ObservedObject var store: NativeModuleStore
     let performAction: (ModuleID, ActionSpec) -> Void
+    let performNativeAction: (ModuleID, NativeModuleAction) -> Void
     let showFrontmostApplicationMenu: (ModuleID) -> Void
     let focusWorkspace: (ModuleID, ProviderID, WorkspaceID) -> Void
 
@@ -302,8 +297,12 @@ struct BarSurfaceView: View {
                     notchExclusion: notchExclusion
                 ) {
                     slot(surface.start, frame: slots.start, alignment: .leading)
-                    slot(surface.center, frame: slots.center, alignment: .center)
-                    slot(surface.end, frame: slots.end, alignment: .trailing)
+                    if slots.centerJoinsEnd {
+                        slot(surface.center + surface.end, frame: slots.end, alignment: .trailing)
+                    } else {
+                        slot(surface.center, frame: slots.center, alignment: .center)
+                        slot(surface.end, frame: slots.end, alignment: .trailing)
+                    }
                 }
             } else if let slots = BarLayoutEngine.verticalSlots(
                 size: geometry.size,
@@ -315,9 +314,33 @@ struct BarSurfaceView: View {
             }
         }
         .foregroundStyle(Color(hex: theme.foreground))
-        .background(Color(hex: theme.resolvedSurfaceBackground))
+        .background { surfaceBackground }
         .clipShape(RoundedRectangle(cornerRadius: surface.resolvedTopPlacement == .menuBarArea ? 0 : theme.cornerRadius))
         .ignoresSafeArea()
+    }
+
+    @ViewBuilder
+    private var surfaceBackground: some View {
+        switch theme.resolvedSurfaceMaterial {
+        case .none:
+            Color(hex: theme.resolvedSurfaceBackground)
+        case .ultraThin:
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .overlay(Color(hex: theme.resolvedSurfaceBackground))
+        case .thin:
+            Rectangle()
+                .fill(.thinMaterial)
+                .overlay(Color(hex: theme.resolvedSurfaceBackground))
+        case .regular:
+            Rectangle()
+                .fill(.regularMaterial)
+                .overlay(Color(hex: theme.resolvedSurfaceBackground))
+        case .thick:
+            Rectangle()
+                .fill(.thickMaterial)
+                .overlay(Color(hex: theme.resolvedSurfaceBackground))
+        }
     }
 
     private func slot(
@@ -331,9 +354,11 @@ struct BarSurfaceView: View {
                     ModuleView(
                         module: module,
                         displayID: displayID,
+                        isHorizontal: surface.edge.isHorizontal,
                         theme: theme,
                         store: store,
                         performAction: performAction,
+                        performNativeAction: performNativeAction,
                         showFrontmostApplicationMenu: showFrontmostApplicationMenu,
                         focusWorkspace: focusWorkspace
                     )
@@ -356,9 +381,11 @@ struct BarSurfaceView: View {
                     ModuleView(
                         module: module,
                         displayID: displayID,
+                        isHorizontal: surface.edge.isHorizontal,
                         theme: theme,
                         store: store,
                         performAction: performAction,
+                        performNativeAction: performNativeAction,
                         showFrontmostApplicationMenu: showFrontmostApplicationMenu,
                         focusWorkspace: focusWorkspace
                     )
@@ -374,21 +401,36 @@ struct BarSurfaceView: View {
 private struct ModuleView: View {
     let module: ModuleSpec
     let displayID: DisplayID
+    let isHorizontal: Bool
     let theme: ThemeSpec
     @ObservedObject var store: NativeModuleStore
     let performAction: (ModuleID, ActionSpec) -> Void
+    let performNativeAction: (ModuleID, NativeModuleAction) -> Void
     let showFrontmostApplicationMenu: (ModuleID) -> Void
     let focusWorkspace: (ModuleID, ProviderID, WorkspaceID) -> Void
+    @State private var nativePopoverPresented = false
 
     var body: some View {
         Group {
             if module.kind == .workspaces {
                 workspaceContent
+            } else if module.kind == .separator {
+                separatorContent
             } else {
                 standardContent
+                    .modifier(ModuleChrome(theme: theme, style: module.style))
             }
         }
-        .modifier(ModuleChrome(theme: theme, style: module.style))
+    }
+
+    private var separatorContent: some View {
+        Rectangle()
+            .fill(theme.resolvedAdaptiveText ? Color.secondary : Color(hex: theme.foreground).opacity(0.35))
+            .frame(
+                width: isHorizontal ? 1 : max(12, theme.fontSize),
+                height: isHorizontal ? max(12, theme.fontSize) : 1
+            )
+            .accessibilityHidden(true)
     }
 
     private var standardContent: some View {
@@ -399,6 +441,24 @@ private struct ModuleView: View {
                     .focusable()
                     .focusEffectDisabled()
                     .accessibilityHint("Runs the configured action")
+            } else if [.wifi, .volume, .battery].contains(module.kind) {
+                Button {
+                    nativePopoverPresented.toggle()
+                    if module.kind == .wifi {
+                        performNativeAction(module.id, .refreshWiFi)
+                    }
+                } label: { decoratedContent }
+                    .buttonStyle(.plain)
+                    .focusable()
+                    .focusEffectDisabled()
+                    .accessibilityHint("Shows system controls")
+                    .popover(isPresented: $nativePopoverPresented) {
+                        NativeStatusPopover(
+                            module: module,
+                            store: store,
+                            perform: { performNativeAction(module.id, $0) }
+                        )
+                    }
             } else if module.kind == .frontmostApp {
                 Button { showFrontmostApplicationMenu(module.id) } label: { decoratedContent }
                     .buttonStyle(.plain)
@@ -408,10 +468,13 @@ private struct ModuleView: View {
             } else { decoratedContent }
         }
         .help(helpText)
-        .accessibilityLabel(presentation.text)
+        .accessibilityLabel(accessibilityLabel)
         .accessibilityValue(accessibilityValue)
         .accessibilityAddTraits(
-            module.onClick != nil || module.kind == .frontmostApp ? .isButton : .isStaticText
+            module.onClick != nil || module.kind == .frontmostApp ||
+                [.wifi, .volume, .battery].contains(module.kind)
+                ? .isButton
+                : .isStaticText
         )
     }
 
@@ -422,7 +485,7 @@ private struct ModuleView: View {
                     Button {
                         focusWorkspace(module.id, providerID, workspace.id)
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: theme.resolvedWorkspaceContentSpacing) {
                             Text(workspace.name)
                                 .font(font)
                                 .fontWeight(workspace.focused ? .semibold : .regular)
@@ -435,29 +498,25 @@ private struct ModuleView: View {
                                 }
                             }
                         }
+                        .frame(minHeight: theme.resolvedWorkspaceMinimumHeight)
                         .foregroundStyle(
-                            workspace.focused
-                                ? Color(hex: module.style?.accent ?? theme.accent)
-                                : Color(hex: module.style?.foreground ?? theme.foreground)
+                            workspaceForeground(focused: workspace.focused)
                         )
-                        .opacity(workspace.occupied == false && !workspace.focused ? 0.55 : 1)
+                        .opacity(
+                            workspace.occupied == false && !workspace.focused
+                                ? theme.resolvedEmptyWorkspaceOpacity
+                                : 1
+                        )
                         .padding(.horizontal, theme.resolvedWorkspacePadding)
-                        .padding(.vertical, 2)
-                        .background(
-                            Color(
-                                hex: workspace.focused
+                        .padding(.vertical, theme.resolvedWorkspaceVerticalPadding)
+                        .modifier(
+                            WorkspaceChrome(
+                                theme: theme,
+                                background: workspace.focused
                                     ? theme.resolvedFocusedWorkspaceBackground
                                     : theme.resolvedWorkspaceBackground
                             )
                         )
-                        .clipShape(RoundedRectangle(cornerRadius: theme.resolvedWorkspaceCornerRadius))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: theme.resolvedWorkspaceCornerRadius)
-                                .stroke(
-                                    Color(hex: theme.resolvedBorderColor),
-                                    lineWidth: theme.resolvedBorderWidth
-                                )
-                        }
                     }
                     .buttonStyle(.plain)
                     .focusable()
@@ -497,9 +556,28 @@ private struct ModuleView: View {
         return "Workspace \(workspace.name), \(status): \(applications)"
     }
 
+    private func workspaceForeground(focused: Bool) -> Color {
+        if focused, let accent = module.style?.accent {
+            return Color(hex: accent)
+        }
+        if !focused, let foreground = module.style?.foreground {
+            return Color(hex: foreground)
+        }
+        if theme.resolvedAdaptiveText {
+            return .primary
+        }
+        return Color(hex: focused ? theme.accent : theme.foreground)
+    }
+
     private var decoratedContent: some View {
         HStack(spacing: 4) {
-            Text(presentation.text)
+            if let symbolName = presentation.symbolName {
+                Image(systemName: symbolName)
+                    .symbolRenderingMode(.hierarchical)
+            }
+            if !presentation.text.isEmpty {
+                Text(presentation.text)
+            }
             if store.actionFailures[module.id] != nil {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
@@ -530,6 +608,12 @@ private struct ModuleView: View {
             return store.frontmostApplication
         case .battery:
             return store.battery.presentation
+        case .wifi:
+            return store.wifi.presentation
+        case .volume:
+            return store.volume.presentation
+        case .separator:
+            return .init(text: "")
         case .workspaces, .custom:
             return store.mockModules[module.id] ?? .init(
                 text: module.placeholder ?? "—",
@@ -546,18 +630,30 @@ private struct ModuleView: View {
         }
         switch presentation.health {
         case .healthy:
-            return Color(hex: module.style?.foreground ?? theme.foreground)
+            if let foreground = module.style?.foreground {
+                return Color(hex: foreground)
+            }
+            return theme.resolvedAdaptiveText ? .primary : Color(hex: theme.foreground)
         case .stale:
             return Color(hex: module.states[ModuleState.warning.rawValue]?.foreground ?? theme.accent)
         case .unavailable:
-            return Color(hex: module.states[ModuleState.error.rawValue]?.foreground ?? theme.foreground).opacity(0.55)
+            if let foreground = module.states[ModuleState.error.rawValue]?.foreground ?? module.style?.foreground {
+                return Color(hex: foreground).opacity(0.55)
+            }
+            return (theme.resolvedAdaptiveText ? Color.primary : Color(hex: theme.foreground)).opacity(0.55)
         }
     }
 
     private var helpText: String {
         if let failure = store.actionFailures[module.id] { return failure }
         if module.onClick != nil { return "Runs the configured action" }
+        if [.wifi, .volume, .battery].contains(module.kind) { return "Shows system controls" }
         if module.kind == .frontmostApp { return "Shows the frontmost application's menu" }
+        return presentation.tooltip ?? module.id.rawValue
+    }
+
+    private var accessibilityLabel: String {
+        if !presentation.text.isEmpty { return presentation.text }
         return presentation.tooltip ?? module.id.rawValue
     }
 
@@ -575,6 +671,304 @@ private struct ModuleView: View {
         return .custom(name, size: size)
     }
 
+}
+
+private struct NativeStatusPopover: View {
+    let module: ModuleSpec
+    @ObservedObject var store: NativeModuleStore
+    let perform: (NativeModuleAction) -> Void
+
+    var body: some View {
+        Group {
+            switch module.kind {
+            case .wifi:
+                WiFiControlPopover(moduleID: module.id, store: store, perform: perform)
+            case .volume:
+                VolumeControlPopover(moduleID: module.id, store: store, perform: perform)
+            case .battery:
+                BatteryControlPopover(store: store)
+            default:
+                EmptyView()
+            }
+        }
+        .padding(16)
+        .frame(width: 320)
+    }
+}
+
+private struct WiFiControlPopover: View {
+    let moduleID: ModuleID
+    @ObservedObject var store: NativeModuleStore
+    let perform: (NativeModuleAction) -> Void
+    @State private var selectedNetwork: WiFiNetworkOption?
+    @State private var password = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Wi-Fi", systemImage: "wifi")
+                    .font(.headline)
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { if case .off = store.wifi { false } else { true } },
+                    set: { perform(.setWiFiPower($0)) }
+                ))
+                .labelsHidden()
+            }
+
+            if store.wifiScanning {
+                HStack {
+                    ProgressView().controlSize(.small)
+                    Text("Searching for networks…").foregroundStyle(.secondary)
+                }
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 2) {
+                        ForEach(store.wifiNetworks) { network in
+                            Button {
+                                if network.secured {
+                                    selectedNetwork = network
+                                    password = ""
+                                } else {
+                                    perform(.connectWiFi(ssid: network.ssid, password: nil))
+                                }
+                            } label: {
+                                HStack {
+                                    Text(network.ssid).lineLimit(1)
+                                    Spacer()
+                                    if currentSSID == network.ssid {
+                                        Image(systemName: "checkmark")
+                                    }
+                                    if network.secured {
+                                        Image(systemName: "lock.fill")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Image(systemName: signalSymbol(network.signal))
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.vertical, 5)
+                        }
+                    }
+                }
+                .frame(maxHeight: 220)
+            }
+
+            if let selectedNetwork {
+                Divider()
+                Text("Join \(selectedNetwork.ssid)")
+                    .font(.subheadline.weight(.semibold))
+                SecureField("Password", text: $password)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit { connectSelectedNetwork() }
+                HStack {
+                    Button("Cancel") { self.selectedNetwork = nil }
+                    Spacer()
+                    Button("Join") { connectSelectedNetwork() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(password.isEmpty)
+                }
+            }
+
+            failureText
+            Divider()
+            HStack {
+                Button {
+                    perform(.refreshWiFi)
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                }
+                Spacer()
+                SettingsButton(
+                    title: "Wi-Fi Settings…",
+                    url: "x-apple.systempreferences:com.apple.Wi-Fi-Settings.extension"
+                )
+            }
+        }
+    }
+
+    private var currentSSID: String? {
+        if case .connected(let ssid) = store.wifi { return ssid }
+        return nil
+    }
+
+    @ViewBuilder
+    private var failureText: some View {
+        if let failure = store.actionFailures[moduleID] {
+            Text(failure).font(.caption).foregroundStyle(.red)
+        }
+    }
+
+    private func connectSelectedNetwork() {
+        guard let selectedNetwork else { return }
+        perform(.connectWiFi(ssid: selectedNetwork.ssid, password: password))
+        self.selectedNetwork = nil
+        password = ""
+    }
+
+    private func signalSymbol(_ rssi: Int) -> String {
+        switch rssi {
+        case -55...Int.max: return "wifi"
+        case -70 ... -56: return "wifi"
+        default: return "wifi.exclamationmark"
+        }
+    }
+}
+
+private struct VolumeControlPopover: View {
+    let moduleID: ModuleID
+    @ObservedObject var store: NativeModuleStore
+    let perform: (NativeModuleAction) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Sound", systemImage: "speaker.wave.2.fill")
+                .font(.headline)
+            HStack {
+                Button {
+                    perform(.setMuted(!isMuted))
+                } label: {
+                    Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.fill")
+                        .frame(width: 20)
+                }
+                .buttonStyle(.plain)
+                Slider(
+                    value: Binding(
+                        get: { volume },
+                        set: { perform(.setVolume($0)) }
+                    ),
+                    in: 0...1
+                )
+                Text("\(Int((volume * 100).rounded()))%")
+                    .monospacedDigit()
+                    .frame(width: 40, alignment: .trailing)
+            }
+
+            if !store.audioOutputs.isEmpty {
+                Text("Output").font(.subheadline.weight(.semibold))
+                ForEach(store.audioOutputs) { output in
+                    Button {
+                        perform(.selectAudioOutput(output.id))
+                    } label: {
+                        HStack {
+                            Image(systemName: output.id == store.currentAudioOutputID
+                                ? "checkmark.circle.fill"
+                                : "circle")
+                            Text(output.name).lineLimit(1)
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.vertical, 3)
+                }
+            }
+
+            if let failure = store.actionFailures[moduleID] {
+                Text(failure).font(.caption).foregroundStyle(.red)
+            }
+            Divider()
+            HStack {
+                Spacer()
+                SettingsButton(
+                    title: "Sound Settings…",
+                    url: "x-apple.systempreferences:com.apple.Sound-Settings.extension"
+                )
+            }
+        }
+    }
+
+    private var isMuted: Bool {
+        if case .muted = store.volume { return true }
+        return false
+    }
+
+    private var volume: Double {
+        if case .level(let percent) = store.volume {
+            return Double(percent) / 100
+        }
+        return 0
+    }
+}
+
+private struct BatteryControlPopover: View {
+    @ObservedObject var store: NativeModuleStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Battery", systemImage: store.battery.presentation.symbolName ?? "battery.100percent")
+                .font(.headline)
+            Text(store.battery.presentation.tooltip ?? "Battery information unavailable")
+            ProgressView(value: batteryLevel)
+                .progressViewStyle(.linear)
+            Divider()
+            HStack {
+                Spacer()
+                SettingsButton(
+                    title: "Battery Settings…",
+                    url: "x-apple.systempreferences:com.apple.Battery-Settings.extension"
+                )
+            }
+        }
+    }
+
+    private var batteryLevel: Double {
+        switch store.battery {
+        case .charging(let percent), .discharging(let percent):
+            return Double(percent) / 100
+        case .full: return 1
+        case .noBattery, .unavailable: return 0
+        }
+    }
+}
+
+private struct SettingsButton: View {
+    let title: String
+    let url: String
+
+    var body: some View {
+        Button(title) {
+            guard let destination = URL(string: url) else { return }
+            NSWorkspace.shared.open(destination)
+        }
+        .buttonStyle(.link)
+    }
+}
+
+private struct WorkspaceChrome: ViewModifier {
+    let theme: ThemeSpec
+    let background: String
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if theme.preset == .glass {
+            if #available(macOS 26.0, *) {
+                let shape = RoundedRectangle(cornerRadius: theme.resolvedWorkspaceCornerRadius)
+                content
+                    .background(Color(hex: background), in: shape)
+                    .glassEffect(.regular.interactive(), in: shape)
+            } else {
+                fallback(content: content)
+            }
+        } else {
+            fallback(content: content)
+        }
+    }
+
+    private func fallback<Content: View>(content: Content) -> some View {
+        content
+            .background(Color(hex: background))
+            .clipShape(RoundedRectangle(cornerRadius: theme.resolvedWorkspaceCornerRadius))
+            .overlay {
+                RoundedRectangle(cornerRadius: theme.resolvedWorkspaceCornerRadius)
+                    .stroke(
+                        Color(hex: theme.resolvedBorderColor),
+                        lineWidth: theme.resolvedBorderWidth
+                    )
+            }
+    }
 }
 
 private struct WorkspaceApplicationIcon: View {
@@ -768,6 +1162,9 @@ final class SurfaceResource: NSObject, ManagedConfigurationResource, @unchecked 
                     store: moduleRuntime.store,
                     performAction: { [weak moduleRuntime] moduleID, action in
                         moduleRuntime?.performAction(moduleID: moduleID, action: action)
+                    },
+                    performNativeAction: { [weak moduleRuntime] moduleID, action in
+                        moduleRuntime?.performNativeAction(moduleID: moduleID, action: action)
                     },
                     showFrontmostApplicationMenu: { [weak moduleRuntime] moduleID in
                         moduleRuntime?.showFrontmostApplicationMenu(moduleID: moduleID)

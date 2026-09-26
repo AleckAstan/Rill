@@ -21,7 +21,7 @@ top_placement = "menuBarArea"
 fullscreen = "hide"
 start = ["frontmost"]
 center = ["clock"]
-end = ["battery"]
+end = ["wifi", "status-separator", "volume", "battery"]
 
 [[modules]]
 id = "frontmost"
@@ -31,6 +31,18 @@ kind = "frontmostApp"
 id = "clock"
 kind = "clock"
 format = "HH:mm"
+
+[[modules]]
+id = "wifi"
+kind = "wifi"
+
+[[modules]]
+id = "status-separator"
+kind = "separator"
+
+[[modules]]
+id = "volume"
+kind = "volume"
 
 [[modules]]
 id = "battery"

@@ -14,7 +14,7 @@ Sources/RillPlatform/ panels and displays; layout engine; module registry; text/
 
 - Added `Sources/RillPlatform/TopBarSurface.swift` with pure panel geometry, bounded slot layout, stable display UUID inventory/selection, nonactivating AppKit panels, SwiftUI text/clock renderers and theme styling.
 - Menu-bar-area panels use the full screen top strip and derived 28-point fallback or positive safe inset. Below-system-UI panels intersect visible and safe frames and apply configured thickness/inset.
-- Start/center/end slots never overlap. Without a notch they receive bounded thirds; with a notch, the center relocates into half of the larger usable side and all slots clip overflow rather than growing the window.
+- Without a notch, start/center/end receive bounded thirds. The original notch layout relocated center into half of the larger usable side; phase 12 changed this so center joins end in one trailing-aligned group at the far right, while overflow remains clipped instead of growing the window.
 - `SurfaceResource` prepares hidden panels, commits them as a generation, retires old panels, and reconciles on display, wake and Space notifications. Panels remain non-key/non-main and accept first mouse without activating Rill.
 - Updated the no-manager starter to rendered phase-04 modules: `Rill` text, clock and `Ready` text.
 - The distributed starter explicitly selects `display = "all"` so the first launch demonstrates the required multi-display behavior; omitted `display` still defaults to `primary`.

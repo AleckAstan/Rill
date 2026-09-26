@@ -61,6 +61,7 @@ final class TopBarGeometryTests: XCTestCase {
                 notchExclusion: nil
             )
         )
+        XCTAssertFalse(slots.centerJoinsEnd)
         assertDisjoint(slots.start, slots.center)
         assertDisjoint(slots.center, slots.end)
         XCTAssertTrue(CGRect(x: 0, y: 0, width: 120, height: 28).contains(slots.start))
@@ -80,7 +81,7 @@ final class TopBarGeometryTests: XCTestCase {
         XCTAssertLessThan(slots.center.minY, slots.end.minY)
     }
 
-    func testCenterRelocatesBesideNotchWithoutOverlap() throws {
+    func testCenterJoinsEndAtFarRightWhenNotchIsPresent() throws {
         let notch = CGRect(x: 700, y: 0, width: 112, height: 38)
         let slots = try XCTUnwrap(
             BarLayoutEngine.horizontalSlots(
@@ -89,11 +90,13 @@ final class TopBarGeometryTests: XCTestCase {
                 notchExclusion: notch
             )
         )
+        XCTAssertTrue(slots.centerJoinsEnd)
+        XCTAssertEqual(slots.center, slots.end)
+        XCTAssertEqual(slots.end.maxX, 1504)
         XCTAssertFalse(slots.start.intersects(notch))
         XCTAssertFalse(slots.center.intersects(notch))
         XCTAssertFalse(slots.end.intersects(notch))
         assertDisjoint(slots.start, slots.center)
-        assertDisjoint(slots.center, slots.end)
     }
 
     func testLogicalPointGeometryDoesNotDependOnRetinaScale() {
