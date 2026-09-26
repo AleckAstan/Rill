@@ -626,6 +626,20 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
         return focusedWorkspaceBackground
     }
 
+    /// Chooses the readable monochrome foreground for the configured focused
+    /// workspace fill. A translucent fill is composited over the theme's base
+    /// background, so the result remains deterministic across appearances.
+    public var resolvedFocusedWorkspaceForeground: String {
+        guard let fill = ThemeRGBA(hex: resolvedFocusedWorkspaceBackground), fill.alpha > 0.1 else {
+            return foreground
+        }
+        let base = ThemeRGBA(hex: background) ?? .black
+        let luminance = fill.composited(over: base).relativeLuminance
+        let blackContrast = (luminance + 0.05) / 0.05
+        let whiteContrast = 1.05 / (luminance + 0.05)
+        return blackContrast >= whiteContrast ? "#000000FF" : "#FFFFFFFF"
+    }
+
     public var resolvedBorderColor: String {
         guard let borderColor else {
             switch preset {
@@ -733,6 +747,52 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
 
     public var resolvedAdaptiveText: Bool {
         adaptiveText ?? (preset == .glass)
+    }
+}
+
+private struct ThemeRGBA {
+    let red: Double
+    let green: Double
+    let blue: Double
+    let alpha: Double
+
+    static let black = ThemeRGBA(red: 0, green: 0, blue: 0, alpha: 1)
+
+    init?(hex: String) {
+        guard hex.first == "#", hex.count == 7 || hex.count == 9,
+              let value = UInt64(hex.dropFirst(), radix: 16) else { return nil }
+        if hex.count == 9 {
+            red = Double((value >> 24) & 0xFF) / 255
+            green = Double((value >> 16) & 0xFF) / 255
+            blue = Double((value >> 8) & 0xFF) / 255
+            alpha = Double(value & 0xFF) / 255
+        } else {
+            red = Double((value >> 16) & 0xFF) / 255
+            green = Double((value >> 8) & 0xFF) / 255
+            blue = Double(value & 0xFF) / 255
+            alpha = 1
+        }
+    }
+
+    private init(red: Double, green: Double, blue: Double, alpha: Double) {
+        self.red = red; self.green = green; self.blue = blue; self.alpha = alpha
+    }
+
+    func composited(over base: ThemeRGBA) -> ThemeRGBA {
+        ThemeRGBA(
+            red: red * alpha + base.red * (1 - alpha),
+            green: green * alpha + base.green * (1 - alpha),
+            blue: blue * alpha + base.blue * (1 - alpha),
+            alpha: 1
+        )
+    }
+
+    var relativeLuminance: Double {
+        0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue)
+    }
+
+    private func linear(_ channel: Double) -> Double {
+        channel <= 0.04045 ? channel / 12.92 : pow((channel + 0.055) / 1.055, 2.4)
     }
 }
 

@@ -497,6 +497,18 @@ private struct ModuleView: View {
                                         application: application,
                                         size: theme.resolvedApplicationIconSize
                                     )
+                                    if isFocusedApplication(application, in: workspace, providerID: providerID),
+                                       let label = activeApplicationLabel(providerID: providerID) {
+                                        Text(label)
+                                            .font(font)
+                                            .fontWeight(.semibold)
+                                            .lineLimit(1)
+                                            .truncationMode(.tail)
+                                            .layoutPriority(1)
+                                            .transition(
+                                                .opacity.combined(with: .move(edge: .leading))
+                                            )
+                                    }
                                 }
                             }
                         }
@@ -571,6 +583,20 @@ private struct ModuleView: View {
         visibleWorkspaces.first(where: \.focused)?.id
     }
 
+    private func activeApplicationLabel(providerID: ProviderID) -> String? {
+        store.focusedWindows[providerID]?.appName
+    }
+
+    private func isFocusedApplication(
+        _ application: WorkspaceApplication,
+        in workspace: WorkspaceState,
+        providerID: ProviderID
+    ) -> Bool {
+        guard workspace.focused else { return false }
+        guard let focusedWindow = store.focusedWindows[providerID] else { return application.focused }
+        return application.focused || application.name == focusedWindow.appName
+    }
+
     private var visibleWorkspaces: [WorkspaceState] {
         guard let providerID = module.provider else { return [] }
         let values = store.workspaceStates[providerID] ?? []
@@ -591,16 +617,13 @@ private struct ModuleView: View {
     }
 
     private func workspaceForeground(focused: Bool) -> Color {
-        if focused, let accent = module.style?.accent {
-            return Color(hex: accent)
+        if focused {
+            return Color(hex: theme.resolvedFocusedWorkspaceForeground)
         }
-        if !focused, let foreground = module.style?.foreground {
+        if let foreground = module.style?.foreground {
             return Color(hex: foreground)
         }
-        if theme.resolvedAdaptiveText {
-            return .primary
-        }
-        return Color(hex: focused ? theme.accent : theme.foreground)
+        return theme.resolvedAdaptiveText ? .primary : Color(hex: theme.foreground)
     }
 
     private var decoratedContent: some View {
