@@ -203,11 +203,15 @@ final class NativeModuleLifecycleTests: XCTestCase {
         for index in 0..<100 {
             runtime.publish(try CustomModuleUpdate(text: "one-\(index)"), from: ProviderID("one"), staleAfterMS: 100)
         }
-        runtime.publish(try CustomModuleUpdate(text: "two", state: .success), from: ProviderID("two"))
+        runtime.publish(
+            try CustomModuleUpdate(text: "two", state: .success, popover: "Lorem ipsum"),
+            from: ProviderID("two")
+        )
         try await Task.sleep(for: .milliseconds(80))
         XCTAssertEqual(runtime.store.mockModules[left.id]?.text, "one-99")
         XCTAssertEqual(runtime.store.mockModules[right.id]?.text, "two")
         XCTAssertEqual(runtime.store.mockModules[right.id]?.state, .success)
+        XCTAssertEqual(runtime.store.mockModules[right.id]?.popover, "Lorem ipsum")
         try await Task.sleep(for: .milliseconds(100))
         XCTAssertEqual(runtime.store.mockModules[left.id]?.health, .stale)
         XCTAssertEqual(runtime.store.providerHealth[ProviderID("one")], "stale")
@@ -278,9 +282,10 @@ final class GenericProviderTests: XCTestCase {
     }
 
     func testProducerFramesValidateVersionTypeUTF8AndBounds() throws {
-        let valid = Data(#"{"version":1,"type":"module.update","data":{"text":"Build passed","state":"success","value":1}}"#.utf8)
+        let valid = Data(#"{"version":1,"type":"module.update","data":{"text":"Build passed","state":"success","value":1,"popover":"Details"}}"#.utf8)
         let update = try ProducerFrameDecoder.decode(valid)
         XCTAssertEqual(update.text, "Build passed")
+        XCTAssertEqual(update.popover, "Details")
         XCTAssertEqual(update.state, .success)
         XCTAssertThrowsError(try ProducerFrameDecoder.decode(Data(#"{"version":2,"type":"module.update","data":{"text":"x"}}"#.utf8)))
         XCTAssertThrowsError(try ProducerFrameDecoder.decode(Data(#"{"version":1,"type":"execute","data":{"text":"x"}}"#.utf8)))
@@ -368,6 +373,26 @@ final class GenericProviderTests: XCTestCase {
         await provider.commit()
         try await Task.sleep(for: .milliseconds(150))
         XCTAssertEqual(runtime.store.mockModules[module.id]?.text, "waiting")
+        await provider.stop(); await moduleResource.stop()
+    }
+
+    @MainActor
+    func testPluginProviderPublishesCustomStream() async throws {
+        let runtime = NativeModuleRuntime()
+        let module = ModuleSpec(id: ModuleID("plugin-value"), kind: .custom, provider: ProviderID("plugin-source"))
+        let moduleResource = runtime.resource(for: module)
+        await moduleResource.commit()
+        let spec = ProviderSpec(
+            id: ProviderID("plugin-source"), kind: .plugin, executable: "/usr/bin/printf",
+            args: ["{\\\"version\\\":1,\\\"type\\\":\\\"module.update\\\",\\\"data\\\":{\\\"text\\\":\\\"Plugin ready\\\"}}\\n"],
+            timeoutMS: 500, maxOutputBytes: 65_536, plugin: "example"
+        )
+        let provider = GenericProviderResource(spec: spec, generation: 1, runtime: runtime) { _ in true }
+        await provider.commit()
+        for _ in 0..<20 where runtime.store.mockModules[module.id]?.text != "Plugin ready" {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        XCTAssertEqual(runtime.store.mockModules[module.id]?.text, "Plugin ready")
         await provider.stop(); await moduleResource.stop()
     }
 

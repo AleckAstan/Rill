@@ -124,7 +124,7 @@ public enum SurfaceEdge: String, Codable, Sendable, CaseIterable {
 public typealias PanelEdge = SurfaceEdge
 
 public enum SurfaceKind: String, Codable, Sendable { case bar }
-public enum ProviderKind: String, Codable, Sendable { case yabai, aerospace, omniwm, event, command, stream }
+public enum ProviderKind: String, Codable, Sendable { case yabai, aerospace, omniwm, event, command, stream, plugin }
 public enum ModuleKind: String, Codable, Sendable {
     case text, clock, frontmostApp, battery, wifi, volume, separator, workspaces, custom
 }
@@ -384,6 +384,9 @@ public struct ProviderSpec: Codable, Sendable, Equatable {
     public var maxOutputBytes: Int
     public var intervalMS: Int?
     public var staleAfterMS: Int?
+    /// The configured package ID for a `plugin` provider. The configuration
+    /// loader resolves its manifest into the executable before activation.
+    public var plugin: String?
 
     enum CodingKeys: String, CodingKey, CaseIterable {
         case id, kind, executable, args
@@ -392,6 +395,7 @@ public struct ProviderSpec: Codable, Sendable, Equatable {
         case maxOutputBytes = "max_output_bytes"
         case intervalMS = "interval_ms"
         case staleAfterMS = "stale_after_ms"
+        case plugin
     }
 
     public init(
@@ -403,7 +407,8 @@ public struct ProviderSpec: Codable, Sendable, Equatable {
         timeoutMS: Int = 5_000,
         maxOutputBytes: Int = 65_536,
         intervalMS: Int? = nil,
-        staleAfterMS: Int? = nil
+        staleAfterMS: Int? = nil,
+        plugin: String? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -414,6 +419,7 @@ public struct ProviderSpec: Codable, Sendable, Equatable {
         self.maxOutputBytes = maxOutputBytes
         self.intervalMS = intervalMS
         self.staleAfterMS = staleAfterMS
+        self.plugin = plugin
     }
 
     public init(from decoder: Decoder) throws {
@@ -427,6 +433,27 @@ public struct ProviderSpec: Codable, Sendable, Equatable {
         maxOutputBytes = try container.decodeIfPresent(Int.self, forKey: .maxOutputBytes) ?? 65_536
         intervalMS = try container.decodeIfPresent(Int.self, forKey: .intervalMS)
         staleAfterMS = try container.decodeIfPresent(Int.self, forKey: .staleAfterMS)
+        plugin = try container.decodeIfPresent(String.self, forKey: .plugin)
+    }
+}
+
+/// A local, user-trusted plugin package. `path` points at a directory that
+/// contains `plugin.toml`; it is resolved relative to the Rill configuration.
+public struct PluginSpec: Codable, Sendable, Equatable {
+    public var id: String
+    public var path: String
+
+    enum CodingKeys: String, CodingKey, CaseIterable { case id, path }
+
+    public init(id: String, path: String) {
+        self.id = id
+        self.path = path
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.strictContainer(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        path = try container.decode(String.self, forKey: .path)
     }
 }
 
@@ -802,10 +829,11 @@ public struct AppConfiguration: Codable, Sendable, Equatable {
     public var surfaces: [SurfaceSpec]
     public var modules: [ModuleSpec]
     public var providers: [ProviderSpec]
+    public var plugins: [PluginSpec]
 
     enum CodingKeys: String, CodingKey, CaseIterable {
         case schemaVersion = "schema_version"
-        case theme, surfaces, modules, providers
+        case theme, surfaces, modules, providers, plugins
     }
 
     public init(
@@ -813,13 +841,15 @@ public struct AppConfiguration: Codable, Sendable, Equatable {
         theme: ThemeSpec = .init(),
         surfaces: [SurfaceSpec] = [],
         modules: [ModuleSpec] = [],
-        providers: [ProviderSpec] = []
+        providers: [ProviderSpec] = [],
+        plugins: [PluginSpec] = []
     ) {
         self.schemaVersion = schemaVersion
         self.theme = theme
         self.surfaces = surfaces
         self.modules = modules
         self.providers = providers
+        self.plugins = plugins
     }
 
     public init(from decoder: Decoder) throws {
@@ -829,6 +859,7 @@ public struct AppConfiguration: Codable, Sendable, Equatable {
         surfaces = try container.decodeIfPresent([SurfaceSpec].self, forKey: .surfaces) ?? []
         modules = try container.decodeIfPresent([ModuleSpec].self, forKey: .modules) ?? []
         providers = try container.decodeIfPresent([ProviderSpec].self, forKey: .providers) ?? []
+        plugins = try container.decodeIfPresent([PluginSpec].self, forKey: .plugins) ?? []
     }
 }
 
@@ -925,6 +956,16 @@ public extension AppConfiguration {
         validateIDs(surfaces.map(\.id), path: "surfaces")
         validateIDs(modules.map(\.id), path: "modules")
         validateIDs(providers.map(\.id), path: "providers")
+        var pluginIDs = Set<String>()
+        for (index, plugin) in plugins.enumerated() {
+            let path = "plugins[\(index)]"
+            if plugin.id.isEmpty || plugin.id.count > 64 ||
+                plugin.id.range(of: #"^[A-Za-z0-9][A-Za-z0-9._-]*$"#, options: .regularExpression) == nil {
+                append("\(path).id", "ID must be 1...64 ASCII letters, digits, dot, underscore, or hyphen")
+            }
+            if !pluginIDs.insert(plugin.id).inserted { append("\(path).id", "Duplicate ID '\(plugin.id)'") }
+            if plugin.path.isEmpty { append("\(path).path", "Plugin path must not be empty") }
+        }
 
         if theme.font.isEmpty || theme.font.count > 128 { append("theme.font", "Expected 1...128 characters") }
         validateFinite(theme.fontSize, path: "theme.font_size", range: 8...72)
@@ -1018,7 +1059,7 @@ public extension AppConfiguration {
         }
         for (index, provider) in providers.enumerated() {
             let path = "providers[\(index)]"
-            let requiresExecutable = [.yabai, .aerospace, .omniwm, .command, .stream].contains(provider.kind)
+            let requiresExecutable = [.yabai, .aerospace, .omniwm, .command, .stream, .plugin].contains(provider.kind)
             if requiresExecutable, provider.executable == nil {
                 append("\(path).executable", "\(provider.kind.rawValue) providers require an executable")
             }
@@ -1029,6 +1070,14 @@ public extension AppConfiguration {
                 if provider.executable != nil { append("\(path).executable", "Event providers do not execute programs") }
                 if !provider.args.isEmpty { append("\(path).args", "Event providers do not accept process arguments") }
                 if !provider.environment.isEmpty { append("\(path).env", "Event providers do not accept process environment") }
+            }
+            if provider.kind == .plugin {
+                guard let plugin = provider.plugin, pluginIDs.contains(plugin) else {
+                    append("\(path).plugin", "Plugin providers require a configured plugin ID")
+                    continue
+                }
+            } else if provider.plugin != nil {
+                append("\(path).plugin", "Only plugin providers accept plugin")
             }
             if !(100...300_000).contains(provider.timeoutMS) {
                 append("\(path).timeout_ms", "Expected 100...300000")
@@ -1048,8 +1097,8 @@ public extension AppConfiguration {
                 append("\(path).interval_ms", "Only command providers accept interval_ms")
             }
             if let stale = provider.staleAfterMS {
-                if provider.kind != .stream {
-                    append("\(path).stale_after_ms", "Only stream providers accept stale_after_ms")
+                if provider.kind != .stream && provider.kind != .plugin {
+                    append("\(path).stale_after_ms", "Only stream and plugin providers accept stale_after_ms")
                 } else if !(1_000...86_400_000).contains(stale) {
                     append("\(path).stale_after_ms", "Expected 1000...86400000")
                 }
@@ -1071,8 +1120,8 @@ public extension AppConfiguration {
                 if module.kind == .workspaces, ![.yabai, .aerospace, .omniwm].contains(provider.kind) {
                     append("\(path).provider", "Workspace modules require a yabai, aerospace, or omniwm provider")
                 }
-                if module.kind == .custom, ![.event, .command, .stream].contains(provider.kind) {
-                    append("\(path).provider", "Custom modules require an event, command, or stream provider")
+                if module.kind == .custom, ![.event, .command, .stream, .plugin].contains(provider.kind) {
+                    append("\(path).provider", "Custom modules require an event, command, stream, or plugin provider")
                 }
             } else if [.workspaces, .custom].contains(module.kind) {
                 append("\(path).provider", "\(module.kind.rawValue) modules require a provider")

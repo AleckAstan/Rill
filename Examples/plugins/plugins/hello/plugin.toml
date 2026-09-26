@@ -1,0 +1,5 @@
+[plugin]
+api_version = 1
+id = "hello"
+name = "Hello plugin"
+executable = "./hello.sh"

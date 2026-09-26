@@ -1,6 +1,6 @@
 # Phase 12 handoff
 
-Status: IN PROGRESS. Last updated: 2026-09-25.
+Status: IN PROGRESS. Last updated: 2026-09-26.
 
 ## Resume instructions
 
@@ -32,6 +32,9 @@ scripts/release.sh; signed/notarized package when credentials exist; docs/user/q
 - Replaced the subtle native-glass workspace tint with a clipped configured fill beneath the glass effect and strengthened the default focused fill to `#FFFFFFD9`; inactive spaces remain transparent.
 - Reworked system status modules toward native menu-bar presentation: battery, Wi-Fi and output volume use stateful SF Symbols with tooltip/accessibility detail; Wi-Fi is driven by Network path changes with CoreWLAN identity, volume uses CoreAudio property listeners, and `separator` adds orientation-aware hairlines without capsule chrome.
 - Added native SwiftUI status popovers: Wi-Fi supports power, bounded scans and open/password network association; volume supports slider, mute and default output selection; battery exposes charge detail. Each panel retains a secondary Settings link, while explicit `on_click` remains an override.
+- Added plugin API v1: local `[[plugins]]` package declarations resolve strict `plugin.toml` manifests into supervised `plugin` stream providers. Plugins feed ordinary placeable `custom` modules and use the existing per-user `rillctl` API for host communication; no plugin code is loaded into Rill. Added validation/no-execution/mismatch tests, `Examples/plugins/`, and `docs/user/plugins.md`.
+- Extended custom/plugin payloads with a bounded plain-text `popover` field. Rill renders it in a native SwiftUI popover on click while preserving configured `on_click` precedence. The shipped Hello package now shows `Hello Rill` and opens a Lorem Ipsum popover.
+- Installed the shipped Hello plugin into the active user configuration at `~/.config/rill/plugins/hello`, placed `hello-rill` before the Wi-Fi status cluster, rebuilt/relaunched the Debug app, and explicitly reloaded generation 2. Runtime reports `hello-source: ready` and `omniwm: ready`; the user-facing click/popover observation remains open.
 - Signing, notarization, quarantine installation, owner license choice and publication remain blocked on owner credentials/decisions and are intentionally NOT RUN.
 
 ## Verification record
@@ -62,11 +65,16 @@ scripts/release.sh; signed/notarized package when credentials exist; docs/user/q
 | Frontmost application menu desktop interaction | Current macOS desktop with Accessibility permission | Click opens the active application's menu hierarchy and exposes its native actions; user reported “super! c'est valide” | PASS (user-reported) | User confirmation on 2026-09-25 |
 | Native status module targeted regression | macOS arm64, Xcode 27 / Swift 6.4 | Battery/Wi-Fi/volume presentations, lifecycle cleanup, separator/native-kind configuration and existing module/config behavior pass | PASS | `/tmp/rill-native-modules-targeted.log`; 24 selected tests |
 | Native status popover regression | macOS 27 arm64, Xcode 27 / Swift 6.4 | Rich Wi-Fi/volume/battery popovers compile; 69 main tests and 6 IPC tests pass; the migrated active configuration validates and the relaunched runtime is healthy with AeroSpace ready | PASS (automated) | `/tmp/rill-popover-ui-build.log`; `/tmp/rill-native-popover-tests.log`; `~/.config/rill/config.toml` |
+| Plugin API v1 regression and example | macOS arm64, Xcode 27 / Swift 6.4 | Strict manifest resolution, ID mismatch rejection, no executable launch during validation, plugin stream publication, 73 main tests and 6 IPC tests pass; Debug build and `Examples/plugins/config.toml` validate | PASS | Test result `Test-Rill-2026.09.26_13-51-18-+0300.xcresult`; `/tmp/rill-plugin-tests.log`; `/tmp/rill-plugin-build.log`; `Examples/plugins/` |
+| Plugin native popover regression | macOS arm64, Xcode 27 / Swift 6.4 | Bounded `popover` payload decodes and reaches custom module state; native popover compiles; 73 main tests and 6 IPC tests pass; Hello plugin example validates | PASS (automated) | Test result `Test-Rill-2026.09.26_13-54-58-+0300.xcresult`; `/tmp/rill-plugin-popover-tests.log`; `Examples/plugins/` |
+| Hello plugin desktop validation | Current macOS desktop, Debug Rill generation 2 | `Hello Rill` renders before the Wi-Fi cluster and opens its native Lorem Ipsum popover when clicked; user reported “super! c'est bon, je le vois, oui” | PASS (user-reported) | User confirmation on 2026-09-26 |
 | Signing/notarization/Gatekeeper/publication | Owner credentials and destination | Required external inputs unavailable | NOT RUN | `docs/release-evidence.md` |
 
 ## Remaining work and risks
 
 Local packaging and user documentation are prepared. OmniWM is covered by fixtures plus real OmniWM 0.6.9/protocol 15 startup, query, subscription, focus, restoration and refresh evidence. The frontmost application menu builds, has deterministic hierarchy coverage and was validated on the current macOS desktop. The native Wi-Fi/volume/battery cluster, separator and rich popovers have automated coverage but still need physical interaction validation, including Wi-Fi association and output-device switching. Signing, notarization, quarantine/clean-user install, login-item, upgrade/uninstall and publication checks remain open.
+
+Plugin packages have automated configuration/manifest/popover coverage and a shipped Hello example. Its local package, bar placement and native popover were validated by the user on the current desktop; independent third-party package coverage remains open.
 
 ## Next agent handoff
 

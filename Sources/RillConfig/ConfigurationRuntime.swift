@@ -148,14 +148,15 @@ public struct ConfigurationParser: Sendable {
             throw ConfigurationLoadError([diagnostic(for: error)])
         }
 
-        let diagnostics = decoded.validate()
+        let resolved = try resolvePlugins(in: resolveRelativePaths(in: decoded, source: source), source: source)
+        let diagnostics = resolved.validate()
         guard diagnostics.isEmpty else {
             throw ConfigurationLoadError(diagnostics)
         }
 
         return ConfigurationSnapshot(
             generation: generation,
-            configuration: resolveRelativePaths(in: decoded, source: source),
+            configuration: resolved,
             source: source
         )
     }
@@ -208,12 +209,113 @@ public struct ConfigurationParser: Sendable {
                 result.modules[index].onClick?.executable = resolve(executable, relativeTo: baseURL)
             }
         }
+        for index in result.plugins.indices {
+            result.plugins[index].path = resolve(result.plugins[index].path, relativeTo: baseURL)
+        }
+        return result
+    }
+
+    private func resolvePlugins(
+        in configuration: AppConfiguration,
+        source: ConfigurationSource
+    ) throws -> AppConfiguration {
+        guard !configuration.plugins.isEmpty else { return configuration }
+        var result = configuration
+        let plugins = Dictionary(uniqueKeysWithValues: result.plugins.map { ($0.id, $0.path) })
+        for index in result.providers.indices where result.providers[index].kind == .plugin {
+            let provider = result.providers[index]
+            guard let pluginID = provider.plugin, let packagePath = plugins[pluginID] else { continue }
+            let packageURL = URL(fileURLWithPath: packagePath, isDirectory: true)
+            let manifestURL = packageURL.appendingPathComponent("plugin.toml", isDirectory: false)
+            let text: String
+            do { text = try String(contentsOf: manifestURL, encoding: .utf8) }
+            catch {
+                throw ConfigurationLoadError([.init(
+                    path: "providers[\(index)].plugin",
+                    message: "Cannot read plugin manifest at \(manifestURL.path): \(error.localizedDescription)"
+                )])
+            }
+            let manifest: PluginManifestFile
+            do { manifest = try TOMLDecoder().decode(PluginManifestFile.self, from: text) }
+            catch {
+                throw ConfigurationLoadError([.init(
+                    path: "providers[\(index)].plugin",
+                    message: "Invalid plugin manifest at \(manifestURL.path): \(error)"
+                )])
+            }
+            guard manifest.plugin.apiVersion == 1 else {
+                throw ConfigurationLoadError([.init(path: "providers[\(index)].plugin", message: "Plugin '\(pluginID)' uses unsupported API version \(manifest.plugin.apiVersion); expected 1")])
+            }
+            guard manifest.plugin.id == pluginID else {
+                throw ConfigurationLoadError([.init(path: "providers[\(index)].plugin", message: "Plugin manifest ID '\(manifest.plugin.id)' does not match configured ID '\(pluginID)'")])
+            }
+            guard !manifest.plugin.executable.isEmpty else {
+                throw ConfigurationLoadError([.init(path: "providers[\(index)].plugin", message: "Plugin '\(pluginID)' has an empty executable")])
+            }
+            result.providers[index].executable = resolve(manifest.plugin.executable, relativeTo: packageURL)
+            result.providers[index].args = manifest.plugin.args
+            result.providers[index].environment = manifest.plugin.environment.merging(provider.environment) { _, configured in configured }
+            result.providers[index].environment["RILL_PLUGIN_ID"] = pluginID
+            result.providers[index].environment["RILL_PLUGIN_DIRECTORY"] = packageURL.path
+            result.providers[index].environment["RILL_PLUGIN_API_VERSION"] = "1"
+        }
         return result
     }
 
     private func resolve(_ path: String, relativeTo directory: URL) -> String {
         if path.hasPrefix("/") { return URL(fileURLWithPath: path).standardizedFileURL.path }
         return URL(fileURLWithPath: path, relativeTo: directory).standardizedFileURL.path
+    }
+}
+
+private struct PluginManifestFile: Decodable {
+    let plugin: PluginManifest
+}
+
+private struct PluginManifest: Decodable {
+    let apiVersion: Int
+    let id: String
+    let name: String
+    let executable: String
+    let args: [String]
+    let environment: [String: String]
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case apiVersion = "api_version"
+        case id, name, executable, args
+        case environment = "env"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.strictContainer(keyedBy: CodingKeys.self)
+        apiVersion = try container.decode(Int.self, forKey: .apiVersion)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        executable = try container.decode(String.self, forKey: .executable)
+        args = try container.decodeIfPresent([String].self, forKey: .args) ?? []
+        environment = try container.decodeIfPresent([String: String].self, forKey: .environment) ?? [:]
+    }
+}
+
+private struct PluginCodingKey: CodingKey {
+    let stringValue: String
+    let intValue: Int?
+    init?(stringValue: String) { self.stringValue = stringValue; intValue = nil }
+    init?(intValue: Int) { stringValue = "\(intValue)"; self.intValue = intValue }
+}
+
+private extension Decoder {
+    func strictContainer<Key: CodingKey & CaseIterable>(
+        keyedBy type: Key.Type
+    ) throws -> KeyedDecodingContainer<Key> where Key.AllCases: Sequence {
+        let dynamic = try container(keyedBy: PluginCodingKey.self)
+        let allowed = Set(type.allCases.map(\.stringValue))
+        if let unknown = dynamic.allKeys.first(where: { !allowed.contains($0.stringValue) }) {
+            throw DecodingError.dataCorrupted(.init(
+                codingPath: codingPath + [unknown], debugDescription: "Unknown key '\(unknown.stringValue)'"
+            ))
+        }
+        return try container(keyedBy: type)
     }
 }
 
