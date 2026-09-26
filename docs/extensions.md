@@ -131,6 +131,8 @@ geometry centers a nonactivating panel at the physical top edge; compact
 height uses the positive top safe-area inset or 36 points, and configured
 expanded geometry is bounded. Potential collisions use distinct priorities;
 the highest priority wins.
+The panel uses untinted native Liquid Glass on macOS 26+ so its appearance
+follows the system choice, with regular material on macOS 14–25.
 
 The surface can visually connect around or below a cutout. It cannot draw in
 the physical cutout, reserve system work area, replace the menu bar or claim a

@@ -68,3 +68,11 @@ and provider plugin v1 remain compatible; schema 2 is opt-in. The experimental
 notch surface is top-centered using public `NSScreen` geometry and explicitly
 does not draw in the physical cutout or replace system UI. Automated evidence
 does not establish its real fullscreen/Spaces/sleep-wake or pacing behavior.
+
+The macOS 26+ glass preset now leaves module and notch glass untinted so the
+system's Liquid Glass appearance choice is authoritative. A configured
+`module_background` or module `style.background` remains an explicit module
+tint; the focused workspace keeps its separate configured fill. Older macOS
+releases retain the existing material/color fallback. This replaces the
+implicit module tint and classic material used by the experimental notch
+panel after the user compared clear and frosted system modes.

@@ -1213,10 +1213,12 @@ private struct ModuleChrome: ViewModifier {
             .padding(.vertical, theme.resolvedModuleVerticalPadding)
         if theme.preset == .glass {
             if #available(macOS 26.0, *) {
-                padded.glassEffect(
-                    .regular.tint(Color(hex: style?.background ?? theme.resolvedModuleBackground)).interactive(),
-                    in: RoundedRectangle(cornerRadius: theme.resolvedModuleCornerRadius)
-                )
+                let shape = RoundedRectangle(cornerRadius: theme.resolvedModuleCornerRadius)
+                if let tint = style?.background ?? theme.moduleBackground {
+                    padded.glassEffect(.regular.tint(Color(hex: tint)).interactive(), in: shape)
+                } else {
+                    padded.glassEffect(.regular.interactive(), in: shape)
+                }
             } else {
                 fallback(content: padded)
             }

@@ -533,7 +533,17 @@ private struct NotchWidgetRootView: View {
     let dismiss: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    @ViewBuilder
     var body: some View {
+        let shape = UnevenRoundedRectangle(bottomLeadingRadius: 14, bottomTrailingRadius: 14)
+        if #available(macOS 26.0, *) {
+            content.glassEffect(.regular, in: shape)
+        } else {
+            content.background(.regularMaterial).clipShape(shape)
+        }
+    }
+
+    private var content: some View {
         VStack(spacing: 8) {
             HStack {
                 ExtensionContributionView(
@@ -555,8 +565,6 @@ private struct NotchWidgetRootView: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(.regularMaterial)
-        .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 14, bottomTrailingRadius: 14))
         .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.86), value: expanded)
     }
 }
