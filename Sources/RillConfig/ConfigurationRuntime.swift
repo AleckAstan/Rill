@@ -242,7 +242,7 @@ public enum DefaultConfiguration {
     fullscreen = "hide"
     start = ["frontmost"]
     center = ["clock"]
-    end = ["battery"]
+    end = ["wifi", "status-separator", "volume", "battery"]
 
     [[modules]]
     id = "frontmost"
@@ -252,6 +252,18 @@ public enum DefaultConfiguration {
     id = "clock"
     kind = "clock"
     format = "HH:mm"
+
+    [[modules]]
+    id = "wifi"
+    kind = "wifi"
+
+    [[modules]]
+    id = "status-separator"
+    kind = "separator"
+
+    [[modules]]
+    id = "volume"
+    kind = "volume"
 
     [[modules]]
     id = "battery"

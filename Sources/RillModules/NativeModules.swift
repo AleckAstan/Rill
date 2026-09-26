@@ -1,8 +1,11 @@
 import AppKit
 import ApplicationServices
+import CoreAudio
+import CoreWLAN
 import Darwin
 import Foundation
 import IOKit.ps
+import Network
 
 public enum ModuleHealth: String, Codable, Sendable {
     case healthy
@@ -12,6 +15,7 @@ public enum ModuleHealth: String, Codable, Sendable {
 
 public struct ModuleData: Equatable, Sendable {
     public var text: String
+    public var symbolName: String?
     public var tooltip: String?
     public var health: ModuleHealth
     public var state: ModuleState
@@ -19,12 +23,14 @@ public struct ModuleData: Equatable, Sendable {
 
     public init(
         text: String,
+        symbolName: String? = nil,
         tooltip: String? = nil,
         health: ModuleHealth = .healthy,
         state: ModuleState = .normal,
         value: Double? = nil
     ) {
         self.text = text
+        self.symbolName = symbolName
         self.tooltip = tooltip
         self.health = health
         self.state = state
@@ -100,21 +106,195 @@ public enum BatterySnapshot: Equatable, Sendable {
     public var presentation: ModuleData {
         switch self {
         case .noBattery:
-            return .init(text: "AC", tooltip: "No battery detected")
+            return .init(text: "", symbolName: "powerplug.fill", tooltip: "No battery detected")
         case .unavailable:
-            return .init(text: "Battery —", tooltip: "Battery data unavailable", health: .unavailable)
+            return .init(
+                text: "",
+                symbolName: "battery.0percent",
+                tooltip: "Battery data unavailable",
+                health: .unavailable
+            )
         case .charging(let percent):
-            return .init(text: "⚡ \(percent)%", tooltip: "Battery charging: \(percent)%")
+            return .init(
+                text: "",
+                symbolName: "battery.100percent.bolt",
+                tooltip: "Battery charging: \(percent)%"
+            )
         case .discharging(let percent):
             let health: ModuleHealth = percent <= 15 ? .stale : .healthy
-            return .init(text: "\(percent)%", tooltip: "Battery: \(percent)%", health: health)
+            return .init(
+                text: "",
+                symbolName: batterySymbol(percent: percent),
+                tooltip: "Battery: \(percent)%",
+                health: health
+            )
         case .full:
-            return .init(text: "100%", tooltip: "Battery fully charged")
+            return .init(text: "", symbolName: "battery.100percent", tooltip: "Battery fully charged")
+        }
+    }
+
+    private func batterySymbol(percent: Int) -> String {
+        switch percent {
+        case ..<13: return "battery.0percent"
+        case ..<38: return "battery.25percent"
+        case ..<63: return "battery.50percent"
+        case ..<88: return "battery.75percent"
+        default: return "battery.100percent"
         }
     }
 
     private static func number(_ value: Any?) -> Double? {
         (value as? NSNumber)?.doubleValue
+    }
+}
+
+public enum WiFiSnapshot: Equatable, Sendable {
+    case off
+    case disconnected
+    case connected(ssid: String?)
+    case unavailable
+
+    public var presentation: ModuleData {
+        switch self {
+        case .off:
+            return .init(text: "", symbolName: "wifi.slash", tooltip: "Wi-Fi is off", health: .stale)
+        case .disconnected:
+            return .init(text: "", symbolName: "wifi.exclamationmark", tooltip: "Wi-Fi is not connected", health: .stale)
+        case .connected(let ssid):
+            return .init(
+                text: "",
+                symbolName: "wifi",
+                tooltip: ssid.map { "Wi-Fi: \($0)" } ?? "Wi-Fi connected"
+            )
+        case .unavailable:
+            return .init(text: "", symbolName: "wifi.slash", tooltip: "Wi-Fi unavailable", health: .unavailable)
+        }
+    }
+}
+
+public enum VolumeSnapshot: Equatable, Sendable {
+    case muted
+    case level(Int)
+    case unavailable
+
+    public var presentation: ModuleData {
+        switch self {
+        case .muted:
+            return .init(text: "", symbolName: "speaker.slash.fill", tooltip: "Sound muted")
+        case .level(let percent):
+            let symbol: String
+            switch percent {
+            case 0: symbol = "speaker.fill"
+            case 1...33: symbol = "speaker.wave.1.fill"
+            case 34...66: symbol = "speaker.wave.2.fill"
+            default: symbol = "speaker.wave.3.fill"
+            }
+            return .init(text: "", symbolName: symbol, tooltip: "Volume: \(percent)%")
+        case .unavailable:
+            return .init(
+                text: "",
+                symbolName: "speaker.slash.fill",
+                tooltip: "Volume unavailable",
+                health: .unavailable
+            )
+        }
+    }
+}
+
+public struct WiFiNetworkOption: Identifiable, Equatable, Sendable {
+    public let ssid: String
+    public let signal: Int
+    public let secured: Bool
+    public var id: String { ssid }
+
+    public init(ssid: String, signal: Int, secured: Bool) {
+        self.ssid = ssid
+        self.signal = signal
+        self.secured = secured
+    }
+}
+
+public struct AudioOutputOption: Identifiable, Equatable, Sendable {
+    public let id: UInt32
+    public let name: String
+
+    public init(id: UInt32, name: String) {
+        self.id = id
+        self.name = name
+    }
+}
+
+public enum NativeModuleAction: Sendable {
+    case refreshWiFi
+    case setWiFiPower(Bool)
+    case connectWiFi(ssid: String, password: String?)
+    case setVolume(Double)
+    case setMuted(Bool)
+    case selectAudioOutput(UInt32)
+}
+
+private actor WiFiControl {
+    struct Outcome<Value: Sendable>: Sendable {
+        let value: Value?
+        let error: String?
+    }
+
+    func scan() -> Outcome<[WiFiNetworkOption]> {
+        guard let interface = CWWiFiClient.shared().interface() else {
+            return .init(value: nil, error: "Wi-Fi interface unavailable")
+        }
+        do {
+            let networks = try interface.scanForNetworks(withSSID: nil)
+            var strongest: [String: WiFiNetworkOption] = [:]
+            for network in networks {
+                guard let ssid = network.ssid, !ssid.isEmpty else { continue }
+                let option = WiFiNetworkOption(
+                    ssid: ssid,
+                    signal: network.rssiValue,
+                    secured: !network.supportsSecurity(.none)
+                )
+                if strongest[ssid].map({ $0.signal < option.signal }) ?? true {
+                    strongest[ssid] = option
+                }
+            }
+            return .init(
+                value: strongest.values.sorted {
+                    $0.signal == $1.signal ? $0.ssid.localizedCaseInsensitiveCompare($1.ssid) == .orderedAscending
+                        : $0.signal > $1.signal
+                },
+                error: nil
+            )
+        } catch {
+            return .init(value: nil, error: "Wi-Fi scan failed: \(error.localizedDescription)")
+        }
+    }
+
+    func setPower(_ enabled: Bool) -> String? {
+        guard let interface = CWWiFiClient.shared().interface() else {
+            return "Wi-Fi interface unavailable"
+        }
+        do {
+            try interface.setPower(enabled)
+            return nil
+        } catch {
+            return "Unable to change Wi-Fi power: \(error.localizedDescription)"
+        }
+    }
+
+    func connect(ssid: String, password: String?) -> String? {
+        guard let interface = CWWiFiClient.shared().interface() else {
+            return "Wi-Fi interface unavailable"
+        }
+        do {
+            let networks = try interface.scanForNetworks(withName: ssid)
+            guard let network = networks.max(by: { $0.rssiValue < $1.rssiValue }) else {
+                return "Network '\(ssid)' is no longer available"
+            }
+            try interface.associate(to: network, password: password)
+            return nil
+        } catch {
+            return "Unable to join '\(ssid)': \(error.localizedDescription)"
+        }
     }
 }
 
@@ -158,6 +338,12 @@ public final class NativeModuleStore: ObservableObject {
         health: .unavailable
     )
     @Published public var battery = BatterySnapshot.unavailable
+    @Published public var wifi = WiFiSnapshot.unavailable
+    @Published public var wifiNetworks: [WiFiNetworkOption] = []
+    @Published public var wifiScanning = false
+    @Published public var volume = VolumeSnapshot.unavailable
+    @Published public var audioOutputs: [AudioOutputOption] = []
+    @Published public var currentAudioOutputID: UInt32?
     @Published public var mockModules: [ModuleID: ModuleData] = [:]
     @Published public var actionFailures: [ModuleID: String] = [:]
     @Published public var providerHealth: [ProviderID: String] = [:]
@@ -422,9 +608,12 @@ public actor BoundedActionRunner {
 public final class NativeModuleRuntime: NSObject {
     public let store = NativeModuleStore()
     private let actionRunner = BoundedActionRunner()
+    private let wifiControl = WiFiControl()
     private var clockReferences: [ModuleID: (count: Int, format: String)] = [:]
     private var frontmostReferences: [ModuleID: Int] = [:]
     private var batteryReferences: [ModuleID: Int] = [:]
+    private var wifiReferences: [ModuleID: Int] = [:]
+    private var volumeReferences: [ModuleID: Int] = [:]
     private var mockReferences: [ModuleID: Int] = [:]
     private var customModulesByProvider: [ProviderID: Set<ModuleID>] = [:]
     private var workspaceModulesByProvider: [ProviderID: Set<ModuleID>] = [:]
@@ -438,16 +627,22 @@ public final class NativeModuleRuntime: NSObject {
     private var staleTasks: [ProviderID: Task<Void, Never>] = [:]
     private var clockTimer: Timer?
     private var batteryTimer: Timer?
+    private var wifiMonitor: NWPathMonitor?
+    private var defaultOutputListener: AudioObjectPropertyListenerBlock?
+    private var outputDeviceListeners: [(AudioObjectID, AudioObjectPropertyAddress, AudioObjectPropertyListenerBlock)] = []
+    private var outputDeviceID = AudioObjectID(kAudioObjectUnknown)
     private var observingClockChanges = false
     private var observingFrontmostApp = false
     private var observingBattery = false
     private var applicationMenuTarget: ApplicationMenuActionTarget?
 
-    public var lifecycleCounts: (clock: Int, frontmost: Int, battery: Int, mock: Int) {
+    public var lifecycleCounts: (clock: Int, frontmost: Int, battery: Int, wifi: Int, volume: Int, mock: Int) {
         (
             clockReferences.values.reduce(0) { $0 + $1.count },
             frontmostReferences.values.reduce(0, +),
             batteryReferences.values.reduce(0, +),
+            wifiReferences.values.reduce(0, +),
+            volumeReferences.values.reduce(0, +),
             mockReferences.values.reduce(0, +)
         )
     }
@@ -470,6 +665,36 @@ public final class NativeModuleRuntime: NSObject {
             } else {
                 store.actionFailures[moduleID] = "Action exited with status \(result.exitCode ?? -1)"
             }
+        }
+    }
+
+    public func performNativeAction(moduleID: ModuleID, action: NativeModuleAction) {
+        store.actionFailures[moduleID] = nil
+        switch action {
+        case .refreshWiFi:
+            refreshWiFiNetworks(moduleID: moduleID)
+        case .setWiFiPower(let enabled):
+            Task { [weak self] in
+                guard let self else { return }
+                let error = await wifiControl.setPower(enabled)
+                store.actionFailures[moduleID] = error
+                updateWiFi(path: nil)
+                if enabled { refreshWiFiNetworks(moduleID: moduleID) }
+            }
+        case .connectWiFi(let ssid, let password):
+            Task { [weak self] in
+                guard let self else { return }
+                let error = await wifiControl.connect(ssid: ssid, password: password)
+                store.actionFailures[moduleID] = error
+                updateWiFi(path: nil)
+                if error == nil { refreshWiFiNetworks(moduleID: moduleID) }
+            }
+        case .setVolume(let value):
+            setVolume(value, moduleID: moduleID)
+        case .setMuted(let muted):
+            setMuted(muted, moduleID: moduleID)
+        case .selectAudioOutput(let deviceID):
+            selectAudioOutput(deviceID, moduleID: moduleID)
         }
     }
 
@@ -646,6 +871,12 @@ public final class NativeModuleRuntime: NSObject {
         case .battery:
             batteryReferences[module.id, default: 0] += 1
             startBatteryIfNeeded()
+        case .wifi:
+            wifiReferences[module.id, default: 0] += 1
+            startWiFiIfNeeded()
+        case .volume:
+            volumeReferences[module.id, default: 0] += 1
+            startVolumeIfNeeded()
         case .workspaces, .custom:
             mockReferences[module.id, default: 0] += 1
             if module.kind == .custom, let provider = module.provider {
@@ -661,7 +892,7 @@ public final class NativeModuleRuntime: NSObject {
                     health: .unavailable
                 )
             }
-        case .text:
+        case .text, .separator:
             break
         }
     }
@@ -677,6 +908,12 @@ public final class NativeModuleRuntime: NSObject {
         case .battery:
             decrement(module.id, in: &batteryReferences)
             if batteryReferences.isEmpty { stopBattery() }
+        case .wifi:
+            decrement(module.id, in: &wifiReferences)
+            if wifiReferences.isEmpty { stopWiFi() }
+        case .volume:
+            decrement(module.id, in: &volumeReferences)
+            if volumeReferences.isEmpty { stopVolume() }
         case .workspaces, .custom:
             decrement(module.id, in: &mockReferences)
             if module.kind == .custom, let provider = module.provider {
@@ -688,7 +925,7 @@ public final class NativeModuleRuntime: NSObject {
                 if workspaceModulesByProvider[provider]?.isEmpty == true { workspaceModulesByProvider[provider] = nil }
             }
             if mockReferences[module.id] == nil { store.mockModules[module.id] = nil }
-        case .text:
+        case .text, .separator:
             break
         }
         store.actionFailures[module.id] = nil
@@ -867,6 +1104,327 @@ public final class NativeModuleRuntime: NSObject {
             )
             observingBattery = false
         }
+    }
+
+    private func startWiFiIfNeeded() {
+        updateWiFi(path: nil)
+        guard wifiMonitor == nil else { return }
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self] path in
+            Task { @MainActor [weak self] in
+                self?.updateWiFi(path: path)
+            }
+        }
+        monitor.start(queue: DispatchQueue(label: "app.rill.wifi-monitor", qos: .utility))
+        wifiMonitor = monitor
+        if let moduleID = wifiReferences.keys.first {
+            refreshWiFiNetworks(moduleID: moduleID)
+        }
+    }
+
+    private func updateWiFi(path: NWPath?) {
+        guard let interface = CWWiFiClient.shared().interface() else {
+            store.wifi = .unavailable
+            return
+        }
+        guard interface.powerOn() else {
+            store.wifi = .off
+            return
+        }
+        let connected = path?.usesInterfaceType(.wifi) ?? interface.serviceActive()
+        store.wifi = connected ? .connected(ssid: interface.ssid()) : .disconnected
+    }
+
+    private func stopWiFi() {
+        wifiMonitor?.cancel()
+        wifiMonitor = nil
+        store.wifiNetworks = []
+        store.wifiScanning = false
+    }
+
+    private func refreshWiFiNetworks(moduleID: ModuleID) {
+        guard !store.wifiScanning else { return }
+        store.wifiScanning = true
+        Task { [weak self] in
+            guard let self else { return }
+            let outcome = await wifiControl.scan()
+            store.wifiScanning = false
+            if let networks = outcome.value {
+                store.wifiNetworks = networks
+            }
+            store.actionFailures[moduleID] = outcome.error
+        }
+    }
+
+    private func startVolumeIfNeeded() {
+        updateVolume()
+        guard defaultOutputListener == nil else { return }
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        let listener: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
+            Task { @MainActor [weak self] in
+                self?.bindOutputDeviceListeners()
+                self?.updateVolume()
+            }
+        }
+        guard AudioObjectAddPropertyListenerBlock(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            .main,
+            listener
+        ) == noErr else {
+            store.volume = .unavailable
+            return
+        }
+        defaultOutputListener = listener
+        bindOutputDeviceListeners()
+    }
+
+    private func bindOutputDeviceListeners() {
+        removeOutputDeviceListeners()
+        guard let deviceID = readAudioProperty(
+            objectID: AudioObjectID(kAudioObjectSystemObject),
+            selector: kAudioHardwarePropertyDefaultOutputDevice,
+            scope: kAudioObjectPropertyScopeGlobal,
+            defaultValue: AudioObjectID(kAudioObjectUnknown)
+        ), deviceID != AudioObjectID(kAudioObjectUnknown) else {
+            outputDeviceID = AudioObjectID(kAudioObjectUnknown)
+            return
+        }
+        outputDeviceID = deviceID
+        store.currentAudioOutputID = deviceID
+        store.audioOutputs = availableAudioOutputs()
+        for selector in [kAudioDevicePropertyVolumeScalar, kAudioDevicePropertyMute] {
+            var address = AudioObjectPropertyAddress(
+                mSelector: selector,
+                mScope: kAudioDevicePropertyScopeOutput,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            let listener: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
+                Task { @MainActor [weak self] in self?.updateVolume() }
+            }
+            if AudioObjectAddPropertyListenerBlock(deviceID, &address, .main, listener) == noErr {
+                outputDeviceListeners.append((deviceID, address, listener))
+            }
+        }
+    }
+
+    private func updateVolume() {
+        let deviceID = outputDeviceID == AudioObjectID(kAudioObjectUnknown)
+            ? readAudioProperty(
+                objectID: AudioObjectID(kAudioObjectSystemObject),
+                selector: kAudioHardwarePropertyDefaultOutputDevice,
+                scope: kAudioObjectPropertyScopeGlobal,
+                defaultValue: AudioObjectID(kAudioObjectUnknown)
+            )
+            : outputDeviceID
+        guard let deviceID, deviceID != AudioObjectID(kAudioObjectUnknown) else {
+            store.volume = .unavailable
+            return
+        }
+        let muted = readAudioProperty(
+            objectID: deviceID,
+            selector: kAudioDevicePropertyMute,
+            scope: kAudioDevicePropertyScopeOutput,
+            defaultValue: UInt32(0)
+        ) == 1
+        guard let scalar = readAudioProperty(
+            objectID: deviceID,
+            selector: kAudioDevicePropertyVolumeScalar,
+            scope: kAudioDevicePropertyScopeOutput,
+            defaultValue: Float32(0)
+        ) else {
+            store.volume = muted ? .muted : .unavailable
+            return
+        }
+        store.volume = muted ? .muted : .level(Int((min(1, max(0, scalar)) * 100).rounded()))
+    }
+
+    private func setVolume(_ value: Double, moduleID: ModuleID) {
+        guard outputDeviceID != AudioObjectID(kAudioObjectUnknown) else {
+            store.actionFailures[moduleID] = "Output volume is unavailable"
+            return
+        }
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyVolumeScalar,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var scalar = Float32(min(1, max(0, value)))
+        let result = AudioObjectSetPropertyData(
+            outputDeviceID,
+            &address,
+            0,
+            nil,
+            UInt32(MemoryLayout<Float32>.size),
+            &scalar
+        )
+        store.actionFailures[moduleID] = result == noErr ? nil : "Unable to change output volume"
+        if result == noErr {
+            setMuted(false, moduleID: moduleID)
+            updateVolume()
+        }
+    }
+
+    private func setMuted(_ muted: Bool, moduleID: ModuleID) {
+        guard outputDeviceID != AudioObjectID(kAudioObjectUnknown) else {
+            store.actionFailures[moduleID] = "Output mute is unavailable"
+            return
+        }
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyMute,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var value: UInt32 = muted ? 1 : 0
+        let result = AudioObjectSetPropertyData(
+            outputDeviceID,
+            &address,
+            0,
+            nil,
+            UInt32(MemoryLayout<UInt32>.size),
+            &value
+        )
+        store.actionFailures[moduleID] = result == noErr ? nil : "Unable to change mute state"
+        updateVolume()
+    }
+
+    private func selectAudioOutput(_ deviceID: UInt32, moduleID: ModuleID) {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var value = AudioObjectID(deviceID)
+        let result = AudioObjectSetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            0,
+            nil,
+            UInt32(MemoryLayout<AudioObjectID>.size),
+            &value
+        )
+        store.actionFailures[moduleID] = result == noErr ? nil : "Unable to select output device"
+        if result == noErr {
+            bindOutputDeviceListeners()
+            updateVolume()
+        }
+    }
+
+    private func availableAudioOutputs() -> [AudioOutputOption] {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDevices,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var size: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            0,
+            nil,
+            &size
+        ) == noErr, size > 0 else { return [] }
+        var devices = [AudioObjectID](
+            repeating: AudioObjectID(kAudioObjectUnknown),
+            count: Int(size) / MemoryLayout<AudioObjectID>.size
+        )
+        guard AudioObjectGetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            0,
+            nil,
+            &size,
+            &devices
+        ) == noErr else { return [] }
+
+        return devices.compactMap { deviceID in
+            var streamsAddress = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyStreams,
+                mScope: kAudioDevicePropertyScopeOutput,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            var streamsSize: UInt32 = 0
+            guard AudioObjectGetPropertyDataSize(deviceID, &streamsAddress, 0, nil, &streamsSize) == noErr,
+                  streamsSize > 0 else { return nil }
+            guard let name = readAudioStringProperty(
+                objectID: deviceID,
+                selector: kAudioObjectPropertyName,
+                scope: kAudioObjectPropertyScopeGlobal
+            ) else { return nil }
+            return AudioOutputOption(id: deviceID, name: name)
+        }
+        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private func readAudioStringProperty(
+        objectID: AudioObjectID,
+        selector: AudioObjectPropertySelector,
+        scope: AudioObjectPropertyScope
+    ) -> String? {
+        var address = AudioObjectPropertyAddress(
+            mSelector: selector,
+            mScope: scope,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var value: Unmanaged<CFString>?
+        var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+        guard AudioObjectGetPropertyData(objectID, &address, 0, nil, &size, &value) == noErr else {
+            return nil
+        }
+        return value?.takeUnretainedValue() as String?
+    }
+
+    private func readAudioProperty<T>(
+        objectID: AudioObjectID,
+        selector: AudioObjectPropertySelector,
+        scope: AudioObjectPropertyScope,
+        defaultValue: T
+    ) -> T? {
+        var address = AudioObjectPropertyAddress(
+            mSelector: selector,
+            mScope: scope,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        guard AudioObjectHasProperty(objectID, &address) else { return nil }
+        var value = defaultValue
+        var size = UInt32(MemoryLayout<T>.size)
+        guard AudioObjectGetPropertyData(objectID, &address, 0, nil, &size, &value) == noErr else {
+            return nil
+        }
+        return value
+    }
+
+    private func removeOutputDeviceListeners() {
+        for (deviceID, storedAddress, listener) in outputDeviceListeners {
+            var address = storedAddress
+            AudioObjectRemovePropertyListenerBlock(deviceID, &address, .main, listener)
+        }
+        outputDeviceListeners.removeAll()
+    }
+
+    private func stopVolume() {
+        removeOutputDeviceListeners()
+        if let listener = defaultOutputListener {
+            var address = AudioObjectPropertyAddress(
+                mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+                mScope: kAudioObjectPropertyScopeGlobal,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            AudioObjectRemovePropertyListenerBlock(
+                AudioObjectID(kAudioObjectSystemObject),
+                &address,
+                .main,
+                listener
+            )
+        }
+        defaultOutputListener = nil
+        outputDeviceID = AudioObjectID(kAudioObjectUnknown)
+        store.audioOutputs = []
+        store.currentAudioOutputID = nil
     }
 }
 

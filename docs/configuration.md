@@ -32,7 +32,7 @@ top_placement = "menuBarArea"
 fullscreen = "hide"
 start = ["spaces", "frontmost"]
 center = ["clock"]
-end = ["battery", "custom"]
+end = ["wifi", "status-separator", "volume", "battery", "custom"]
 
 [[providers]]
 id = "wm"
@@ -58,6 +58,18 @@ kind = "clock"
 format = "HH:mm"
 
 [[modules]]
+id = "wifi"
+kind = "wifi"
+
+[[modules]]
+id = "status-separator"
+kind = "separator"
+
+[[modules]]
+id = "volume"
+kind = "volume"
+
+[[modules]]
 id = "battery"
 kind = "battery"
 
@@ -70,7 +82,7 @@ placeholder = "—"
 
 A no-manager starter must omit `wm` and `spaces`; the example above deliberately illustrates optional integration. For AeroSpace or OmniWM replace `kind` and `executable`, retaining the provider abstraction. `display` accepts `primary`, `all`, or `id:<stable-id>` exposed by diagnostics. A missing explicit display suspends that surface until it returns. `edge` accepts top, bottom, left, right. Logical start/center/end follow orientation. Each module instance belongs to at most one surface specification; `all` mirrors it per display with shared data and display-aware workspace filtering when the manager exposes a verified CoreGraphics identity.
 
-Top-only `top_placement` accepts `menuBarArea` (default for top) or `belowSystemUI`; specifying it on another edge is an error. In `menuBarArea`, derive the panel from the full screen frame: full width, top aligned, zero outer inset, height equal to positive top safe-area inset or 28 points otherwise. Reject explicit `thickness`, `inset` or `safe_area` keys in this mode with a diagnostic explaining the derived geometry; do not silently ignore them. Background covers the strip behind the notch, while content uses the auxiliary top-left/top-right usable regions. A nominally centered group must be relocated into usable space or follow the documented overflow policy if it intersects the notch. Theme padding applies inside usable content regions, not to the outer panel frame.
+Top-only `top_placement` accepts `menuBarArea` (default for top) or `belowSystemUI`; specifying it on another edge is an error. In `menuBarArea`, derive the panel from the full screen frame: full width, top aligned, zero outer inset, height equal to positive top safe-area inset or 28 points otherwise. Reject explicit `thickness`, `inset` or `safe_area` keys in this mode with a diagnostic explaining the derived geometry; do not silently ignore them. Background covers the strip behind the notch, while content uses the auxiliary top-left/top-right usable regions. On a notched display, `center` modules join `end` modules in one trailing-aligned group at the far right, ordered before the configured `end` modules. Theme padding applies inside usable content regions, not to the outer panel frame.
 
 For `belowSystemUI` and other edges, `thickness` defaults to 32 points, `inset` to 6 points and `safe_area` to `system`; version 1 accepts only this safe-area value. Available geometry intersects the screen's visible frame with its safe-area-inset frame. Example for an inset top bar: `top_placement = "belowSystemUI"`, `thickness = 32`, `inset = 6`, `safe_area = "system"`. The selected placement never changes or automatically detects the macOS menu-bar auto-hide setting. Document that the user enables auto-hide for the default placement; verify native menu reveal behavior in phase 01.
 
@@ -78,6 +90,6 @@ Provider kinds: `yabai`, `aerospace`, `omniwm`, `event`, `command`, `stream`. Ma
 
 Module `on_click` is an optional inline/table action with `executable`, `args`, and bounded `timeout_ms`; no implicit shell expansion. Workspace modules can use their provider's typed focus action when supported. Styling uses declared state tokens and per-module overrides, not arbitrary CSS. Phase 03 must enumerate allowed overrides, validation bounds, overflow policy and complete defaults in a schema reference before calling version 1 stable.
 
-Theme preset `segmented` groups modules into subtle capsules and highlights the focused workspace; `flat` keeps those layers transparent. `glass` uses native SwiftUI Liquid Glass on macOS 26+ with a translucent segmented fallback on macOS 14–25. Version 1 accepts bounded overrides for surface/module/workspace backgrounds, focused background, border color/width, module/workspace radii and padding, workspace spacing, and application icon size. Presets only provide defaults, so explicit tokens remain stable when changing preset.
+Theme preset `segmented` groups modules into subtle capsules and highlights the focused workspace; `flat` keeps those layers transparent. `glass` uses native SwiftUI Liquid Glass on macOS 26+ with a translucent segmented fallback on macOS 14–25. Version 1 accepts bounded overrides for surface/module/workspace backgrounds, material, adaptive text, focused background, border color/width, module/workspace radii and padding, workspace content/inter-item spacing, minimum height, empty-state opacity, and application icon size. Presets only provide defaults, so explicit tokens remain stable when changing preset.
 
 Hot reload watches the containing directory to catch atomic-save rename patterns, debounces bursts (target 150 ms), reparses and validates the entire file, then commits a generation. Failure retains the last good layout and shows a diagnostic. No executing commands during parsing or `validate`. Unsupported future keys are errors until supported, even if described in the longer-term roadmap.

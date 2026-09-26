@@ -88,6 +88,32 @@ User flat-design validation update: the `flat` preset was loaded with the same l
 
 User native-design validation update: the `glass` preset and focus-ring correction were loaded on macOS 27 with AeroSpace and explicitly approved by the user on 2026-09-25.
 
+2026-09-25 glass workspace refinement: the `glass` preset no longer wraps the complete workspace list in a group capsule. Each workspace receives native interactive glass independently, and glass application icons default to 18 points for a cleaner, more icon-forward layout.
+
+2026-09-25 glass visual correction: the glass surface now diffuses the desktop through an adaptive material, uses appearance-aware primary text, avoids over-rounded capsules and gives workspace items more breathing room.
+
+2026-09-25 glass spacing refinement: desktop comparison increased each glass workspace's horizontal inset from six to nine points while preserving its height and inter-workspace spacing.
+
+2026-09-25 glass capsule alignment: workspace horizontal inset increased to eleven points, and empty workspace content now reserves the same minimum height as application icons so every capsule aligns.
+
+2026-09-25 glass configuration update: every value used by the refined glass appearance is now representable in TOML, including adaptive material/text, capsule geometry, workspace content spacing, minimum height and empty-state opacity.
+
+2026-09-25 glass background refinement: the glass preset once again leaves the complete bar transparent; optional surface materials remain available explicitly through configuration.
+
 2026-09-25 frontmost-menu update: clicking the `frontmostApp` module now mirrors the active application's bounded Accessibility menu hierarchy in a native macOS menu and invokes selected items with `AXPress`. Accessibility access is requested only on interaction, failures remain visible, and an explicit configured `on_click` retains priority.
 
 User frontmost-menu validation update: the native active-application menu was exercised on the current macOS desktop and explicitly approved by the user on 2026-09-25.
+
+2026-09-25 notch alignment correction: on notched MacBook displays, configured center modules now join the end modules in one trailing-aligned group at the far right instead of being relocated to the left usable region.
+
+User notch alignment validation update: the corrected layout was approved on the current MacBook; the workspace list can use the complete left usable region while center and end modules remain grouped at the far right.
+
+2026-09-25 notch-height refinement: the glass preset now uses taller module and workspace controls to better fill the MacBook menu-bar strip while preserving the notch-derived panel geometry.
+
+2026-09-25 active-workspace contrast refinement: the glass focused-workspace tint is substantially whiter so the active space remains immediately distinguishable from inactive capsules.
+
+2026-09-25 active-workspace visibility correction: native Liquid Glass now renders the configured workspace color as a real clipped fill beneath the glass effect; the default active fill is near-opaque white rather than a subtle tint.
+
+2026-09-25 native status-module update: battery, Wi-Fi and output-volume modules now render stateful SF Symbols instead of status text while retaining exact details in tooltips and accessibility labels. Wi-Fi uses CoreWLAN with event-driven Network path updates, volume uses CoreAudio property listeners, and a new orientation-aware `separator` module groups controls without capsule chrome. The distributed default configuration demonstrates the native status cluster; 69 main tests and 6 IPC tests pass, the Debug app builds, and every shipped example validates. Physical appearance and live-change behavior remain user-observed.
+
+2026-09-25 native status-popover update: clicking Wi-Fi, volume or battery now opens a rich native SwiftUI popover instead of immediately opening System Settings. Public APIs provide Wi-Fi power/scan/association, volume/mute/default-output selection and battery detail; each panel keeps Settings as a secondary action, and explicit `on_click` remains authoritative. The active user configuration was migrated, 69 main tests and 6 IPC tests pass, the Debug build succeeds and the relaunched runtime is healthy; physical interactions remain user-observed.

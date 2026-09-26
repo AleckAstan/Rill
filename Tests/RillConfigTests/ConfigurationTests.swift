@@ -75,6 +75,35 @@ final class ConfigurationParserTests: XCTestCase {
         assertInvalid(text, contains: "modules[0].text")
     }
 
+    func testNativeStatusAndSeparatorModulesDecodeWithoutProviders() throws {
+        let text = """
+        schema_version = 1
+
+        [[surfaces]]
+        id = "main"
+        end = ["wifi", "divider", "volume", "battery"]
+
+        [[modules]]
+        id = "wifi"
+        kind = "wifi"
+
+        [[modules]]
+        id = "divider"
+        kind = "separator"
+
+        [[modules]]
+        id = "volume"
+        kind = "volume"
+
+        [[modules]]
+        id = "battery"
+        kind = "battery"
+        """
+        let configuration = try parser.parse(text: text).configuration
+        XCTAssertEqual(configuration.modules.map(\.kind), [.wifi, .separator, .volume, .battery])
+        XCTAssertTrue(configuration.validate().isEmpty)
+    }
+
     func testNumericBoundsAndInvalidTypesAreRejected() {
         assertInvalid(
             DefaultConfiguration.contents.replacingOccurrences(
@@ -106,15 +135,27 @@ final class ConfigurationParserTests: XCTestCase {
             module_padding = 7
             module_vertical_padding = 3
             workspace_padding = 5
+            workspace_vertical_padding = 4
+            workspace_content_spacing = 6
             workspace_spacing = 4
+            workspace_min_height = 22
+            empty_workspace_opacity = 0.7
             application_icon_size = 20
+            surface_material = "regular"
+            adaptive_text = true
             """
         )
         let theme = try parser.parse(text: text).configuration.theme
         XCTAssertEqual(theme.preset, .flat)
         XCTAssertEqual(theme.resolvedModuleBackground, "#11223344")
         XCTAssertEqual(theme.resolvedBorderWidth, 2)
+        XCTAssertEqual(theme.resolvedWorkspaceVerticalPadding, 4)
+        XCTAssertEqual(theme.resolvedWorkspaceContentSpacing, 6)
+        XCTAssertEqual(theme.resolvedWorkspaceMinimumHeight, 22)
+        XCTAssertEqual(theme.resolvedEmptyWorkspaceOpacity, 0.7)
         XCTAssertEqual(theme.resolvedApplicationIconSize, 20)
+        XCTAssertEqual(theme.resolvedSurfaceMaterial, .regular)
+        XCTAssertTrue(theme.resolvedAdaptiveText)
     }
 
     func testGlassThemePresetDecodes() throws {
@@ -134,6 +175,13 @@ final class ConfigurationParserTests: XCTestCase {
                 with: "preset = \"segmented\"\napplication_icon_size = 40"
             ),
             contains: "theme.application_icon_size"
+        )
+        assertInvalid(
+            DefaultConfiguration.contents.replacingOccurrences(
+                of: "preset = \"segmented\"",
+                with: "preset = \"segmented\"\nempty_workspace_opacity = 1.2"
+            ),
+            contains: "theme.empty_workspace_opacity"
         )
     }
 

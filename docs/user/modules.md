@@ -42,7 +42,39 @@ id = "battery"
 kind = "battery"
 ```
 
-Battery data comes from the supported IOKit power-source interface and refreshes on power-state changes, wake, and a slow 30-second reconciliation timer. Charging shows a lightning indicator, low charge uses the warning presentation, unavailable data shows `Battery —`, and hardware with no battery intentionally shows `AC`. No permission prompt is required.
+Battery data comes from the supported IOKit power-source interface and refreshes on power-state changes, wake, and a slow 30-second reconciliation timer. The module renders an SF Symbol selected from the current charge band, adds a bolt while charging, and exposes the exact percentage in its tooltip and accessibility label. Low charge uses the warning presentation; hardware with no battery shows a power-plug symbol. No permission prompt is required.
+
+## Wi-Fi
+
+```toml
+[[modules]]
+id = "wifi"
+kind = "wifi"
+```
+
+Wi-Fi uses CoreWLAN for radio and network identity plus an event-driven Network path monitor. It renders the native `wifi`, disconnected, or disabled SF Symbol; the tooltip and accessibility label include the SSID when macOS makes it available. Clicking opens a native popover that can enable or disable Wi-Fi, scan nearby networks and join open or password-protected networks. A secondary **Wi-Fi Settings…** action remains available. Rill does not request location access solely to reveal a hidden SSID, so macOS privacy policy can hide names until the user grants the relevant system permission.
+
+## Volume
+
+```toml
+[[modules]]
+id = "volume"
+kind = "volume"
+```
+
+Volume reads the default output device through CoreAudio and listens for default-device, volume, and mute changes. Its SF Symbol follows the current level or mute state, while the exact percentage remains available in the tooltip and accessibility label. Clicking opens a native popover with a volume slider, mute control, output-device selection and a secondary **Sound Settings…** action. Devices that do not expose a master scalar report an unavailable state instead of showing a fabricated level.
+
+## Separator
+
+```toml
+[[modules]]
+id = "status-separator"
+kind = "separator"
+```
+
+Separators have no provider or capsule chrome. They render as a vertical hairline on top/bottom bars and a horizontal hairline on left/right bars, allowing native-looking groups without embedding punctuation in text modules.
+
+Clicking the battery symbol opens a native status popover with charge state, percentage visualization and a secondary **Battery Settings…** action. macOS does not expose every Control Center battery action through public APIs, so Rill keeps unsupported controls in System Settings instead of relying on private interfaces.
 
 ## Custom data
 
@@ -70,14 +102,16 @@ on_click = { executable = "/usr/bin/open", args = ["/Users/me/My Project"], time
 
 Rill launches exactly `executable` with the declared argument array. Spaces and shell metacharacters remain literal; there is no shell, environment expansion, globbing, or command substitution unless the executable is explicitly a shell. Timeout bounds are 100–300000 ms and output is capped at 64 KiB. Launch errors, timeouts, and nonzero exits appear on the module as an error indicator and tooltip without blocking the UI.
 
+For `wifi`, `volume`, `battery`, and `frontmostApp`, an explicit `on_click` replaces the built-in popover or application menu. Omit it to retain native interaction.
+
 Interactive modules use native SwiftUI buttons with VoiceOver labels, values, hints, and actions. Rill does not add motion of its own, so Reduce Motion requires no alternate animation path.
 
 ## Styling and health
 
 Native modules publish healthy, warning/stale, or unavailable presentation. A module's `style` overrides its normal foreground, background, font, size, and padding. `states.warning` and `states.error` can override warning and unavailable foreground colors. See the complete [configuration reference](configuration.md).
 
-The global `theme.preset` selects `flat`, `segmented`, or `glass`. The segmented preset draws independent module capsules, a stronger focused-workspace capsule, subtle borders and compact application icons. Glass uses SwiftUI's native Liquid Glass effect on macOS 26+ and a translucent fallback on older supported systems. Every generated token can be overridden in `[theme]`, including surface/module/workspace backgrounds, radii, border, spacing, padding and `application_icon_size`.
+The global `theme.preset` selects `flat`, `segmented`, or `glass`. The segmented preset draws independent module capsules, a stronger focused-workspace capsule, subtle borders and compact application icons. Glass uses SwiftUI's native Liquid Glass effect on macOS 26+ and a translucent fallback on older supported systems. Its workspace list has no enclosing group capsule: each space receives its own glass treatment and uses a larger 18-point application icon by default. Every generated token can be overridden in `[theme]`, including surface/module/workspace backgrounds, radii, border, spacing, padding and `application_icon_size`.
 
 Custom updates also select `states.normal`, `states.warning`, `states.error`, or `states.success`. Stream data becomes stale after the configured `stale_after_ms` while retaining the last visible value.
 
-The standalone example at [`Examples/default/config.toml`](../../Examples/default/config.toml) uses the frontmost application, clock, and battery across all connected displays.
+The standalone example at [`Examples/default/config.toml`](../../Examples/default/config.toml) uses the frontmost application, clock, Wi-Fi, volume, battery, and a status-group separator across all connected displays.

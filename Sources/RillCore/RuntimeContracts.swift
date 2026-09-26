@@ -125,7 +125,9 @@ public typealias PanelEdge = SurfaceEdge
 
 public enum SurfaceKind: String, Codable, Sendable { case bar }
 public enum ProviderKind: String, Codable, Sendable { case yabai, aerospace, omniwm, event, command, stream }
-public enum ModuleKind: String, Codable, Sendable { case text, clock, frontmostApp, battery, workspaces, custom }
+public enum ModuleKind: String, Codable, Sendable {
+    case text, clock, frontmostApp, battery, wifi, volume, separator, workspaces, custom
+}
 public enum TopPlacement: String, Codable, Sendable { case menuBarArea, belowSystemUI }
 public enum SafeAreaPolicy: String, Codable, Sendable { case system }
 public enum FullscreenPolicy: String, Codable, Sendable { case hide, show }
@@ -434,6 +436,14 @@ public enum ThemePreset: String, Codable, Hashable, Sendable, CaseIterable {
     case glass
 }
 
+public enum SurfaceMaterial: String, Codable, Hashable, Sendable, CaseIterable {
+    case none
+    case ultraThin = "ultra_thin"
+    case thin
+    case regular
+    case thick
+}
+
 public struct ThemeSpec: Codable, Hashable, Sendable {
     public var preset: ThemePreset
     public var font: String
@@ -456,8 +466,14 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
     public var modulePadding: Double?
     public var moduleVerticalPadding: Double?
     public var workspacePadding: Double?
+    public var workspaceVerticalPadding: Double?
+    public var workspaceContentSpacing: Double?
     public var workspaceSpacing: Double?
+    public var workspaceMinimumHeight: Double?
+    public var emptyWorkspaceOpacity: Double?
     public var applicationIconSize: Double?
+    public var surfaceMaterial: SurfaceMaterial?
+    public var adaptiveText: Bool?
 
     enum CodingKeys: String, CodingKey, CaseIterable {
         case preset, font, foreground, background, accent, padding, spacing
@@ -475,8 +491,14 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
         case modulePadding = "module_padding"
         case moduleVerticalPadding = "module_vertical_padding"
         case workspacePadding = "workspace_padding"
+        case workspaceVerticalPadding = "workspace_vertical_padding"
+        case workspaceContentSpacing = "workspace_content_spacing"
         case workspaceSpacing = "workspace_spacing"
+        case workspaceMinimumHeight = "workspace_min_height"
+        case emptyWorkspaceOpacity = "empty_workspace_opacity"
         case applicationIconSize = "application_icon_size"
+        case surfaceMaterial = "surface_material"
+        case adaptiveText = "adaptive_text"
     }
 
     public init(
@@ -501,8 +523,14 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
         modulePadding: Double? = nil,
         moduleVerticalPadding: Double? = nil,
         workspacePadding: Double? = nil,
+        workspaceVerticalPadding: Double? = nil,
+        workspaceContentSpacing: Double? = nil,
         workspaceSpacing: Double? = nil,
-        applicationIconSize: Double? = nil
+        workspaceMinimumHeight: Double? = nil,
+        emptyWorkspaceOpacity: Double? = nil,
+        applicationIconSize: Double? = nil,
+        surfaceMaterial: SurfaceMaterial? = nil,
+        adaptiveText: Bool? = nil
     ) {
         self.preset = preset
         self.font = font
@@ -525,8 +553,14 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
         self.modulePadding = modulePadding
         self.moduleVerticalPadding = moduleVerticalPadding
         self.workspacePadding = workspacePadding
+        self.workspaceVerticalPadding = workspaceVerticalPadding
+        self.workspaceContentSpacing = workspaceContentSpacing
         self.workspaceSpacing = workspaceSpacing
+        self.workspaceMinimumHeight = workspaceMinimumHeight
+        self.emptyWorkspaceOpacity = emptyWorkspaceOpacity
         self.applicationIconSize = applicationIconSize
+        self.surfaceMaterial = surfaceMaterial
+        self.adaptiveText = adaptiveText
     }
 
     public init(from decoder: Decoder) throws {
@@ -552,8 +586,14 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
         modulePadding = try container.decodeIfPresent(Double.self, forKey: .modulePadding)
         moduleVerticalPadding = try container.decodeIfPresent(Double.self, forKey: .moduleVerticalPadding)
         workspacePadding = try container.decodeIfPresent(Double.self, forKey: .workspacePadding)
+        workspaceVerticalPadding = try container.decodeIfPresent(Double.self, forKey: .workspaceVerticalPadding)
+        workspaceContentSpacing = try container.decodeIfPresent(Double.self, forKey: .workspaceContentSpacing)
         workspaceSpacing = try container.decodeIfPresent(Double.self, forKey: .workspaceSpacing)
+        workspaceMinimumHeight = try container.decodeIfPresent(Double.self, forKey: .workspaceMinimumHeight)
+        emptyWorkspaceOpacity = try container.decodeIfPresent(Double.self, forKey: .emptyWorkspaceOpacity)
         applicationIconSize = try container.decodeIfPresent(Double.self, forKey: .applicationIconSize)
+        surfaceMaterial = try container.decodeIfPresent(SurfaceMaterial.self, forKey: .surfaceMaterial)
+        adaptiveText = try container.decodeIfPresent(Bool.self, forKey: .adaptiveText)
     }
 
     public var resolvedSurfaceBackground: String {
@@ -580,7 +620,7 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
             switch preset {
             case .flat: return "#00000000"
             case .segmented: return "#3B4252FF"
-            case .glass: return "#FFFFFF24"
+            case .glass: return "#FFFFFFD9"
             }
         }
         return focusedWorkspaceBackground
@@ -606,7 +646,7 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
             switch preset {
             case .flat: return 0
             case .segmented: return 5
-            case .glass: return 12
+            case .glass: return 7
             }
         }
         return moduleCornerRadius
@@ -617,7 +657,7 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
             switch preset {
             case .flat: return 0
             case .segmented: return 4
-            case .glass: return 9
+            case .glass: return 7
             }
         }
         return workspaceCornerRadius
@@ -628,7 +668,7 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
             switch preset {
             case .flat: return 0
             case .segmented: return 8
-            case .glass: return 9
+            case .glass: return 10
             }
         }
         return modulePadding
@@ -639,7 +679,7 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
             switch preset {
             case .flat: return 0
             case .segmented: return 4
-            case .glass: return 5
+            case .glass: return 6
             }
         }
         return moduleVerticalPadding
@@ -650,10 +690,18 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
             switch preset {
             case .flat: return 2
             case .segmented: return 5
-            case .glass: return 6
+            case .glass: return 11
             }
         }
         return workspacePadding
+    }
+
+    public var resolvedWorkspaceVerticalPadding: Double {
+        workspaceVerticalPadding ?? (preset == .glass ? 5 : 2)
+    }
+
+    public var resolvedWorkspaceContentSpacing: Double {
+        workspaceContentSpacing ?? 4
     }
 
     public var resolvedWorkspaceSpacing: Double {
@@ -661,14 +709,30 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
             switch preset {
             case .flat: return 6
             case .segmented: return 4
-            case .glass: return 5
+            case .glass: return 7
             }
         }
         return workspaceSpacing
     }
 
     public var resolvedApplicationIconSize: Double {
-        applicationIconSize ?? 16
+        applicationIconSize ?? (preset == .glass ? 18 : 16)
+    }
+
+    public var resolvedWorkspaceMinimumHeight: Double {
+        workspaceMinimumHeight ?? resolvedApplicationIconSize
+    }
+
+    public var resolvedEmptyWorkspaceOpacity: Double {
+        emptyWorkspaceOpacity ?? (preset == .glass ? 0.82 : 0.55)
+    }
+
+    public var resolvedSurfaceMaterial: SurfaceMaterial {
+        surfaceMaterial ?? .none
+    }
+
+    public var resolvedAdaptiveText: Bool {
+        adaptiveText ?? (preset == .glass)
     }
 }
 
@@ -834,8 +898,20 @@ public extension AppConfiguration {
         if let value = theme.workspacePadding {
             validateFinite(value, path: "theme.workspace_padding", range: 0...64)
         }
+        if let value = theme.workspaceVerticalPadding {
+            validateFinite(value, path: "theme.workspace_vertical_padding", range: 0...32)
+        }
+        if let value = theme.workspaceContentSpacing {
+            validateFinite(value, path: "theme.workspace_content_spacing", range: 0...32)
+        }
         if let value = theme.workspaceSpacing {
             validateFinite(value, path: "theme.workspace_spacing", range: 0...64)
+        }
+        if let value = theme.workspaceMinimumHeight {
+            validateFinite(value, path: "theme.workspace_min_height", range: 0...64)
+        }
+        if let value = theme.emptyWorkspaceOpacity {
+            validateFinite(value, path: "theme.empty_workspace_opacity", range: 0...1)
         }
         if let value = theme.applicationIconSize {
             validateFinite(value, path: "theme.application_icon_size", range: 8...32)
