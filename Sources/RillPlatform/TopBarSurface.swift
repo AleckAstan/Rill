@@ -356,7 +356,8 @@ struct BarSurfaceView: View {
         frame: CGRect,
         alignment: Alignment
     ) -> some View {
-        HStack(spacing: theme.spacing) {
+        let contentInset = min(theme.padding, frame.width / 4)
+        return HStack(spacing: theme.spacing) {
             ForEach(identifiers, id: \.self) { identifier in
                 if let module = modules[identifier] {
                     ModuleView(
@@ -374,6 +375,7 @@ struct BarSurfaceView: View {
                 }
             }
         }
+        .padding(.horizontal, contentInset)
         .frame(width: frame.width, height: frame.height, alignment: alignment)
         .clipped()
         .position(x: frame.midX, y: frame.midY)

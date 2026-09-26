@@ -20,6 +20,7 @@ Sources/RillPlatform/ panels and displays; layout engine; module registry; text/
 - The distributed starter explicitly selects `display = "all"` so the first launch demonstrates the required multi-display behavior; omitted `display` still defaults to `primary`.
 - Added status-menu reload, active panel diagnostics, live smoke/snapshot mode and visual reload/rollback smoke coverage.
 - No Git commit exists because this workspace is not a Git repository.
+- Post-phase refinement (2026-09-26): the user noticed glass controls trimmed at the far left/right of the top bar. Horizontal groups now reserve a bounded inner margin inside their clipped slot, using `theme.padding`, so effect/animation overdraw has room while notch and group collision limits remain enforced. The Debug app was rebuilt/relaunched with the user's top configuration; the user confirmed the corrected edge clearance.
 
 ## Verification record
 
@@ -34,6 +35,7 @@ Sources/RillPlatform/ panels and displays; layout engine; module registry; text/
 | Production notch placement | MacBook safe inset 38 plus external display | MacBook panel `(476, -38, 1800, 38)`, background top strip, content beside notch / observed and user confirmed | PASS | [smoke report](evidence/smoke.json), [MacBook snapshot](evidence/top-display-2.png), [user feedback](evidence/user-feedback.md) |
 | Display close/reopen while Rill runs | Same two-display setup | External remains single; MacBook panel returns single and correctly placed / user confirmed | PASS | [user feedback](evidence/user-feedback.md) |
 | Primary/all/explicit selection | Pure selection tests plus live primary/all runs | Correct selected panel set; missing explicit display suspends / observed | PASS | [test.log](evidence/test.log), [smoke report](evidence/smoke.json) |
+| Post-phase horizontal edge clearance | macOS 27 arm64, active glass top bar | Build and full test suite pass; relaunched app reports no configuration error, three visible panels and ready extension/Hello/OmniWM; user confirmed the two ends render correctly | PASS (user-reported visual check) | `Sources/RillPlatform/TopBarSurface.swift`; `./scripts/build.sh`; `./scripts/test.sh`; live `rillctl` diagnostics and user confirmation, 2026-09-26 |
 
 ## Remaining work and risks
 
