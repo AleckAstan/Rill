@@ -23,6 +23,7 @@ All source paths are relative to the Rill project root. Planned paths may not ex
 4. With available credentials, sign app and embedded code, enable hardened runtime, notarize, staple and verify the distributed artifact. Keep secrets in the signing environment, not the repository.
 5. Test clean-user/quarantine installation, launch, event hooks, hot reload, launch-at-login opt-in and full uninstall. Remove only Rill-owned resources; preserve user configs by default and document optional removal.
 6. Prepare release notes with measured compatibility, known limits and source/build provenance. Publish only to the owner-approved destination when authorized, then record artifact URL/checksum and tag/commit. If credentials or publication inputs are absent, finish local artifacts and record the precise blocker.
+7. Maintain the API-v1 local plugin extension boundary: strict package manifests, supervised producer lifecycle, a copyable example and user documentation. Do not expand this into in-process code loading or a remote marketplace without a separately versioned security/design review.
 
 ## Deliverables
 

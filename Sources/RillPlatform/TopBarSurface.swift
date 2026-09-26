@@ -461,6 +461,15 @@ private struct ModuleView: View {
                             perform: { performNativeAction(module.id, $0) }
                         )
                     }
+            } else if module.kind == .custom, let popover = presentation.popover {
+                Button { nativePopoverPresented.toggle() } label: { decoratedContent }
+                    .buttonStyle(.plain)
+                    .focusable()
+                    .focusEffectDisabled()
+                    .accessibilityHint("Shows plugin details")
+                    .popover(isPresented: $nativePopoverPresented) {
+                        CustomModulePopover(title: presentation.text, content: popover)
+                    }
             } else if module.kind == .frontmostApp {
                 Button { showFrontmostApplicationMenu(module.id) } label: { decoratedContent }
                     .buttonStyle(.plain)
@@ -474,7 +483,7 @@ private struct ModuleView: View {
         .accessibilityValue(accessibilityValue)
         .accessibilityAddTraits(
             module.onClick != nil || module.kind == .frontmostApp ||
-                [.wifi, .volume, .battery].contains(module.kind)
+                [.wifi, .volume, .battery].contains(module.kind) || presentation.popover != nil
                 ? .isButton
                 : .isStaticText
         )
@@ -704,6 +713,7 @@ private struct ModuleView: View {
     private var helpText: String {
         if let failure = store.actionFailures[module.id] { return failure }
         if module.onClick != nil { return "Runs the configured action" }
+        if presentation.popover != nil { return "Shows plugin details" }
         if [.wifi, .volume, .battery].contains(module.kind) { return "Shows system controls" }
         if module.kind == .frontmostApp { return "Shows the frontmost application's menu" }
         return presentation.tooltip ?? module.id.rawValue
@@ -728,6 +738,26 @@ private struct ModuleView: View {
         return .custom(name, size: size)
     }
 
+}
+
+private struct CustomModulePopover: View {
+    let title: String
+    let content: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(.headline)
+            Text(content)
+                .font(.body)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+        }
+        .frame(minWidth: 220, maxWidth: 360, alignment: .leading)
+        .padding(14)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(title)
+        .accessibilityValue(content)
+    }
 }
 
 private struct NativeStatusPopover: View {

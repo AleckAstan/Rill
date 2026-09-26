@@ -1,0 +1,32 @@
+schema_version = 1
+
+[theme]
+preset = "glass"
+
+[[surfaces]]
+id = "main"
+display = "all"
+edge = "top"
+top_placement = "menuBarArea"
+start = ["plugin-hello"]
+end = ["clock"]
+
+[[plugins]]
+id = "hello"
+path = "./plugins/hello"
+
+[[providers]]
+id = "hello-source"
+kind = "plugin"
+plugin = "hello"
+
+[[modules]]
+id = "plugin-hello"
+kind = "custom"
+provider = "hello-source"
+placeholder = "Starting plugin…"
+
+[[modules]]
+id = "clock"
+kind = "clock"
+format = "HH:mm"

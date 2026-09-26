@@ -24,6 +24,7 @@ Paths inside a file resolve relative to that file's directory. Executables must 
 | `surfaces` | array of tables | No | Empty |
 | `modules` | array of tables | No | Empty |
 | `providers` | array of tables | No | Empty |
+| `plugins` | array of tables | No | Empty |
 
 IDs are 1–64 characters, start with an ASCII letter or digit, and then use letters, digits, `.`, `_`, or `-`. IDs are unique within their type. Each module may belong to only one surface. Same-display-selector, same-edge surface overlap is rejected in version 1.
 
@@ -109,13 +110,28 @@ For top surfaces, `top_placement` accepts:
 
 Non-top edges use the same system-safe thickness, inset and safe-area rules. `top_placement` is invalid on non-top edges.
 
+## Plugins
+
+Each local plugin package is declared before a provider references it:
+
+```toml
+[[plugins]]
+id = "build-status"
+path = "./plugins/build-status"
+```
+
+`id` is a unique 1–64 character identifier and `path` is a non-empty package
+directory. Rill reads its `plugin.toml` during validation/reload. See
+[Plugins](plugins.md) for the strict API-v1 manifest and trust model.
+
 ## Providers
 
-All providers require `id` and `kind`. Kinds are `yabai`, `aerospace`, `omniwm`, `event`, `command`, and `stream`.
+All providers require `id` and `kind`. Kinds are `yabai`, `aerospace`, `omniwm`, `event`, `command`, `stream`, and `plugin`.
 
 | Key | Type | Default / rule |
 | --- | --- | --- |
 | `executable` | string | Required for `yabai`, `aerospace`, `omniwm`, `command`, and `stream` |
+| `plugin` | string | Required for `plugin`; references `[[plugins]].id` |
 | `args` | string array | `[]` |
 | `env` | string table | `{}` |
 | `timeout_ms` | integer | `5000`; 100–300000 |
@@ -123,11 +139,11 @@ All providers require `id` and `kind`. Kinds are `yabai`, `aerospace`, `omniwm`,
 | `interval_ms` | integer | Required only for `command`; 1000–86400000 |
 | `stale_after_ms` | integer | Optional; 1000–86400000 |
 
-`stream` timeout is shutdown grace, not stream lifetime. Command output is bounded by `max_output_bytes`; stream frames are limited to 64 KiB. Streams reconnect with bounded exponential backoff and become stale after `stale_after_ms` without losing the last value.
+`stream` timeout is shutdown grace, not stream lifetime. Command output is bounded by `max_output_bytes`; stream frames are limited to 64 KiB. Streams reconnect with bounded exponential backoff and become stale after `stale_after_ms` without losing the last value. A `plugin` provider takes its executable, arguments, and package environment from its manifest and otherwise behaves as a supervised stream.
 
 ## Modules and actions
 
-All modules require `id` and `kind`. Kinds are `text`, `clock`, `frontmostApp`, `battery`, `wifi`, `volume`, `separator`, `workspaces`, and `custom`. A `text` module requires its non-empty `text` value. `format` and `placeholder` are optional strings. `battery`, `wifi`, and `volume` render compact native SF Symbols and need no provider. `separator` draws an orientation-aware divider and has no data source. A `workspaces` module requires a `yabai`, `aerospace`, or `omniwm` provider. When its provider exposes application identities and a focused window, the focused workspace appends that application's name to its focused icon; the expanding selection capsule remains bounded by its surface slot and selects black or white text for contrast against its configured fill. A `custom` module requires an `event`, `command`, or `stream` provider.
+All modules require `id` and `kind`. Kinds are `text`, `clock`, `frontmostApp`, `battery`, `wifi`, `volume`, `separator`, `workspaces`, and `custom`. A `text` module requires its non-empty `text` value. `format` and `placeholder` are optional strings. `battery`, `wifi`, and `volume` render compact native SF Symbols and need no provider. `separator` draws an orientation-aware divider and has no data source. A `workspaces` module requires a `yabai`, `aerospace`, or `omniwm` provider. When its provider exposes application identities and a focused window, the focused workspace appends that application's name to its focused icon; the expanding selection capsule remains bounded by its surface slot and selects black or white text for contrast against its configured fill. A `custom` module requires an `event`, `command`, `stream`, or `plugin` provider.
 
 `on_click` accepts `executable`, optional `args = []`, and `timeout_ms = 5000` in the range 100–300000. It follows the same explicit executable-path rules. On `wifi`, `volume`, `battery`, and `frontmostApp`, an explicit action intentionally replaces the built-in native popover or application menu.
 

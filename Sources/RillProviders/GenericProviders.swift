@@ -183,7 +183,7 @@ public final class GenericProviderResource: ManagedConfigurationResource, @unche
             runtime?.setProviderHealth(spec.id, "ready")
             return
         }
-        guard task == nil, spec.kind == .command || spec.kind == .stream else { return }
+        guard task == nil, spec.kind == .command || spec.kind == .stream || spec.kind == .plugin else { return }
         runtime?.setProviderHealth(spec.id, "starting")
         task = Task { [weak self] in await self?.run() }
     }

@@ -20,6 +20,8 @@ public struct ModuleData: Equatable, Sendable {
     public var health: ModuleHealth
     public var state: ModuleState
     public var value: Double?
+    /// Plain text rendered by Rill in a native popover when present.
+    public var popover: String?
 
     public init(
         text: String,
@@ -27,7 +29,8 @@ public struct ModuleData: Equatable, Sendable {
         tooltip: String? = nil,
         health: ModuleHealth = .healthy,
         state: ModuleState = .normal,
-        value: Double? = nil
+        value: Double? = nil,
+        popover: String? = nil
     ) {
         self.text = text
         self.symbolName = symbolName
@@ -35,6 +38,7 @@ public struct ModuleData: Equatable, Sendable {
         self.health = health
         self.state = state
         self.value = value
+        self.popover = popover
     }
 }
 
@@ -43,14 +47,19 @@ public struct CustomModuleUpdate: Codable, Equatable, Sendable {
     public let tooltip: String?
     public let state: ModuleState
     public let value: Double?
+    public let popover: String?
 
-    enum CodingKeys: String, CodingKey, CaseIterable { case text, tooltip, state, value }
+    enum CodingKeys: String, CodingKey, CaseIterable { case text, tooltip, state, value, popover }
 
-    public init(text: String, tooltip: String? = nil, state: ModuleState = .normal, value: Double? = nil) throws {
+    public init(
+        text: String, tooltip: String? = nil, state: ModuleState = .normal,
+        value: Double? = nil, popover: String? = nil
+    ) throws {
         guard !text.isEmpty, text.count <= 4_096 else { throw ValidationError("text must contain 1...4096 characters") }
         guard tooltip?.count ?? 0 <= 8_192 else { throw ValidationError("tooltip must contain at most 8192 characters") }
+        guard popover?.count ?? 0 <= 8_192 else { throw ValidationError("popover must contain at most 8192 characters") }
         guard value?.isFinite != false else { throw ValidationError("value must be finite") }
-        self.text = text; self.tooltip = tooltip; self.state = state; self.value = value
+        self.text = text; self.tooltip = tooltip; self.state = state; self.value = value; self.popover = popover
     }
 
     public init(from decoder: Decoder) throws {
@@ -64,7 +73,8 @@ public struct CustomModuleUpdate: Codable, Equatable, Sendable {
             text: container.decode(String.self, forKey: .text),
             tooltip: container.decodeIfPresent(String.self, forKey: .tooltip),
             state: container.decodeIfPresent(ModuleState.self, forKey: .state) ?? .normal,
-            value: container.decodeIfPresent(Double.self, forKey: .value)
+            value: container.decodeIfPresent(Double.self, forKey: .value),
+            popover: container.decodeIfPresent(String.self, forKey: .popover)
         )
     }
 
@@ -765,7 +775,8 @@ public final class NativeModuleRuntime: NSObject {
                 text: update.text,
                 tooltip: update.tooltip,
                 state: update.state,
-                value: update.value
+                value: update.value,
+                popover: update.popover
             )
         }
     }
@@ -789,7 +800,8 @@ public final class NativeModuleRuntime: NSObject {
                 tooltip: message,
                 health: .unavailable,
                 state: .error,
-                value: previous?.value
+                value: previous?.value,
+                popover: previous?.popover
             )
         }
     }

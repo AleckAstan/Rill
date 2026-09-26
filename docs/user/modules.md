@@ -88,6 +88,12 @@ Text is limited to 4096 characters, tooltip to 8192, value must be finite, and s
 
 `workspaces` renders typed state from a configured yabai, AeroSpace, or OmniWM provider. AeroSpace and OmniWM workspace buttons also show one native application icon per managed app; within the focused workspace, the focused application's icon is followed by its application name. This label truncates within the surface rather than moving other bar groups. Its foreground is automatically selected for contrast against the configured focused-workspace background. The workspace tooltip lists app names and window counts. A generic app symbol is used when a provider does not expose a bundle identifier or macOS cannot resolve it. Yabai continues to show workspace labels and occupancy because its current adapter does not yet query application identities. Provider failures remain visible in the module instead of hiding the workspace control.
 
+`plugin` providers are packaged, versioned stream producers for custom modules.
+They use the same safe payload and presentation path; see the [plugin API](plugins.md).
+An update may include a bounded plain-text `popover`; then clicking its custom
+module opens that text in a native Rill popover. This is presentation data, not
+plugin-provided UI code.
+
 ## Click actions
 
 Any module can define an action:

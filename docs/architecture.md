@@ -35,6 +35,14 @@ Use nonactivating panels where practical; verify click handling, context menus a
 
 A provider has ID, capabilities, lifecycle, health, snapshot/updates and supported actions. Workspace IDs are opaque strings namespaced by provider; preserve the distinction between native Spaces and window-manager workspaces. Providers are optional. No installed manager is required for the basic bar.
 
+Plugin packages are local user-trusted directories with a strict versioned
+manifest. A plugin resolves to a supervised NDJSON stream provider and can
+only drive the existing `custom` module presentation; Rill never dynamically
+loads plugin code or lets a package supply arbitrary SwiftUI. The public host
+API remains the versioned per-user `rillctl` IPC protocol. Manifest resolution
+is preparation work, so a missing/invalid package rolls back with the active
+generation intact.
+
 User-configured commands run as the logged-in user. Use executable plus argument arrays, explicit timeouts and output bounds. Shell interpretation happens only when a user explicitly invokes a shell executable. Data received from providers never becomes code or implicit action. No root helper, SIP change or scripting addition is required by Rill's baseline; unavailable manager operations report capability errors.
 
 Direct distribution, without App Sandbox, is the initial assumption because user commands and local integrations are core features. Enable hardened runtime for release and keep entitlements minimal. Request macOS permissions only for implemented features that need them, and document denied-state behavior.

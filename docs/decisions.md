@@ -14,6 +14,7 @@
 | D10 | All four edges ship in 0.1; richer floating surfaces follow later | Release scope |
 | D11 | Native data providers are event-driven and shared across displays; click actions use direct executable/argument invocation with bounded resources and no implicit shell | Implemented and accepted in phase 05 |
 | D12 | The frontmost-app module exposes the active application's native menu hierarchy on click through public macOS Accessibility APIs; an explicit `on_click` overrides this behavior | Implemented during phase 12 refinement; requires user-granted Accessibility access |
+| D13 | Third-party modules use local versioned plugin packages that resolve to supervised NDJSON producers; plugins use `rillctl` as their host API and never load code in-process | Implemented 2026-09-26; API v1 deliberately excludes arbitrary UI code and remote installation |
 
 Append evidence, alternatives, consequences and date when accepting or changing a decision. Update every affected contract, example and phase before changing a public interface. No branding availability, license choice, developer account or release destination has been established.
 
@@ -44,3 +45,13 @@ D07 uses a per-user Unix socket with owned `0700` runtime directory, `0600` sock
 ## Frontmost application menu refinement — 2026-09-25
 
 D12 reads the currently active process's `AXMenuBar` only when its Rill module is clicked, bounds traversal to eight levels and 1,000 items, mirrors enabled state and hierarchy in a native `NSMenu`, and dispatches selected leaves with `AXPress`. Rill requests Accessibility access only on this interaction, reports denied/unavailable/action failures on the module, and retains the phase-05 configured `on_click` behavior as an explicit override.
+
+## Plugin API v1 — 2026-09-26
+
+D13 chooses out-of-process local packages over a QML/JavaScript/SwiftUI
+extension runtime. The package manifest is decoded strictly before activation;
+its ID/version/executable are checked and its relative paths are resolved
+against the package. The resolved process receives a source-scoped plugin
+provider identity and follows the existing bounded stream supervisor. This
+keeps config reload rollback, cancellation, output limits and the local IPC
+trust model intact while making bar modules distributable as directories.

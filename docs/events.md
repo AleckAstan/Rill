@@ -22,7 +22,7 @@ Command providers emit one JSON object and exit; streams emit newline-delimited 
 {"version":1,"type":"module.update","data":{"text":"Build passed","tooltip":"Local build","state":"success","value":1}}
 ```
 
-The supervisor supplies source identity and receive time; a stream cannot impersonate another provider. Custom data is plain text, optional finite numeric value, optional tooltip and state (`normal`, `warning`, `error`, `success`). No HTML, shell fragments, action definitions or arbitrary theme mutations are accepted. Text is limited to 4096 characters and tooltip to 8192. Unknown types or invalid frames produce bounded diagnostics without crashing or blocking the UI.
+The supervisor supplies source identity and receive time; a stream cannot impersonate another provider. Custom data is plain text, optional finite numeric value, optional tooltip, optional plain-text `popover`, and state (`normal`, `warning`, `error`, `success`). When present, `popover` is rendered by Rill in a native popover when the custom module is clicked. No HTML, shell fragments, action definitions or arbitrary theme mutations are accepted. Text is limited to 4096 characters; tooltip and popover are each limited to 8192. Unknown types or invalid frames produce bounded diagnostics without crashing or blocking the UI.
 
 Command output contains one JSON envelope (trailing JSON whitespace is accepted). Standard output is capped by `max_output_bytes`; stderr is retained separately up to 16 KiB for diagnostics. A command has one in-flight process and waits `interval_ms` after completion before starting again. Timeout sends TERM followed by KILL after 250 ms. Streams decode fragmented and multiple newline frames incrementally; each incomplete frame is capped at 64 KiB, stderr remains bounded, and reconnect delays are 1, 2, 4, 8, 16, then 30 seconds with ±20% jitter. Backoff resets after 60 seconds healthy. Rill attempts to terminate the process group as well as the direct child. Valid updates are coalesced per source over 50 ms, so a flood holds at most the latest pending state. `stale_after_ms` changes a quiet stream to stale without discarding its last value.
 
@@ -33,6 +33,13 @@ rillctl emit --source user-feed --name module.update --data '{"text":"Build pass
 ```
 
 Manager callbacks send `refresh` invalidations through the same CLI with an empty data object. The adapter then queries authoritative state; do not trust a callback as a complete snapshot. Typed native providers publish normalized workspace and focused-window state directly to the store rather than using the custom module payload shape.
+
+Plugin packages use this exact producer protocol. Rill resolves a strict
+API-versioned `plugin.toml` during configuration preparation, launches the
+declared executable as a stream source, and tags every output frame with the
+configured provider identity. A plugin cannot choose another source identity.
+The plugin-facing host API is `rillctl`'s existing local commands; details and
+the trust boundary are in [the plugin guide](user/plugins.md).
 
 ## Internal state and recovery
 

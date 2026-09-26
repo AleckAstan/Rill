@@ -214,6 +214,73 @@ final class ConfigurationParserTests: XCTestCase {
         )
     }
 
+    func testPluginManifestResolvesToAStreamProviderWithoutExecutingIt() throws {
+        let directory = temporaryDirectory()
+        let package = directory.appendingPathComponent("plugins/build-status", isDirectory: true)
+        try FileManager.default.createDirectory(at: package, withIntermediateDirectories: true)
+        try """
+        [plugin]
+        api_version = 1
+        id = "build-status"
+        name = "Build status"
+        executable = "./plugin.sh"
+        args = ["--watch"]
+        env = { SOURCE = "test" }
+        """.write(to: package.appendingPathComponent("plugin.toml"), atomically: true, encoding: .utf8)
+        let sentinel = package.appendingPathComponent("invoked")
+        try "#!/bin/sh\\ntouch '\(sentinel.path)'\\n".write(
+            to: package.appendingPathComponent("plugin.sh"), atomically: true, encoding: .utf8
+        )
+        let text = """
+        schema_version = 1
+
+        [[plugins]]
+        id = "build-status"
+        path = "./plugins/build-status"
+
+        [[providers]]
+        id = "build"
+        kind = "plugin"
+        plugin = "build-status"
+
+        [[modules]]
+        id = "build"
+        kind = "custom"
+        provider = "build"
+        """
+        let snapshot = try parser.parse(text: text, source: .file(directory.appendingPathComponent("config.toml")))
+        let provider = try XCTUnwrap(snapshot.configuration.providers.first)
+        XCTAssertEqual(provider.kind, .plugin)
+        XCTAssertEqual(provider.executable, package.appendingPathComponent("plugin.sh").path)
+        XCTAssertEqual(provider.args, ["--watch"])
+        XCTAssertEqual(provider.environment["SOURCE"], "test")
+        XCTAssertEqual(provider.environment["RILL_PLUGIN_ID"], "build-status")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: sentinel.path))
+    }
+
+    func testPluginManifestIDMismatchIsRejected() throws {
+        let directory = temporaryDirectory()
+        let package = directory.appendingPathComponent("plugin", isDirectory: true)
+        try FileManager.default.createDirectory(at: package, withIntermediateDirectories: true)
+        try """
+        [plugin]
+        api_version = 1
+        id = "other"
+        name = "Other"
+        executable = "./plugin.sh"
+        """.write(to: package.appendingPathComponent("plugin.toml"), atomically: true, encoding: .utf8)
+        assertInvalid("""
+        schema_version = 1
+        [[plugins]]
+        id = "expected"
+        path = "./plugin"
+        [[providers]]
+        id = "source"
+        kind = "plugin"
+        plugin = "expected"
+        """, contains: "does not match", source: .file(directory.appendingPathComponent("config.toml")))
+    }
+
     func testValidationNeverExecutesConfiguredProgram() throws {
         let directory = temporaryDirectory()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -236,10 +303,11 @@ final class ConfigurationParserTests: XCTestCase {
     private func assertInvalid(
         _ text: String,
         contains expected: String,
+        source: ConfigurationSource = .bundledDefault,
         file: StaticString = #filePath,
         line: UInt = #line
     ) {
-        XCTAssertThrowsError(try parser.parse(text: text), file: file, line: line) { error in
+        XCTAssertThrowsError(try parser.parse(text: text, source: source), file: file, line: line) { error in
             XCTAssertTrue(
                 String(describing: error).contains(expected),
                 "Expected '\(expected)' in \(error)",
