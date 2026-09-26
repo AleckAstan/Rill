@@ -14,13 +14,14 @@ docs/performance.md with raw measurements and reproduction; accessibility checkl
 
 - Added a reproducible bounded event-enqueue benchmark at `scripts/benchmark.sh` and documented performance budgets, Instruments methodology and soak procedure in `docs/performance.md`.
 - Added an explicit accessibility checklist in `docs/accessibility-checklist.md`; no manual VoiceOver or performance result is inferred.
+- Workspace focus changes now use a native SwiftUI spring driven by `theme.animation_ms`: one matched-geometry capsule indicator glides between workspace buttons while focus color and capsule emphasis interpolate together. `animation_ms = 0` and macOS Reduce Motion disable all added motion. Frame-pacing and desktop reduced-motion validation remain open.
 
 ## Verification record
 
 | Check / command | Environment | Expected / observed | Result | Evidence |
 | --- | --- | --- | --- | --- |
 | Phase acceptance suite | Not recorded | Not executed | NOT RUN | None |
-| Build/test regression | macOS arm64, Xcode 27 / Swift 6.4 | Existing build and automated tests remain green | PASS | `/tmp/rill-phase10-build.log`; `/tmp/rill-phase10-tests.log` |
+| Workspace-focus animation regression | macOS arm64, Xcode 27 / Swift 6.4 | `./scripts/test.sh` passes 69 main tests and 6 IPC tests; `./scripts/build.sh` succeeds with the native workspace spring and Reduce Motion path compiled | PASS | Xcode result `/Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/.build/DerivedData/Logs/Test/Test-Rill-2026.09.26_13-16-39-+0300.xcresult` |
 | Release benchmark, Instruments, soak and accessibility audit | Real desktop session | Raw measurements and manual evidence required | NOT RUN | None |
 
 ## Remaining work and risks
