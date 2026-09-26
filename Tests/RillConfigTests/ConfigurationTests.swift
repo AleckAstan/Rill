@@ -23,7 +23,7 @@ final class ConfigurationParserTests: XCTestCase {
         assertInvalid(
             DefaultConfiguration.contents.replacingOccurrences(
                 of: "schema_version = 1",
-                with: "schema_version = 2"
+                with: "schema_version = 3"
             ),
             contains: "schema_version"
         )
@@ -298,6 +298,137 @@ final class ConfigurationParserTests: XCTestCase {
         """
         _ = try parser.parse(text: text, source: .file(directory.appendingPathComponent("config.toml")))
         XCTAssertFalse(FileManager.default.fileExists(atPath: sentinel.path))
+    }
+
+    func testVersionTwoExtensionManifestResolvesWithoutExecution() throws {
+        let directory = temporaryDirectory()
+        let package = directory.appendingPathComponent("extension", isDirectory: true)
+        try FileManager.default.createDirectory(at: package, withIntermediateDirectories: true)
+        let sentinel = package.appendingPathComponent("invoked")
+        let executable = package.appendingPathComponent("extension.sh")
+        try "#!/bin/sh\ntouch '\(sentinel.path)'\n".write(to: executable, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: executable.path)
+        try """
+        [extension]
+        api_version = 2
+        id = "dev.rill.test"
+        name = "Test"
+        executable = "./extension.sh"
+        requested_capabilities = ["actions"]
+
+        [[extension.contributions]]
+        id = "module"
+        kind = "module"
+
+        [[extension.contributions]]
+        id = "notch"
+        kind = "notchWidget"
+        """.write(to: package.appendingPathComponent("extension.toml"), atomically: true, encoding: .utf8)
+        let text = """
+        schema_version = 2
+        [[extensions]]
+        id = "dev.rill.test"
+        path = "./extension"
+        grant = ["actions"]
+        [[modules]]
+        id = "rich"
+        kind = "extension"
+        extension = "dev.rill.test"
+        contribution = "module"
+        [[surfaces]]
+        id = "main"
+        start = ["rich"]
+        [[notch_widgets]]
+        id = "notch"
+        extension = "dev.rill.test"
+        contribution = "notch"
+        """
+        let configuration = try parser.parse(
+            text: text,
+            source: .file(directory.appendingPathComponent("config.toml"))
+        ).configuration
+        XCTAssertEqual(configuration.schemaVersion, 2)
+        XCTAssertEqual(configuration.extensions.first?.executable, executable.path)
+        XCTAssertEqual(configuration.extensions.first?.contributions.count, 2)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: sentinel.path))
+    }
+
+    func testVersionOneCannotActivateUIExtensionsAndCapabilitiesRequireGrant() throws {
+        let directory = temporaryDirectory()
+        let package = directory.appendingPathComponent("extension", isDirectory: true)
+        try FileManager.default.createDirectory(at: package, withIntermediateDirectories: true)
+        let executable = package.appendingPathComponent("extension.sh")
+        try "#!/bin/sh\nexit 0\n".write(to: executable, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: executable.path)
+        try """
+        [extension]
+        api_version = 2
+        id = "dev.rill.denied"
+        name = "Denied"
+        executable = "./extension.sh"
+        requested_capabilities = ["actions"]
+        contributions = []
+        """.write(to: package.appendingPathComponent("extension.toml"), atomically: true, encoding: .utf8)
+        let config = """
+        schema_version = 2
+        [[extensions]]
+        id = "dev.rill.denied"
+        path = "./extension"
+        """
+        assertInvalid(config, contains: "unauthorized capability", source: .file(directory.appendingPathComponent("config.toml")))
+        assertInvalid(config.replacingOccurrences(of: "schema_version = 2", with: "schema_version = 1"), contains: "schema_version", source: .file(directory.appendingPathComponent("config.toml")))
+    }
+
+    func testExtensionManifestRejectsUnknownVersionAndDuplicateContributions() throws {
+        let directory = temporaryDirectory()
+        let package = directory.appendingPathComponent("extension", isDirectory: true)
+        try FileManager.default.createDirectory(at: package, withIntermediateDirectories: true)
+        let executable = package.appendingPathComponent("extension.sh")
+        try "#!/bin/sh\nexit 0\n".write(to: executable, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: executable.path)
+        let source: ConfigurationSource = .file(directory.appendingPathComponent("config.toml"))
+        let config = """
+        schema_version = 2
+        [[extensions]]
+        id = "dev.rill.strict"
+        path = "./extension"
+        """
+
+        try """
+        [extension]
+        api_version = 3
+        id = "dev.rill.strict"
+        name = "Strict"
+        executable = "./extension.sh"
+        contributions = []
+        """.write(to: package.appendingPathComponent("extension.toml"), atomically: true, encoding: .utf8)
+        assertInvalid(config, contains: "unsupported API version", source: source)
+
+        try """
+        [extension]
+        api_version = 2
+        id = "dev.rill.strict"
+        name = "Strict"
+        executable = "./extension.sh"
+        unknown = true
+        contributions = []
+        """.write(to: package.appendingPathComponent("extension.toml"), atomically: true, encoding: .utf8)
+        assertInvalid(config, contains: "Unknown key", source: source)
+
+        try """
+        [extension]
+        api_version = 2
+        id = "dev.rill.strict"
+        name = "Strict"
+        executable = "./extension.sh"
+        [[extension.contributions]]
+        id = "same"
+        kind = "module"
+        [[extension.contributions]]
+        id = "same"
+        kind = "module"
+        """.write(to: package.appendingPathComponent("extension.toml"), atomically: true, encoding: .utf8)
+        assertInvalid(config, contains: "duplicate contribution", source: source)
     }
 
     private func assertInvalid(

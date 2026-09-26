@@ -283,6 +283,7 @@ struct BarSurfaceView: View {
     let theme: ThemeSpec
     let notchExclusion: CGRect?
     @ObservedObject var store: NativeModuleStore
+    @ObservedObject var extensionRuntime: ExtensionRuntimeStore
     let performAction: (ModuleID, ActionSpec) -> Void
     let performNativeAction: (ModuleID, NativeModuleAction) -> Void
     let showFrontmostApplicationMenu: (ModuleID) -> Void
@@ -357,6 +358,7 @@ struct BarSurfaceView: View {
                         isHorizontal: surface.edge.isHorizontal,
                         theme: theme,
                         store: store,
+                        extensionRuntime: extensionRuntime,
                         performAction: performAction,
                         performNativeAction: performNativeAction,
                         showFrontmostApplicationMenu: showFrontmostApplicationMenu,
@@ -384,6 +386,7 @@ struct BarSurfaceView: View {
                         isHorizontal: surface.edge.isHorizontal,
                         theme: theme,
                         store: store,
+                        extensionRuntime: extensionRuntime,
                         performAction: performAction,
                         performNativeAction: performNativeAction,
                         showFrontmostApplicationMenu: showFrontmostApplicationMenu,
@@ -404,6 +407,7 @@ private struct ModuleView: View {
     let isHorizontal: Bool
     let theme: ThemeSpec
     @ObservedObject var store: NativeModuleStore
+    @ObservedObject var extensionRuntime: ExtensionRuntimeStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Namespace private var workspaceFocusNamespace
     let performAction: (ModuleID, ActionSpec) -> Void
@@ -414,7 +418,21 @@ private struct ModuleView: View {
 
     var body: some View {
         Group {
-            if module.kind == .workspaces {
+            if module.kind == .extensionModule,
+               let extensionID = module.extensionID,
+               let contribution = module.contribution {
+                ExtensionContributionView(
+                    extensionID: extensionID,
+                    contributionID: contribution,
+                    expanded: false,
+                    runtime: extensionRuntime
+                )
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(module.id.rawValue)
+                .accessibilityValue(extensionRuntime.health[extensionID]?.rawValue ?? "starting")
+                .accessibilityIdentifier("rill.module.\(module.id.rawValue)")
+                .modifier(ModuleChrome(theme: theme, style: module.style))
+            } else if module.kind == .workspaces {
                 workspaceContent
             } else if module.kind == .separator {
                 separatorContent
@@ -686,6 +704,8 @@ private struct ModuleView: View {
                 tooltip: "Provider data unavailable",
                 health: .unavailable
             )
+        case .extensionModule:
+            return .init(text: "")
         }
     }
 
@@ -1191,6 +1211,7 @@ final class SurfaceResource: NSObject, ManagedConfigurationResource, @unchecked 
     private let configuration: AppConfiguration
     private let generation: UInt64
     private let moduleRuntime: NativeModuleRuntime
+    private let extensionRuntime: ExtensionRuntimeStore
     private var panels: [RillPanel] = []
     private var committed = false
 
@@ -1198,7 +1219,8 @@ final class SurfaceResource: NSObject, ManagedConfigurationResource, @unchecked 
         surfaceID: SurfaceID,
         configuration: AppConfiguration,
         generation: UInt64,
-        moduleRuntime: NativeModuleRuntime
+        moduleRuntime: NativeModuleRuntime,
+        extensionRuntime: ExtensionRuntimeStore
     ) throws {
         guard let surface = configuration.surfaces.first(where: { $0.id == surfaceID }) else {
             throw SurfaceResourceError.missingSurface(surfaceID)
@@ -1207,6 +1229,7 @@ final class SurfaceResource: NSObject, ManagedConfigurationResource, @unchecked 
         self.configuration = configuration
         self.generation = generation
         self.moduleRuntime = moduleRuntime
+        self.extensionRuntime = extensionRuntime
         super.init()
         panels = makePanels()
     }
@@ -1280,6 +1303,7 @@ final class SurfaceResource: NSObject, ManagedConfigurationResource, @unchecked 
                     theme: configuration.theme,
                     notchExclusion: exclusion,
                     store: moduleRuntime.store,
+                    extensionRuntime: extensionRuntime,
                     performAction: { [weak moduleRuntime] moduleID, action in
                         moduleRuntime?.performAction(moduleID: moduleID, action: action)
                     },

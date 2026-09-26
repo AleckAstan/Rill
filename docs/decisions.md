@@ -15,6 +15,7 @@
 | D11 | Native data providers are event-driven and shared across displays; click actions use direct executable/argument invocation with bounded resources and no implicit shell | Implemented and accepted in phase 05 |
 | D12 | The frontmost-app module exposes the active application's native menu hierarchy on click through public macOS Accessibility APIs; an explicit `on_click` overrides this behavior | Implemented during phase 12 refinement; requires user-granted Accessibility access |
 | D13 | Third-party modules use local versioned plugin packages that resolve to supervised NDJSON producers; plugins use `rillctl` as their host API and never load code in-process | Implemented 2026-09-26; API v1 deliberately excludes arbitrary UI code and remote installation |
+| D14 | Rich UI extensions use a separately buildable SDK and bounded bidirectional declarative protocol while remaining out of process; notch widgets use Rill-owned public-AppKit panels | Implemented experimentally in phase 13; API stabilization and real-notch evidence remain open |
 
 Append evidence, alternatives, consequences and date when accepting or changing a decision. Update every affected contract, example and phase before changing a public interface. No branding availability, license choice, developer account or release destination has been established.
 
@@ -55,3 +56,15 @@ against the package. The resolved process receives a source-scoped plugin
 provider identity and follows the existing bounded stream supervisor. This
 keeps config reload rollback, cancellation, output limits and the local IPC
 trust model intact while making bar modules distributable as directories.
+
+## Extension API v2 — 2026-09-26
+
+D14 keeps third-party Swift ABI and UI objects outside Rill. A strict local
+manifest negotiates three initial capabilities and declared contributions;
+4-byte length-framed JSON carries a finite tree and opaque actions. Rill caps
+frames, trees, images, stderr, update rate and restart count, preserves the
+last valid UI, and scopes action routing to the active generation. Schema 1
+and provider plugin v1 remain compatible; schema 2 is opt-in. The experimental
+notch surface is top-centered using public `NSScreen` geometry and explicitly
+does not draw in the physical cutout or replace system UI. Automated evidence
+does not establish its real fullscreen/Spaces/sleep-wake or pacing behavior.

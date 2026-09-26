@@ -1,6 +1,11 @@
-# Configuration contract, version 1
+# Configuration contract, versions 1 and 2
 
 Status: implemented in phase 03. TOML provides comments and a familiar file-based workflow. Rill uses the pinned `TOMLDecoder` dependency and does not silently substitute another format. The complete user-facing schema, defaults and bounds are in [the configuration reference](user/configuration.md).
+
+Version 1 remains frozen and fully accepted. Phase 13 adds version 2 only for
+out-of-process UI extensions and experimental `notch_widgets`; every version-1
+field retains its meaning. A file using no v2 feature may remain version 1.
+Migration and rollback are documented in [extensions.md](extensions.md).
 
 Resolution order: explicit `--config <absolute-or-relative-path>`; `$XDG_CONFIG_HOME/rill/config.toml` when XDG_CONFIG_HOME is absolute; otherwise `~/.config/rill/config.toml`. Resolve explicit relative paths against CLI working directory. Finder launch uses the same default. Missing default config uses bundled defaults without writing into the user's home. `rillctl init` explicitly creates a starter and refuses overwrite. Missing explicit path is an actionable error.
 
@@ -95,3 +100,11 @@ Module `on_click` is an optional inline/table action with `executable`, `args`, 
 Theme preset `segmented` groups modules into subtle capsules and highlights the focused workspace; `flat` keeps those layers transparent. `glass` uses native SwiftUI Liquid Glass on macOS 26+ with a translucent segmented fallback on macOS 14–25. Workspace focus changes use a short native spring derived from `animation_ms`; `0` disables it, and Reduce Motion disables it automatically. Version 1 accepts bounded overrides for surface/module/workspace backgrounds, material, adaptive text, focused background, border color/width, module/workspace radii and padding, workspace content/inter-item spacing, minimum height, empty-state opacity, and application icon size. Presets only provide defaults, so explicit tokens remain stable when changing preset.
 
 Hot reload watches the containing directory to catch atomic-save rename patterns, debounces bursts (target 150 ms), reparses and validates the entire file, then commits a generation. Failure retains the last good layout and shows a diagnostic. No executing commands during parsing or `validate`. Unsupported future keys are errors until supported, even if described in the longer-term roadmap.
+
+Schema 2 adds `[[extensions]]` with `id`, package `path`, and explicit `grant`,
+extension modules with `kind = "extension"`, `extension`, and `contribution`,
+and `[[notch_widgets]]` with stable ID, extension/contribution, display,
+priority/collision and bounded compact/expanded geometry. Manifest resolution
+is preparation-only and checks API 2, identity, capabilities, contributions,
+ownership, modes and executable presence without launch. Failed migration or
+reload preserves the active generation and last valid extension presentation.

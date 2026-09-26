@@ -41,6 +41,11 @@ configured provider identity. A plugin cannot choose another source identity.
 The plugin-facing host API is `rillctl`'s existing local commands; details and
 the trust boundary are in [the plugin guide](user/plugins.md).
 
+UI extensions do not use this newline provider protocol. Experimental API v2
+uses a separate bidirectional length-framed protocol and finite declarative
+view vocabulary; it cannot inject provider state, shell actions or another
+extension's contribution. See [the extension contract](extensions.md).
+
 ## Internal state and recovery
 
 Core models: `ProviderID`, `WorkspaceID(provider, rawID)`, `DisplayID`, `WorkspaceState(id, name, display, focused, visible, occupied, applications?)`, `WorkspaceApplication(id, name, bundleIdentifier?, focused, windowCount)`, `FocusedWindow(appName, title?)`, `ProviderHealth(starting, ready, stale, unavailable, failed)`. Unknown occupancy is distinct from false, and `applications = nil` means the provider does not expose an application projection while an empty array means the workspace has none. Each batch includes source, generation, monotonic receive sequence and optional source timestamp. Prefer latest valid state; reject obsolete query completions after newer queries or reload generations. Preserve source scope across managers and do not assume their identifiers match NSScreen IDs.
