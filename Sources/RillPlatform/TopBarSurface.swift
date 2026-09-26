@@ -158,21 +158,20 @@ public enum BarLayoutEngine {
         size: CGSize,
         padding: CGFloat
     ) -> VerticalSlotFrames? {
-        guard size.width.isFinite, size.height.isFinite,
-              padding.isFinite, size.width > 0, size.height > 0, padding >= 0 else { return nil }
-        let content = CGRect(
-            x: 0,
-            y: padding,
-            width: size.width,
-            height: size.height - 2 * padding
-        )
-        guard content.height > 0 else { return nil }
+        guard let content = verticalContentFrame(size: size, padding: padding) else { return nil }
         let third = content.height / 3
         return .init(
             start: CGRect(x: 0, y: content.minY, width: content.width, height: third),
             center: CGRect(x: 0, y: content.minY + third, width: content.width, height: third),
             end: CGRect(x: 0, y: content.minY + 2 * third, width: content.width, height: content.height - 2 * third)
         )
+    }
+
+    public static func verticalContentFrame(size: CGSize, padding: CGFloat) -> CGRect? {
+        guard size.width.isFinite, size.height.isFinite,
+              padding.isFinite, size.width > 0, size.height > 0, padding >= 0,
+              size.height > 2 * padding else { return nil }
+        return CGRect(x: 0, y: padding, width: size.width, height: size.height - 2 * padding)
     }
 }
 
@@ -305,13 +304,21 @@ struct BarSurfaceView: View {
                         slot(surface.end, frame: slots.end, alignment: .trailing)
                     }
                 }
-            } else if let slots = BarLayoutEngine.verticalSlots(
+            } else if let frame = BarLayoutEngine.verticalContentFrame(
                 size: geometry.size,
                 padding: theme.padding
             ) {
-                verticalSlot(surface.start, frame: slots.start, alignment: .top)
-                verticalSlot(surface.center, frame: slots.center, alignment: .center)
-                verticalSlot(surface.end, frame: slots.end, alignment: .bottom)
+                VStack(spacing: 0) {
+                    ScrollView(.vertical) {
+                        verticalGroup(surface.start)
+                    }
+                    .scrollIndicators(.hidden)
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    verticalGroup(surface.center)
+                    verticalGroup(surface.end)
+                }
+                .frame(width: frame.width, height: frame.height, alignment: .top)
+                .position(x: frame.midX, y: frame.midY)
             }
         }
         .foregroundStyle(Color(hex: theme.foreground))
@@ -372,11 +379,7 @@ struct BarSurfaceView: View {
         .position(x: frame.midX, y: frame.midY)
     }
 
-    private func verticalSlot(
-        _ identifiers: [ModuleID],
-        frame: CGRect,
-        alignment: VerticalAlignment
-    ) -> some View {
+    private func verticalGroup(_ identifiers: [ModuleID]) -> some View {
         VStack(spacing: theme.spacing) {
             ForEach(identifiers, id: \.self) { identifier in
                 if let module = modules[identifier] {
@@ -395,9 +398,7 @@ struct BarSurfaceView: View {
                 }
             }
         }
-        .frame(width: frame.width, height: frame.height, alignment: Alignment(horizontal: .center, vertical: alignment))
-        .clipped()
-        .position(x: frame.midX, y: frame.midY)
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -431,14 +432,14 @@ private struct ModuleView: View {
                 .accessibilityLabel(module.id.rawValue)
                 .accessibilityValue(extensionRuntime.health[extensionID]?.rawValue ?? "starting")
                 .accessibilityIdentifier("rill.module.\(module.id.rawValue)")
-                .modifier(ModuleChrome(theme: theme, style: module.style))
+                .modifier(ModuleChrome(theme: theme, style: module.style, isHorizontal: isHorizontal))
             } else if module.kind == .workspaces {
                 workspaceContent
             } else if module.kind == .separator {
                 separatorContent
             } else {
                 standardContent
-                    .modifier(ModuleChrome(theme: theme, style: module.style))
+                    .modifier(ModuleChrome(theme: theme, style: module.style, isHorizontal: isHorizontal))
             }
         }
     }
@@ -508,37 +509,13 @@ private struct ModuleView: View {
     }
 
     private var workspaceContent: some View {
-        HStack(spacing: theme.resolvedWorkspaceSpacing) {
+        workspaceStack {
             if let providerID = module.provider, !visibleWorkspaces.isEmpty {
                 ForEach(visibleWorkspaces, id: \.id) { workspace in
                     Button {
                         focusWorkspace(module.id, providerID, workspace.id)
                     } label: {
-                        HStack(spacing: theme.resolvedWorkspaceContentSpacing) {
-                            Text(workspace.name)
-                                .font(font)
-                                .fontWeight(workspace.focused ? .semibold : .regular)
-                            if let applications = workspace.applications {
-                                ForEach(applications, id: \.id) { application in
-                                    WorkspaceApplicationIcon(
-                                        application: application,
-                                        size: theme.resolvedApplicationIconSize
-                                    )
-                                    if isFocusedApplication(application, in: workspace, providerID: providerID),
-                                       let label = activeApplicationLabel(providerID: providerID) {
-                                        Text(label)
-                                            .font(font)
-                                            .fontWeight(.semibold)
-                                            .lineLimit(1)
-                                            .truncationMode(.tail)
-                                            .layoutPriority(1)
-                                            .transition(
-                                                .opacity.combined(with: .move(edge: .leading))
-                                            )
-                                    }
-                                }
-                            }
-                        }
+                        workspaceContents(workspace, providerID: providerID)
                         .frame(minHeight: theme.resolvedWorkspaceMinimumHeight)
                         .foregroundStyle(
                             workspaceForeground(focused: workspace.focused)
@@ -548,8 +525,9 @@ private struct ModuleView: View {
                                 ? theme.resolvedEmptyWorkspaceOpacity
                                 : 1
                         )
-                        .padding(.horizontal, theme.resolvedWorkspacePadding)
-                        .padding(.vertical, theme.resolvedWorkspaceVerticalPadding)
+                        .padding(.horizontal, isHorizontal ? theme.resolvedWorkspacePadding : 0)
+                        .padding(.vertical, isHorizontal ? theme.resolvedWorkspaceVerticalPadding : theme.resolvedWorkspacePadding)
+                        .frame(maxWidth: isHorizontal ? nil : .infinity)
                         .background {
                             if workspace.focused {
                                 WorkspaceFocusIndicator(theme: theme)
@@ -569,7 +547,8 @@ private struct ModuleView: View {
                             WorkspaceFocusMotion(
                                 focused: workspace.focused,
                                 animation: workspaceFocusAnimation,
-                                isEnabled: workspaceMotionIsEnabled
+                                isEnabled: workspaceMotionIsEnabled,
+                                isHorizontal: isHorizontal
                             )
                         )
                     }
@@ -591,6 +570,62 @@ private struct ModuleView: View {
         }
         .animation(workspaceFocusAnimation, value: focusedWorkspaceID)
         .accessibilityIdentifier("rill.module.\(module.id.rawValue)")
+    }
+
+    @ViewBuilder
+    private func workspaceContents(_ workspace: WorkspaceState, providerID: ProviderID) -> some View {
+        if isHorizontal {
+            HStack(spacing: theme.resolvedWorkspaceContentSpacing) {
+                workspaceNumber(workspace)
+                if let applications = workspace.applications {
+                    ForEach(applications, id: \.id) { application in
+                        workspaceIcon(application)
+                        if isFocusedApplication(application, in: workspace, providerID: providerID),
+                           let label = activeApplicationLabel(providerID: providerID) {
+                            Text(label)
+                                .font(font)
+                                .fontWeight(.semibold)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .layoutPriority(1)
+                                .transition(.opacity.combined(with: .move(edge: .leading)))
+                        }
+                    }
+                }
+            }
+        } else {
+            VStack(spacing: theme.resolvedWorkspaceContentSpacing) {
+                workspaceNumber(workspace)
+                if let applications = workspace.applications {
+                    ForEach(applications, id: \.id) { application in
+                        workspaceIcon(application)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func workspaceNumber(_ workspace: WorkspaceState) -> some View {
+        Text(workspace.name)
+            .font(font)
+            .fontWeight(workspace.focused ? .semibold : .regular)
+            .lineLimit(1)
+            .truncationMode(.tail)
+    }
+
+    private func workspaceIcon(_ application: WorkspaceApplication) -> some View {
+        WorkspaceApplicationIcon(application: application, size: theme.resolvedApplicationIconSize)
+    }
+
+    @ViewBuilder
+    private func workspaceStack<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        if isHorizontal {
+            HStack(spacing: theme.resolvedWorkspaceSpacing, content: content)
+        } else {
+            VStack(spacing: theme.resolvedWorkspaceSpacing, content: content)
+                .frame(maxWidth: .infinity)
+        }
     }
 
     private var workspaceMotionIsEnabled: Bool {
@@ -654,17 +689,30 @@ private struct ModuleView: View {
     }
 
     private var decoratedContent: some View {
-        HStack(spacing: 4) {
-            if let symbolName = presentation.symbolName {
-                Image(systemName: symbolName)
-                    .symbolRenderingMode(.hierarchical)
-            }
-            if !presentation.text.isEmpty {
+        Group {
+            if !isHorizontal && [.text, .clock].contains(module.kind) {
                 Text(presentation.text)
-            }
-            if store.actionFailures[module.id] != nil {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.red)
+                    .fixedSize()
+                    .rotationEffect(.degrees(90))
+                    .frame(
+                        width: theme.fontSize + 6,
+                        height: max(52, CGFloat(presentation.text.count) * theme.fontSize * 0.58)
+                    )
+            } else {
+                HStack(spacing: 4) {
+                    if let symbolName = presentation.symbolName {
+                        Image(systemName: symbolName)
+                            .symbolRenderingMode(.hierarchical)
+                            .frame(maxWidth: isHorizontal ? nil : 22, maxHeight: isHorizontal ? nil : 22)
+                    }
+                    if !presentation.text.isEmpty {
+                        Text(presentation.text)
+                    }
+                    if store.actionFailures[module.id] != nil {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.red)
+                    }
+                }
             }
         }
             .lineLimit(1)
@@ -1082,10 +1130,14 @@ private struct WorkspaceFocusMotion: ViewModifier {
     let focused: Bool
     let animation: Animation?
     let isEnabled: Bool
+    let isHorizontal: Bool
 
     func body(content: Content) -> some View {
         content
-            .scaleEffect(x: focused && isEnabled ? 1.035 : 1, y: 1)
+            .scaleEffect(
+                x: focused && isEnabled && isHorizontal ? 1.035 : 1,
+                y: focused && isEnabled && !isHorizontal ? 1.035 : 1
+            )
             .shadow(
                 color: focused && isEnabled ? Color.white.opacity(0.20) : .clear,
                 radius: focused && isEnabled ? 4 : 0,
@@ -1150,11 +1202,12 @@ private struct WorkspaceApplicationIcon: View {
 private struct ModuleChrome: ViewModifier {
     let theme: ThemeSpec
     let style: ModuleStyle?
+    let isHorizontal: Bool
 
     @ViewBuilder
     func body(content: Content) -> some View {
         let padded = content
-            .padding(.horizontal, style?.padding ?? theme.resolvedModulePadding)
+            .padding(.horizontal, isHorizontal ? (style?.padding ?? theme.resolvedModulePadding) : min(4, style?.padding ?? theme.resolvedModulePadding))
             .padding(.vertical, theme.resolvedModuleVerticalPadding)
         if theme.preset == .glass {
             if #available(macOS 26.0, *) {
