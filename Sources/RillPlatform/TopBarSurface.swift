@@ -404,6 +404,8 @@ private struct ModuleView: View {
     let isHorizontal: Bool
     let theme: ThemeSpec
     @ObservedObject var store: NativeModuleStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var workspaceFocusNamespace
     let performAction: (ModuleID, ActionSpec) -> Void
     let performNativeAction: (ModuleID, NativeModuleAction) -> Void
     let showFrontmostApplicationMenu: (ModuleID) -> Void
@@ -509,12 +511,26 @@ private struct ModuleView: View {
                         )
                         .padding(.horizontal, theme.resolvedWorkspacePadding)
                         .padding(.vertical, theme.resolvedWorkspaceVerticalPadding)
+                        .background {
+                            if workspace.focused {
+                                WorkspaceFocusIndicator(theme: theme)
+                                    .matchedGeometryEffect(
+                                        id: "workspace-focus.\(module.id.rawValue)",
+                                        in: workspaceFocusNamespace
+                                    )
+                            }
+                        }
                         .modifier(
                             WorkspaceChrome(
                                 theme: theme,
-                                background: workspace.focused
-                                    ? theme.resolvedFocusedWorkspaceBackground
-                                    : theme.resolvedWorkspaceBackground
+                                background: theme.resolvedWorkspaceBackground
+                            )
+                        )
+                        .modifier(
+                            WorkspaceFocusMotion(
+                                focused: workspace.focused,
+                                animation: workspaceFocusAnimation,
+                                isEnabled: workspaceMotionIsEnabled
                             )
                         )
                     }
@@ -534,7 +550,25 @@ private struct ModuleView: View {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
             }
         }
+        .animation(workspaceFocusAnimation, value: focusedWorkspaceID)
         .accessibilityIdentifier("rill.module.\(module.id.rawValue)")
+    }
+
+    private var workspaceMotionIsEnabled: Bool {
+        !reduceMotion && theme.animationMS > 0
+    }
+
+    private var workspaceFocusAnimation: Animation? {
+        guard workspaceMotionIsEnabled else { return nil }
+        // A spring response is deliberately a little longer than the generic
+        // theme duration so the focus handoff remains legible without feeling
+        // abrupt in a dense menu-bar layout.
+        let response = min(max(Double(theme.animationMS) / 1_000 * 1.6, 0.22), 0.55)
+        return .spring(response: response, dampingFraction: 0.82, blendDuration: 0.08)
+    }
+
+    private var focusedWorkspaceID: WorkspaceID? {
+        visibleWorkspaces.first(where: \.focused)?.id
     }
 
     private var visibleWorkspaces: [WorkspaceState] {
@@ -967,6 +1001,39 @@ private struct WorkspaceChrome: ViewModifier {
                         Color(hex: theme.resolvedBorderColor),
                         lineWidth: theme.resolvedBorderWidth
                     )
+            }
+    }
+}
+
+private struct WorkspaceFocusMotion: ViewModifier {
+    let focused: Bool
+    let animation: Animation?
+    let isEnabled: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(x: focused && isEnabled ? 1.035 : 1, y: 1)
+            .shadow(
+                color: focused && isEnabled ? Color.white.opacity(0.20) : .clear,
+                radius: focused && isEnabled ? 4 : 0,
+                y: 1
+            )
+            .animation(animation, value: focused)
+    }
+}
+
+private struct WorkspaceFocusIndicator: View {
+    let theme: ThemeSpec
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: theme.resolvedWorkspaceCornerRadius)
+        shape
+            .fill(Color(hex: theme.resolvedFocusedWorkspaceBackground))
+            .overlay {
+                shape.stroke(
+                    Color(hex: theme.resolvedBorderColor),
+                    lineWidth: theme.resolvedBorderWidth
+                )
             }
     }
 }

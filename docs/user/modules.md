@@ -104,7 +104,7 @@ Rill launches exactly `executable` with the declared argument array. Spaces and 
 
 For `wifi`, `volume`, `battery`, and `frontmostApp`, an explicit `on_click` replaces the built-in popover or application menu. Omit it to retain native interaction.
 
-Interactive modules use native SwiftUI buttons with VoiceOver labels, values, hints, and actions. Rill does not add motion of its own, so Reduce Motion requires no alternate animation path.
+Interactive modules use native SwiftUI buttons with VoiceOver labels, values, hints, and actions. Workspace focus changes use a short native spring with a shared capsule indicator that slides to the selected space; it is automatically disabled with macOS Reduce Motion and may be disabled with `theme.animation_ms = 0`.
 
 ## Styling and health
 
