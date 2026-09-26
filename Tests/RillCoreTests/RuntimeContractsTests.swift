@@ -53,6 +53,7 @@ final class RuntimeContractsTests: XCTestCase {
         XCTAssertEqual(glass.resolvedSurfaceBackground, "#00000000")
         XCTAssertEqual(glass.resolvedModuleBackground, "#FFFFFF14")
         XCTAssertEqual(glass.resolvedFocusedWorkspaceBackground, "#FFFFFFD9")
+        XCTAssertEqual(glass.resolvedFocusedWorkspaceForeground, "#000000FF")
         XCTAssertEqual(glass.resolvedModuleCornerRadius, 7)
         XCTAssertEqual(glass.resolvedWorkspaceCornerRadius, 7)
         XCTAssertEqual(glass.resolvedModulePadding, 10)
@@ -80,6 +81,19 @@ final class RuntimeContractsTests: XCTestCase {
         XCTAssertEqual(theme.resolvedBorderWidth, 2)
         XCTAssertEqual(theme.resolvedModulePadding, 7)
         XCTAssertEqual(theme.resolvedApplicationIconSize, 20)
+    }
+
+    func testFocusedWorkspaceForegroundSelectsContrastingColor() {
+        XCTAssertEqual(
+            ThemeSpec(preset: .flat, background: "#FFFFFFFF", focusedWorkspaceBackground: "#17171CFF")
+                .resolvedFocusedWorkspaceForeground,
+            "#FFFFFFFF"
+        )
+        XCTAssertEqual(
+            ThemeSpec(preset: .flat, background: "#17171CFF", focusedWorkspaceBackground: "#FFFFFF80")
+                .resolvedFocusedWorkspaceForeground,
+            "#000000FF"
+        )
     }
 
     func testSurfaceEdgesAreComplete() { XCTAssertEqual(Set(SurfaceEdge.allCases), [.top, .bottom, .left, .right]) }
