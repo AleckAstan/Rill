@@ -131,8 +131,13 @@ geometry centers a nonactivating panel at the physical top edge; compact
 height uses the positive top safe-area inset or 36 points, and configured
 expanded geometry is bounded. Potential collisions use distinct priorities;
 the highest priority wins.
-The panel uses untinted native Liquid Glass on macOS 26+ so its appearance
-follows the system choice, with regular material on macOS 14–25.
+The default `background_style = "system_glass"` uses untinted native Liquid
+Glass on macOS 26+ and regular material on macOS 14–25. An extension may opt
+its configured notch widget into `background_style = "black"` for a true black
+surface beside a MacBook cutout. Hover expands the panel and leaving it
+collapses it; a compact click or accessibility action can also expand it.
+The host animates the same panel's frame and disables frame animation when
+Reduce Motion is enabled.
 
 The surface can visually connect around or below a cutout. It cannot draw in
 the physical cutout, reserve system work area, replace the menu bar or claim a
@@ -146,3 +151,5 @@ declared.
 only `RillExtensionKit`. It supplies a rich bar module and a notch widget and
 exercises every initial node. See `docs/user/extensions.md` for build,
 installation, accessibility, security and troubleshooting steps.
+The sibling `../RillNotch` project is a real media extension using this same
+API, with Music and Spotify controls and artwork where those apps expose it.

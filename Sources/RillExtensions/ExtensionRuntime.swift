@@ -448,6 +448,11 @@ private struct ExtensionNodeView: View {
 
 enum NotchWidgetState: String, Sendable { case compact, expanded, dismissed }
 
+@MainActor
+private final class NotchWidgetViewState: ObservableObject {
+    @Published var expanded = false
+}
+
 enum NotchWidgetGeometry {
     static func frame(
         screen: CGRect,
@@ -467,6 +472,7 @@ final class NotchWidgetResource: NSObject, ManagedConfigurationResource, @unchec
     private let spec: NotchWidgetSpec
     private let configuration: AppConfiguration
     private let runtime: ExtensionRuntimeStore
+    private let viewState = NotchWidgetViewState()
     private var panels: [RillPanel] = []
     private var state: NotchWidgetState = .compact
     private var committed = false
@@ -496,24 +502,54 @@ final class NotchWidgetResource: NSObject, ManagedConfigurationResource, @unchec
         if committed && state != .dismissed { panels.forEach { $0.orderFrontRegardless() } }
     }
 
-    private func setState(_ newState: NotchWidgetState) { state = newState; reconcile() }
+    private func setState(_ newState: NotchWidgetState) {
+        guard state != newState else { return }
+        state = newState
+        viewState.expanded = newState == .expanded
+        if state == .dismissed {
+            panels.forEach { $0.close() }
+            panels = []
+            return
+        }
+        let screens = ScreenInventory.screens(for: spec.display)
+        guard screens.count == panels.count else { reconcile(); return }
+        for (panel, selected) in zip(panels, screens) {
+            let screen = selected.0
+            let frame = NotchWidgetGeometry.frame(screen: screen.frame, safeTopInset: screen.safeAreaInsets.top, spec: spec, state: state)
+            if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+                panel.setFrame(frame, display: true)
+            } else {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.28
+                    context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                    panel.animator().setFrame(frame, display: true)
+                }
+            }
+        }
+    }
+
+    private func makeContentView() -> NSView {
+        NotchHostingView(rootView: NotchWidgetRootView(
+            spec: spec,
+            viewState: viewState,
+            runtime: runtime,
+            expand: { [weak self] in self?.setState($0 ? .expanded : .compact) },
+            dismiss: { [weak self] in self?.setState(.dismissed) }
+        ))
+    }
 
     private func makePanels() -> [RillPanel] {
         guard state != .dismissed, isCollisionWinner else { return [] }
         return ScreenInventory.screens(for: spec.display).map { screen, displayID in
             let frame = NotchWidgetGeometry.frame(screen: screen.frame, safeTopInset: screen.safeAreaInsets.top, spec: spec, state: state)
             let panel = RillPanel(surfaceID: SurfaceID("notch.\(spec.id)"), displayID: displayID, frame: frame)
+            panel.usesMenuBarArea = true
+            panel.acceptsMouseMovedEvents = true
             panel.level = .floating
             panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenNone]
             panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = true
             panel.isMovable = false; panel.isReleasedWhenClosed = false
-            panel.contentView = NSHostingView(rootView: NotchWidgetRootView(
-                spec: spec,
-                expanded: state == .expanded,
-                runtime: runtime,
-                expand: { [weak self] in self?.setState($0 ? .expanded : .compact) },
-                dismiss: { [weak self] in self?.setState(.dismissed) }
-            ))
+            panel.contentView = makeContentView()
             return panel
         }
     }
@@ -525,21 +561,40 @@ final class NotchWidgetResource: NSObject, ManagedConfigurationResource, @unchec
     }
 }
 
+@MainActor
+private final class NotchHostingView: NSHostingView<NotchWidgetRootView> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override var needsPanelToBecomeKey: Bool { false }
+}
+
 private struct NotchWidgetRootView: View {
     let spec: NotchWidgetSpec
-    let expanded: Bool
+    @ObservedObject var viewState: NotchWidgetViewState
     @ObservedObject var runtime: ExtensionRuntimeStore
     let expand: (Bool) -> Void
     let dismiss: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    private var expanded: Bool { viewState.expanded }
+
     @ViewBuilder
     var body: some View {
         let shape = UnevenRoundedRectangle(bottomLeadingRadius: 14, bottomTrailingRadius: 14)
-        if #available(macOS 26.0, *) {
+        if spec.backgroundStyle == .black {
+            content.background(Color.black).clipShape(shape).foregroundStyle(.white)
+                .onHover { hovering in expand(hovering) }
+                .onTapGesture { if !expanded { expand(true) } }
+                .accessibilityAction(named: "Expand notch widget") { expand(true) }
+        } else if #available(macOS 26.0, *) {
             content.glassEffect(.regular, in: shape)
+                .onHover { hovering in expand(hovering) }
+                .onTapGesture { if !expanded { expand(true) } }
+                .accessibilityAction(named: "Expand notch widget") { expand(true) }
         } else {
             content.background(.regularMaterial).clipShape(shape)
+                .onHover { hovering in expand(hovering) }
+                .onTapGesture { if !expanded { expand(true) } }
+                .accessibilityAction(named: "Expand notch widget") { expand(true) }
         }
     }
 
@@ -552,18 +607,18 @@ private struct NotchWidgetRootView: View {
                     expanded: expanded,
                     runtime: runtime
                 )
-                Button { expand(!expanded) } label: {
-                    Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                }
-                .buttonStyle(.plain).focusable().focusEffectDisabled()
-                .accessibilityLabel(expanded ? "Collapse notch widget" : "Expand notch widget")
+                .frame(maxWidth: .infinity)
                 if expanded {
+                    Button { expand(false) } label: { Image(systemName: "chevron.up") }
+                        .buttonStyle(.plain).focusable().focusEffectDisabled()
+                        .accessibilityLabel("Collapse notch widget")
                     Button(action: dismiss) { Image(systemName: "xmark.circle.fill") }
                         .buttonStyle(.plain).accessibilityLabel("Dismiss notch widget")
                 }
             }
         }
-        .padding(10)
+        .padding(.horizontal, expanded ? 14 : 8)
+        .padding(.vertical, expanded ? 10 : 3)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.86), value: expanded)
     }

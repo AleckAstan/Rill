@@ -16,6 +16,7 @@
 | D12 | The frontmost-app module exposes the active application's native menu hierarchy on click through public macOS Accessibility APIs; an explicit `on_click` overrides this behavior | Implemented during phase 12 refinement; requires user-granted Accessibility access |
 | D13 | Third-party modules use local versioned plugin packages that resolve to supervised NDJSON producers; plugins use `rillctl` as their host API and never load code in-process | Implemented 2026-09-26; API v1 deliberately excludes arbitrary UI code and remote installation |
 | D14 | Rich UI extensions use a separately buildable SDK and bounded bidirectional declarative protocol while remaining out of process; notch widgets use Rill-owned public-AppKit panels | Implemented experimentally in phase 13; API stabilization and real-notch evidence remain open |
+| D15 | Notch widgets may opt into a black surface and hover expansion; real media plugins stay separate SDK clients | Implemented for sibling RillNotch proof on 2026-09-27; physical notch and media-app behavior remain unverified |
 
 Append evidence, alternatives, consequences and date when accepting or changing a decision. Update every affected contract, example and phase before changing a public interface. No branding availability, license choice, developer account or release destination has been established.
 
@@ -76,3 +77,16 @@ tint; the focused workspace keeps its separate configured fill. Older macOS
 releases retain the existing material/color fallback. This replaces the
 implicit module tint and classic material used by the experimental notch
 panel after the user compared clear and frosted system modes.
+
+## RillNotch proof — 2026-09-27
+
+D15 adds `background_style = "black"` only to schema-2 notch widgets, leaving
+system glass as the default. The host expands on hover without closing the
+panel, animates its frame, and uses an immediate frame change with Reduce
+Motion. The sibling `../RillNotch` executable imports only `RillExtensionKit`
+and polls Music/Spotify through public AppleScript interfaces. Its artwork and
+controls stay in the extension; Rill receives bounded declarative content and
+opaque action IDs. The animated compact wave indicates playback state and is
+not a measured audio-frequency spectrum. A local demo proves protocol/runtime
+integration; neither live media automation nor physical notch fit has been
+observed in this session.

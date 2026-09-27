@@ -342,6 +342,7 @@ final class ConfigurationParserTests: XCTestCase {
         id = "notch"
         extension = "dev.rill.test"
         contribution = "notch"
+        background_style = "black"
         """
         let configuration = try parser.parse(
             text: text,
@@ -350,6 +351,7 @@ final class ConfigurationParserTests: XCTestCase {
         XCTAssertEqual(configuration.schemaVersion, 2)
         XCTAssertEqual(configuration.extensions.first?.executable, executable.path)
         XCTAssertEqual(configuration.extensions.first?.contributions.count, 2)
+        XCTAssertEqual(configuration.notchWidgets.first?.backgroundStyle, .black)
         XCTAssertFalse(FileManager.default.fileExists(atPath: sentinel.path))
     }
 
