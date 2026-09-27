@@ -7,9 +7,10 @@ Status: IN PROGRESS. Last updated: 2026-09-27.
 The user explicitly advanced this post-0.1 phase while manual/external gates
 in phases 09–12 remain open; do not mark those predecessors complete by
 inference. Read the phase packet and `docs/extensions.md`. Core implementation
-and automated checks are present. Resume with real notched-hardware,
-VoiceOver/keyboard/Reduce Motion and extension-specific Instruments work, then
-fix any observed behavior before considering API stability.
+and automated checks are present. Resume with the sibling `../RillNotch` on
+real notched hardware and a playing Music/Spotify track, then complete
+VoiceOver/keyboard/Reduce Motion and extension-specific Instruments work.
+Fix any observed behavior before considering API stability.
 
 ## Expected output for downstream agents
 
@@ -68,6 +69,17 @@ fixtures, docs and evidence.
   workspace padding and 18-point application icons. Other left/center modules
   also retain their glass chrome; right status symbols remain enlarged. The
   active configuration's workspace overrides were restored to original values.
+- Created `../RillNotch` as a standalone Swift package using only the extension
+  SDK. It publishes Music/Spotify track metadata, artwork where supplied,
+  progress and playback actions as a notch-widget contribution. It polls the
+  apps' public AppleScript interfaces every two seconds. The compact wave is
+  animated playback activity, not measured audio frequency data.
+- Added opt-in `background_style = "black"` to schema-2 notch widgets. The
+  generic host now expands on hover/compact click/accessibility action, uses
+  the same panel for animated frame changes, collapses when the pointer leaves
+  and observes Reduce Motion. The notch panel accepts first mouse/move events
+  without becoming key and bypasses visible-frame clamping at the physical
+  top edge. Existing widgets default to system glass.
 
 ## Verification record
 
@@ -94,6 +106,23 @@ notched hardware, VoiceOver and Reduce Motion observations were not performed.
 | System glass appearance integration | macOS 27 arm64; active top configuration after removing explicit module tint | `./scripts/build.sh` and `./scripts/test.sh` pass (80 app tests, 6 IPC tests); relaunched app has two panels, no config error and ready extension/Hello/OmniWM. Clear/frosted visual comparison still needs user observation. | PARTIAL PASS | Current session build/test and `rillctl status/diagnostics`, 2026-09-26 |
 | Icon-only glass bar, 2026-09-27 | App build and full tests pass (80 app + 6 IPC); active config validates after removing its old focused fill and resizing icons/padding. Relaunched app reports two visible panels, no configuration error and extension/Hello/OmniWM ready. Visual appearance and interaction remain user-unverified; `screencapture` returned “could not create image from display”. | PARTIAL PASS | `/tmp/rill-glass-icon-build.log`, `/tmp/rill-glass-icon-tests.log`, `rillctl validate/status/diagnostics` in this session |
 | Left workspace glass restoration and right-end scoping, 2026-09-27 | Final `./scripts/build.sh` and `./scripts/test.sh` pass (80 app + 6 IPC); active config validates. Relaunched app reports generation 1, two visible panels, no config error and ready extension/Hello/OmniWM. Visual appearance and clicks still need owner confirmation. | PARTIAL PASS | `/tmp/rill-workspace-glass-build.log`, `/tmp/rill-workspace-glass-tests.log`, `rillctl validate/status/diagnostics` in this session |
+| RillNotch release build and v2 validation, 2026-09-27 | `swift build -c release` in sibling project passes; `rillctl validate --config ../RillNotch/config.toml` accepts the black style and package without launch | PASS | `/tmp/rill-notch-final-build.log`; CLI output in session |
+| Rill host build and tests after black/hover changes, 2026-09-27 | Final `./scripts/build.sh` passes; `./scripts/test.sh` rerun passes 80 app and 6 IPC tests, including black style parsing. A final one-line flexible-width layout adjustment was built after the test rerun. First final run crashed inside XCTest `swift_task_localValuePopImpl` during the pre-existing immediate-child-crash test; its focused rerun and full rerun passed. | PASS after rerun; initial runner crash recorded | `/tmp/rill-notch-host-build-final2.log`; `/tmp/rill-notch-host-tests-final.log`; `/tmp/rill-notch-host-targeted.log`; `/tmp/rill-notch-host-tests-rerun.log`; `~/Library/Logs/DiagnosticReports/xctest-2026-09-27-111519.ips` |
+| RillNotch framed demo protocol, 2026-09-27 | Python harness sends v2 context, receives hello and changing compact/expanded updates with control IDs, then sends shutdown; process exits | PASS | Command/output in session |
+| Media automation syntax/empty-state probe, 2026-09-27 | Extracted Music artwork AppleScript compiles with `osacompile`; full JXA query runs and returns `[null,null]` when neither app runs; framed plugin publishes “Nothing playing” and shuts down cleanly | PASS (syntax/empty state only) | `/tmp/rillnotch-art.applescript`; command/output in session |
+| Isolated RillNotch demo runtime, 2026-09-27 | Temporary per-user runtime, `RILL_NOTCH_DEMO=1`, standalone config; status reports generation 1, extension ready and no configuration error; diagnostics reports one visible panel. Screen capture could not create an image. | PASS (runtime only, unnotched display); visual NOT RUN | `rillctl status/diagnostics --json` output in session; `/tmp/rill-notch-demo-final.log` |
+| Live Music/Spotify metadata, artwork and playback actions | Music was installed but not running; Spotify was unavailable. Automation prompts and actions were not exercised | NOT RUN | None |
+| Physical black-notch fit, hover/click animation, VoiceOver and pacing | Session display has no positive notch safe-area inset; input/assistive and frame-pacing observations were not performed | NOT RUN | None |
+| Owner-requested local RillNotch launch, 2026-09-27 | `open -n -g -a <Debug Rill.app> --env RILL_RUNTIME_DIR=<separate run directory> --args --config ../RillNotch/config.toml` leaves a second app instance and the RillNotch child running; status reports generation 1, extension ready and no configuration error; diagnostics reports one visible panel on external 2560×1080 display | PASS (launch/health only); owner interaction NOT RUN | `rillctl status/diagnostics --json` output in session; `~/Library/Logs/RillNotch-live.log` |
+| Single-instance RillNotch integration, 2026-09-27 | Active configuration backed up, `rich-notch` widget replaced by `rill-notch`, sibling extension added, candidate and active files validated; two previous Rill processes stopped and one standard-runtime Rill instance launched. `rillctl status/diagnostics --json` reports generation 1, one Rill process, two visible panels, ready RillNotch/RichSample/Hello/OmniWM and no configuration error. The RichSample bar module remains. | PASS (configuration and runtime); owner visual/media interaction NOT RUN | `~/.config/rill/config.toml.before-rillnotch-20260927-112608`; active `~/.config/rill/config.toml`; `~/Library/Logs/Rill-RillNotch.log`; CLI/process output in session |
+| MacBook display correction, 2026-09-27 | With lid open, `rillctl displays --json` and NSScreen show external 2560×1080 scale 1 plus built-in 1800×1169 scale 2/top safe inset 38. `primary` selected the external, so active and sibling sample widget configs changed to `display = "all"`. After reload and restart, one Rill process, four visible panels, extension/provider health ready and no config error; CoreGraphics lists centered 440×164 panels at each display's top edge, including built-in coordinates `(1156,1080)` in Quartz space. Real visual fit/input await owner confirmation. | PASS (selection/geometry/runtime); visual NOT RUN | `~/.config/rill/config.toml.before-rillnotch-all-20260927-113005`; active config; `../RillNotch/config.toml`; CLI/CoreGraphics output in session |
+| Owner RillNotch POC validation, 2026-09-27 | After the two-display correction, the owner said “super” and declared the POC valid on the opened MacBook. This confirms visible placement for the current setup. No separate result was given for live Music/Spotify metadata/artwork/actions, VoiceOver, fullscreen/sleep/wake or measured pacing. | PASS (user-reported visual POC); remaining detailed checks NOT RUN | Owner feedback in conversation |
+
+The first reload following the display-selector edit reported empty extension
+health for more than a second while a RillNotch child process existed. A clean
+restart restored both extensions to ready, and a subsequent explicit reload
+kept them ready. This transient reload anomaly was not reproduced or explained;
+investigate if it recurs during owner testing.
 
 An informational 1.2-second startup smoke measured 1.35 s wall, 0.15 s user,
 0.04 s system, 70,287,360-byte maximum RSS and 23,724,920-byte peak memory
@@ -111,15 +140,21 @@ native-glass appearance comparison was superseded by this owner request. The loc
 trust checks do not sandbox an accepted executable; documentation states this
 explicitly. The public-AppKit notch strategy may need geometry/fullscreen
 changes after hardware observation.
+RillNotch additionally needs a live Music/Spotify session to verify AppleScript
+authorization, artwork export/download and each playback action. Its compact
+wave currently visualizes the playing state rather than sampled audio.
 
 ## Next agent handoff
 
 - Exact next action: use a real multi-display notched MacBook for
   compact/expanded/dismissed plus exact reload process count and
-  fullscreen/Spaces/sleep-wake/menu/VoiceOver/Reduce Motion observation.
+  fullscreen/Spaces/sleep-wake/menu/VoiceOver/Reduce Motion observation; run
+  `../RillNotch` with a playing Music or Spotify track to verify metadata,
+  artwork, hover animation and all three controls.
 - Artifacts: `Packages/RillExtensionKit/`, `Sources/RillExtensions/`,
   `Examples/extensions/`, `docs/extensions.md`, `docs/user/extensions.md`, and
-  `evidence/extension-smoke.json`.
+  `evidence/extension-smoke.json`. The sibling RillNotch repository has local
+  `main` commit `f510fad` for the owner-validated POC.
 - Cleanup / test-environment changes: the active personal configuration now
   omits the former `module_background = "#FFFFFF14"` override; its pre-change
   backup is `~/.config/rill/config.toml.before-native-glass-20260926-155625`.
@@ -129,6 +164,15 @@ changes after hardware observation.
   The owner's clarification restored the workspace-specific values after a
   second backup at `~/.config/rill/config.toml.before-workspace-glass-20260927`.
   Smoke panels terminated automatically. SwiftPM build products exist under
-  package-local `.build` directories and are ignored.
+  package-local `.build` directories and are ignored. For owner testing,
+  a separate Rill instance was launched briefly with runtime directory
+  `~/Library/Application Support/RillNotch/run`; it has now been stopped and
+  its stale socket/launcher marker removed. The active personal configuration
+  was backed up to
+  `~/.config/rill/config.toml.before-rillnotch-20260927-112608`, then changed
+  to use `../RillNotch` as its sole notch widget. A second backup at
+  `~/.config/rill/config.toml.before-rillnotch-all-20260927-113005` precedes
+  the `primary` → `all` display selector change. One Rill process remains
+  running with the standard runtime and log `~/Library/Logs/Rill-RillNotch.log`.
 - Completion date / evidence reviewer: incomplete; owner/manual evidence still
   required.

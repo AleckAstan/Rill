@@ -524,6 +524,7 @@ public struct ExtensionSpec: Codable, Sendable, Equatable {
 }
 
 public enum NotchCollisionPolicy: String, Codable, Sendable { case highestPriority = "highest_priority" }
+public enum NotchBackgroundStyle: String, Codable, Sendable { case systemGlass = "system_glass", black }
 
 public struct NotchWidgetSpec: Codable, Sendable, Equatable {
     public var id: String
@@ -532,6 +533,7 @@ public struct NotchWidgetSpec: Codable, Sendable, Equatable {
     public var display: DisplaySelector
     public var priority: Int
     public var collision: NotchCollisionPolicy
+    public var backgroundStyle: NotchBackgroundStyle
     public var compactWidth: Double
     public var expandedWidth: Double
     public var expandedHeight: Double
@@ -539,6 +541,7 @@ public struct NotchWidgetSpec: Codable, Sendable, Equatable {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case id, contribution, display, priority, collision
         case extensionID = "extension"
+        case backgroundStyle = "background_style"
         case compactWidth = "compact_width"
         case expandedWidth = "expanded_width"
         case expandedHeight = "expanded_height"
@@ -551,12 +554,14 @@ public struct NotchWidgetSpec: Codable, Sendable, Equatable {
         display: DisplaySelector = .primary,
         priority: Int = 0,
         collision: NotchCollisionPolicy = .highestPriority,
+        backgroundStyle: NotchBackgroundStyle = .systemGlass,
         compactWidth: Double = 220,
         expandedWidth: Double = 420,
         expandedHeight: Double = 180
     ) {
         self.id = id; self.extensionID = extensionID; self.contribution = contribution
         self.display = display; self.priority = priority; self.collision = collision
+        self.backgroundStyle = backgroundStyle
         self.compactWidth = compactWidth; self.expandedWidth = expandedWidth
         self.expandedHeight = expandedHeight
     }
@@ -569,6 +574,7 @@ public struct NotchWidgetSpec: Codable, Sendable, Equatable {
         display = try container.decodeIfPresent(DisplaySelector.self, forKey: .display) ?? .primary
         priority = try container.decodeIfPresent(Int.self, forKey: .priority) ?? 0
         collision = try container.decodeIfPresent(NotchCollisionPolicy.self, forKey: .collision) ?? .highestPriority
+        backgroundStyle = try container.decodeIfPresent(NotchBackgroundStyle.self, forKey: .backgroundStyle) ?? .systemGlass
         compactWidth = try container.decodeIfPresent(Double.self, forKey: .compactWidth) ?? 220
         expandedWidth = try container.decodeIfPresent(Double.self, forKey: .expandedWidth) ?? 420
         expandedHeight = try container.decodeIfPresent(Double.self, forKey: .expandedHeight) ?? 180

@@ -22,6 +22,10 @@ developer-local path; its only dependency is the local SDK product.
 On macOS 26 and newer, Rill renders the notch widget with untinted native
 Liquid Glass so the system's appearance choice applies. macOS 14–25 use a
 regular material fallback.
+Use `background_style = "black"` in a `[[notch_widgets]]` entry for a black
+notch surface. It expands on hover or compact click and collapses when the
+pointer leaves. The separate `../RillNotch` project demonstrates a media
+plugin with this style.
 
 ## Authoring
 

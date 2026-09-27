@@ -104,7 +104,8 @@ Hot reload watches the containing directory to catch atomic-save rename patterns
 Schema 2 adds `[[extensions]]` with `id`, package `path`, and explicit `grant`,
 extension modules with `kind = "extension"`, `extension`, and `contribution`,
 and `[[notch_widgets]]` with stable ID, extension/contribution, display,
-priority/collision and bounded compact/expanded geometry. Manifest resolution
+priority/collision, `background_style` (`system_glass` by default or `black`),
+and bounded compact/expanded geometry. Manifest resolution
 is preparation-only and checks API 2, identity, capabilities, contributions,
 ownership, modes and executable presence without launch. Failed migration or
 reload preserves the active generation and last valid extension presentation.
