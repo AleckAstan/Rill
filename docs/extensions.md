@@ -100,7 +100,8 @@ only the contribution and opaque `action_id` chosen by the extension. They
 cannot define shell commands or host actions.
 
 The finite nodes are `text`, `symbol`, declared local `image`, `hStack`,
-`vStack`, `spacer`, `divider`, `progress`, `button`, `list`, and `popover`.
+`vStack`, `spacer`, `divider`, `progress`, `button`, `list`, `popover`, and
+experimental `nowPlaying`.
 Trees are capped at 256 nodes, depth 12, 64 children per node and 4,096
 characters per string. Progress is finite in 0...1. Images are package-local,
 non-symlink and at most 1 MiB. SF Symbols require an accessibility label;
@@ -111,6 +112,18 @@ scale to a bounded native view, controls use native keyboard focus and
 semantic accessibility labels, and Reduce Motion suppresses the notch spring.
 There is no raw color/CSS, arbitrary drawing, shell action, custom `NSView` or
 extension-supplied SwiftUI.
+
+`nowPlaying` is a semantic media node intended for a notch widget. It carries
+`media` with required `title`, `artist`, `is_playing` and optional `album`,
+`source`, package-relative `artwork_resource`, `artwork_revision`, playback
+`position`, `duration`, Unix `updated_at`, and opaque
+`previous_action_id`/`toggle_action_id`/`next_action_id`. Rill validates all
+fields, owns the compact/expanded layout, animates the activity bars locally,
+interpolates progress while playing and renders accessible native buttons.
+The activity bars reflect playback state; the API does not expose audio samples
+or a measured spectrum. An extension should update on media state changes and
+periodic position corrections, not for each animation frame. Other declarative
+nodes and API-v1 providers continue to work as before.
 
 ## Supervision and reload
 

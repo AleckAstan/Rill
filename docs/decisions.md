@@ -17,6 +17,7 @@
 | D13 | Third-party modules use local versioned plugin packages that resolve to supervised NDJSON producers; plugins use `rillctl` as their host API and never load code in-process | Implemented 2026-09-26; API v1 deliberately excludes arbitrary UI code and remote installation |
 | D14 | Rich UI extensions use a separately buildable SDK and bounded bidirectional declarative protocol while remaining out of process; notch widgets use Rill-owned public-AppKit panels | Implemented experimentally in phase 13; API stabilization and real-notch evidence remain open |
 | D15 | Notch widgets may opt into a black surface and hover expansion; real media plugins stay separate SDK clients | Implemented for sibling RillNotch proof on 2026-09-27; physical notch and media-app behavior remain unverified |
+| D16 | A semantic `nowPlaying` node lets Rill own media layout and animation while an extension supplies bounded data and opaque controls | Experimental phase-13 addition, 2026-09-27; real media and visual quality still need owner observation |
 
 Append evidence, alternatives, consequences and date when accepting or changing a decision. Update every affected contract, example and phase before changing a public interface. No branding availability, license choice, developer account or release destination has been established.
 

@@ -354,6 +354,7 @@ struct ExtensionContributionView: View {
         if let presentation = runtime.presentations[key] {
             ExtensionNodeView(
                 node: expanded ? presentation.expanded ?? presentation.compact : presentation.compact,
+                expanded: expanded,
                 packageDirectory: runtime.packageDirectory(for: extensionID),
                 action: { runtime.perform(extensionID: extensionID, contributionID: contributionID, actionID: $0) }
             )
@@ -370,13 +371,14 @@ struct ExtensionContributionView: View {
 
 private struct ExtensionNodeView: View {
     let node: RillExtensionNode
+    var expanded = false
     let packageDirectory: URL
     let action: (String) -> Void
     @State private var popover = false
 
     @ViewBuilder var body: some View {
         switch node.kind {
-        case .hStack, .vStack, .list, .spacer, .divider:
+        case .hStack, .vStack, .list, .spacer, .divider, .nowPlaying:
             rendered
         default:
             rendered.accessibilityLabel(node.label ?? defaultLabel)
@@ -426,6 +428,9 @@ private struct ExtensionNodeView: View {
                     }.padding(14).frame(maxWidth: 420)
                 }
             )
+        case .nowPlaying:
+            return AnyView(NowPlayingView(media: node.media!, expanded: expanded,
+                packageDirectory: packageDirectory, action: action))
         }
     }
 
@@ -443,6 +448,174 @@ private struct ExtensionNodeView: View {
 
     private var defaultLabel: String {
         node.text ?? node.name ?? node.kind.rawValue
+    }
+}
+
+/// A host-owned media presentation. Extensions supply data and opaque action IDs only.
+private struct NowPlayingView: View {
+    let media: RillNowPlayingContent
+    let expanded: Bool
+    let packageDirectory: URL
+    let action: (String) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Group {
+            if expanded {
+                expandedContent.transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
+            } else {
+                compactContent.transition(.opacity)
+            }
+        }
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .animation(reduceMotion ? nil : .spring(response: 0.38, dampingFraction: 0.84), value: expanded)
+    }
+
+    private var compactContent: some View {
+        HStack(spacing: 0) {
+            artwork(size: 28)
+                .frame(width: 46, alignment: .leading)
+            Spacer(minLength: 0)
+            activityWave
+                .frame(width: 46, alignment: .trailing)
+        }
+        .padding(.horizontal, 10)
+        .frame(maxHeight: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Now playing: \(media.title), \(media.artist)")
+        .accessibilityValue(media.isPlaying ? "Playing" : "Paused")
+    }
+
+    private var expandedContent: some View {
+        VStack(spacing: 9) {
+            HStack(alignment: .center, spacing: 13) {
+                artwork(size: 76)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(media.source?.uppercased() ?? "NOW PLAYING")
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .tracking(1.4)
+                        .foregroundStyle(.white.opacity(0.48))
+                        .lineLimit(1)
+                    Text(media.title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .accessibilityLabel("Title: \(media.title)")
+                    Text(media.artist.isEmpty ? "Unknown artist" : media.artist)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.65))
+                        .lineLimit(1)
+                        .accessibilityLabel("Artist: \(media.artist)")
+                    if let album = media.album, !album.isEmpty {
+                        Text(album).font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.38)).lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Spacer(minLength: 12)
+            }
+            progressTrack
+            HStack {
+                activityWave.opacity(0.7)
+                Spacer()
+                playbackButton("backward.end.fill", label: "Previous track", id: media.previousActionID, size: 15)
+                playbackButton(media.isPlaying ? "pause.fill" : "play.fill",
+                    label: media.isPlaying ? "Pause" : "Play", id: media.toggleActionID, size: 18)
+                    .frame(width: 31, height: 31)
+                    .background(.white.opacity(0.15), in: Circle())
+                playbackButton("forward.end.fill", label: "Next track", id: media.nextActionID, size: 15)
+                Spacer()
+                Text(media.source ?? "").font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.4)).lineLimit(1)
+                    .frame(width: 50, alignment: .trailing)
+            }
+            .frame(height: 31)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 10)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    @ViewBuilder private func artwork(size: CGFloat) -> some View {
+        let path = media.artworkResource.map { packageDirectory.appendingPathComponent($0) }
+        if let path, let image = NSImage(contentsOf: path) {
+            Image(nsImage: image).resizable().scaledToFill()
+                .frame(width: size, height: size).clipShape(RoundedRectangle(cornerRadius: size * 0.18))
+                .id(media.artworkRevision)
+                .accessibilityLabel("Album artwork")
+        } else {
+            Image(systemName: "music.note")
+                .font(.system(size: size * 0.42, weight: .medium))
+                .frame(width: size, height: size)
+                .background(Color(white: 0.16), in: RoundedRectangle(cornerRadius: size * 0.18))
+                .accessibilityLabel("Music artwork placeholder")
+        }
+    }
+
+    private var activityWave: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 24.0, paused: !media.isPlaying || reduceMotion)) { timeline in
+            let time = timeline.date.timeIntervalSinceReferenceDate
+            HStack(alignment: .center, spacing: 2.5) {
+                ForEach(0..<5, id: \.self) { index in
+                    Capsule()
+                        .fill(.white.opacity(media.isPlaying ? 0.78 : 0.32))
+                        .frame(width: 2.5, height: waveHeight(index: index, time: time))
+                }
+            }
+            .frame(height: 22)
+        }
+        .accessibilityLabel(media.isPlaying ? "Playback activity" : "Playback paused")
+    }
+
+    private func waveHeight(index: Int, time: TimeInterval) -> CGFloat {
+        guard media.isPlaying, !reduceMotion else { return CGFloat([6, 12, 17, 10, 5][index]) }
+        let motion = abs(sin(time * 3.1 + Double(index) * 1.3))
+        return 4 + CGFloat(motion) * CGFloat([10, 17, 13, 18, 9][index])
+    }
+
+    private var progressTrack: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { timeline in
+            let elapsed = media.isPlaying && media.updatedAt > 0
+                ? max(0, timeline.date.timeIntervalSince1970 - media.updatedAt) : 0
+            let current = min(media.duration, max(0, media.position + elapsed))
+            VStack(spacing: 4) {
+                GeometryReader { geometry in
+                    Capsule().fill(.white.opacity(0.18))
+                        .overlay(alignment: .leading) {
+                            Capsule().fill(.white).frame(width: geometry.size.width * (media.duration > 0 ? current / media.duration : 0))
+                        }
+                }
+                .frame(height: 3)
+                HStack {
+                    Text(timeLabel(current))
+                    Spacer()
+                    Text(timeLabel(media.duration))
+                }
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.4))
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Playback progress")
+            .accessibilityValue("\(timeLabel(current)) of \(timeLabel(media.duration))")
+        }
+    }
+
+    private func timeLabel(_ seconds: Double) -> String {
+        guard seconds.isFinite, seconds >= 0 else { return "0:00" }
+        let value = Int(seconds)
+        return "\(value / 60):\(String(format: "%02d", value % 60))"
+    }
+
+    private func playbackButton(_ symbol: String, label: String, id: String?, size: CGFloat) -> some View {
+        Button { if let id { action(id) } } label: {
+            Image(systemName: symbol).font(.system(size: size, weight: .semibold))
+                .frame(width: 32, height: 30)
+        }
+        .buttonStyle(.plain).focusable().focusEffectDisabled()
+        .disabled(id == nil)
+        .accessibilityLabel(label)
     }
 }
 
@@ -520,8 +693,8 @@ final class NotchWidgetResource: NSObject, ManagedConfigurationResource, @unchec
                 panel.setFrame(frame, display: true)
             } else {
                 NSAnimationContext.runAnimationGroup { context in
-                    context.duration = 0.28
-                    context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                    context.duration = 0.36
+                    context.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.75, 0.2, 1)
                     panel.animator().setFrame(frame, display: true)
                 }
             }
@@ -576,10 +749,16 @@ private struct NotchWidgetRootView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var expanded: Bool { viewState.expanded }
+    private var isNowPlaying: Bool {
+        let key = ExtensionContributionKey(extensionID: spec.extensionID, contributionID: spec.contribution)
+        return runtime.presentations[key]?.compact.kind == .nowPlaying
+    }
 
     @ViewBuilder
     var body: some View {
-        let shape = UnevenRoundedRectangle(bottomLeadingRadius: 14, bottomTrailingRadius: 14)
+        let shape = UnevenRoundedRectangle(
+            bottomLeadingRadius: expanded && isNowPlaying ? 28 : 14,
+            bottomTrailingRadius: expanded && isNowPlaying ? 28 : 14)
         if spec.backgroundStyle == .black {
             content.background(Color.black).clipShape(shape).foregroundStyle(.white)
                 .onHover { hovering in expand(hovering) }
@@ -608,7 +787,7 @@ private struct NotchWidgetRootView: View {
                     runtime: runtime
                 )
                 .frame(maxWidth: .infinity)
-                if expanded {
+                if expanded && !isNowPlaying {
                     Button { expand(false) } label: { Image(systemName: "chevron.up") }
                         .buttonStyle(.plain).focusable().focusEffectDisabled()
                         .accessibilityLabel("Collapse notch widget")
@@ -617,8 +796,17 @@ private struct NotchWidgetRootView: View {
                 }
             }
         }
-        .padding(.horizontal, expanded ? 14 : 8)
-        .padding(.vertical, expanded ? 10 : 3)
+        .overlay(alignment: .topTrailing) {
+            if expanded && isNowPlaying {
+                Button(action: dismiss) { Image(systemName: "xmark").font(.system(size: 9, weight: .semibold)) }
+                    .buttonStyle(.plain).focusable().focusEffectDisabled()
+                    .foregroundStyle(.white.opacity(0.36))
+                    .padding(.top, 12).padding(.trailing, 12)
+                    .accessibilityLabel("Dismiss notch widget")
+            }
+        }
+        .padding(.horizontal, isNowPlaying ? 0 : (expanded ? 14 : 8))
+        .padding(.vertical, isNowPlaying ? 0 : (expanded ? 10 : 3))
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.86), value: expanded)
     }
