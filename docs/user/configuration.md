@@ -45,24 +45,24 @@ IDs are 1–64 characters, start with an ASCII letter or digit, and then use let
 | `spacing` | number | `10` | 0–64 |
 | `animation_ms` | integer | `160` | 0–5000; `0` disables workspace focus motion |
 
-On horizontal bars, `padding` also gives each clipped module group an inner left/right margin. This leaves room for glass effects and the focused workspace's motion at the screen and notch boundaries.
+On horizontal bars, `padding` also gives each clipped module group an inner left/right margin. This leaves room for focus motion and any explicitly enabled glass effects at the screen and notch boundaries.
 
-`flat` keeps modules and workspace states transparent, matching a minimal continuous bar. `segmented` gives each module a subtle capsule and gives the focused workspace a stronger capsule. `glass` uses SwiftUI's native Liquid Glass effect on macOS 26 or newer over a transparent bar; its untinted default follows the system's Liquid Glass appearance choice. Workspace lists use one glass capsule per space instead of an enclosing group capsule, and default text follows the current light/dark appearance. macOS 14–25 receive a translucent fallback with the same geometry. An explicit `module_background` or module `style.background` tints glass modules on macOS 26+ and fills fallback capsules on older systems. The focused workspace keeps its separate `focused_workspace_background` fill. Explicit visual tokens override the selected preset:
+`flat` keeps modules and workspace states transparent, matching a minimal continuous bar. `segmented` gives each module a subtle capsule and gives the focused workspace a stronger capsule. `glass` keeps one native glass capsule per workspace and a filled focused-workspace indicator, while ordinary modules on the right are backgroundless by default. Status SF Symbols are larger; text modules remain readable. An explicit nontransparent `module_background` or module `style.background` opts ordinary modules into native Liquid Glass on macOS 26+ and a translucent capsule on macOS 14–25. Explicit visual tokens override the selected preset:
 
-When the focused workspace changes, a single capsule indicator glides between workspace buttons, like a native tab-bar selection, while the color and a subtle horizontal emphasis interpolate with it. The native spring is derived from `animation_ms`. The transition is automatically disabled when macOS Reduce Motion is enabled, and can also be disabled in the configuration with `animation_ms = 0`.
+When the focused workspace changes, its filled indicator glides between workspace buttons, with a subtle emphasis. The native spring is derived from `animation_ms`. The transition is automatically disabled when macOS Reduce Motion is enabled, and can also be disabled in the configuration with `animation_ms = 0`.
 
 | Key | Segmented | Flat | Glass | Bounds |
 | --- | --- | --- | --- | --- |
 | `surface_background` | `background` | `background` | transparent | color |
-| `module_background` | `#2A2F39FF` | transparent | system glass without tint; `#FFFFFF14` fallback | color |
+| `module_background` | `#2A2F39FF` | transparent | transparent; explicit color opts into glass | color |
 | `workspace_background` | transparent | transparent | transparent | color |
 | `focused_workspace_background` | `#3B4252FF` | transparent | `#FFFFFFD9` | color |
 | `border_color` | `#FFFFFF18` | transparent | `#FFFFFF20` fallback | color |
 | `border_width` | `1` | `0` | `1` fallback | 0–8 |
 | `module_corner_radius` | `5` | `0` | `7` | 0–32 |
 | `workspace_corner_radius` | `4` | `0` | `7` | 0–32 |
-| `module_padding` | `8` | `0` | `10` | 0–64 |
-| `module_vertical_padding` | `4` | `0` | `6` | 0–32 |
+| `module_padding` | `8` | `0` | `6` | 0–64 |
+| `module_vertical_padding` | `4` | `0` | `4` | 0–32 |
 | `workspace_padding` | `5` | `2` | `11` | 0–64 |
 | `workspace_vertical_padding` | `2` | `2` | `5` | 0–32 |
 | `workspace_content_spacing` | `4` | `4` | `4` | 0–32 |
@@ -75,7 +75,7 @@ When the focused workspace changes, a single capsule indicator glides between wo
 
 All numeric values must be finite. Module-level `style.background`, `style.padding`, `style.foreground`, and `style.accent` override the corresponding global presentation for that module.
 
-The refined glass appearance can be reproduced without relying on implicit preset values:
+The mixed glass appearance can be reproduced without relying on implicit preset values (omit `module_background` to keep ordinary modules backgroundless):
 
 ```toml
 [theme]
@@ -89,8 +89,8 @@ border_color = "#FFFFFF20"
 border_width = 1
 module_corner_radius = 7
 workspace_corner_radius = 7
-module_padding = 10
-module_vertical_padding = 6
+module_padding = 6
+module_vertical_padding = 4
 workspace_padding = 11
 workspace_vertical_padding = 5
 workspace_content_spacing = 4

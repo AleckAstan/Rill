@@ -1,6 +1,6 @@
 # Phase 13 handoff
 
-Status: IN PROGRESS. Last updated: 2026-09-26.
+Status: IN PROGRESS. Last updated: 2026-09-27.
 
 ## Resume instructions
 
@@ -59,6 +59,15 @@ fixtures, docs and evidence.
   translucent fallback. The active user's explicit `module_background` was
   removed after a timestamped configuration backup. The focused workspace's
   separate fill was left unchanged.
+- The initial icon-only implementation removed backgrounds from all bar
+  items; the owner then narrowed that request to the right-side `end` group.
+  Textual date, clock, extension and app modules retain their content.
+- Owner clarification: the backgroundless treatment applies only to ordinary
+  modules in the right-side `end` group. Restored the left workspace items'
+  native glass effects, filled focused-workspace indicator, original 11/5-point
+  workspace padding and 18-point application icons. Other left/center modules
+  also retain their glass chrome; right status symbols remain enlarged. The
+  active configuration's workspace overrides were restored to original values.
 
 ## Verification record
 
@@ -83,6 +92,8 @@ notched hardware, VoiceOver and Reduce Motion observations were not performed.
 | Actual notched-hardware compact/expanded/dismissed, clicks, fullscreen, Spaces, sleep/wake, menu reveal and frame pacing | Real notched hardware required | NOT RUN | None |
 | Extension idle CPU/memory, update latency and expansion/collapse pacing against phase-11 method | Instruments/soak session and stability limits required | NOT RUN | None |
 | System glass appearance integration | macOS 27 arm64; active top configuration after removing explicit module tint | `./scripts/build.sh` and `./scripts/test.sh` pass (80 app tests, 6 IPC tests); relaunched app has two panels, no config error and ready extension/Hello/OmniWM. Clear/frosted visual comparison still needs user observation. | PARTIAL PASS | Current session build/test and `rillctl status/diagnostics`, 2026-09-26 |
+| Icon-only glass bar, 2026-09-27 | App build and full tests pass (80 app + 6 IPC); active config validates after removing its old focused fill and resizing icons/padding. Relaunched app reports two visible panels, no configuration error and extension/Hello/OmniWM ready. Visual appearance and interaction remain user-unverified; `screencapture` returned “could not create image from display”. | PARTIAL PASS | `/tmp/rill-glass-icon-build.log`, `/tmp/rill-glass-icon-tests.log`, `rillctl validate/status/diagnostics` in this session |
+| Left workspace glass restoration and right-end scoping, 2026-09-27 | Final `./scripts/build.sh` and `./scripts/test.sh` pass (80 app + 6 IPC); active config validates. Relaunched app reports generation 1, two visible panels, no config error and ready extension/Hello/OmniWM. Visual appearance and clicks still need owner confirmation. | PARTIAL PASS | `/tmp/rill-workspace-glass-build.log`, `/tmp/rill-workspace-glass-tests.log`, `rillctl validate/status/diagnostics` in this session |
 
 An informational 1.2-second startup smoke measured 1.35 s wall, 0.15 s user,
 0.04 s system, 70,287,360-byte maximum RSS and 23,724,920-byte peak memory
@@ -95,7 +106,8 @@ The API remains experimental. Required manual acceptance is incomplete:
 multi-display/four-edge runtime observation; full semantic accessibility and
 overflow audit; exact reload process-count observation; real notch behavior;
 and extension-specific CPU, memory, latency and frame-pacing limits. The new
-native-glass appearance also awaits a user visual check in both OS modes. The local
+icon-only appearance also awaits a user visual/click check; the prior
+native-glass appearance comparison was superseded by this owner request. The local
 trust checks do not sandbox an accepted executable; documentation states this
 explicitly. The public-AppKit notch strategy may need geometry/fullscreen
 changes after hardware observation.
@@ -111,6 +123,11 @@ changes after hardware observation.
 - Cleanup / test-environment changes: the active personal configuration now
   omits the former `module_background = "#FFFFFF14"` override; its pre-change
   backup is `~/.config/rill/config.toml.before-native-glass-20260926-155625`.
+  On 2026-09-27 its explicit focused white fill and obsolete glass spacing/icon
+  sizes were updated after backup at
+  `~/.config/rill/config.toml.before-icon-only-glass-20260927-104058`.
+  The owner's clarification restored the workspace-specific values after a
+  second backup at `~/.config/rill/config.toml.before-workspace-glass-20260927`.
   Smoke panels terminated automatically. SwiftPM build products exist under
   package-local `.build` directories and are ignored.
 - Completion date / evidence reviewer: incomplete; owner/manual evidence still

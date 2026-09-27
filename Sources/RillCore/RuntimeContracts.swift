@@ -750,7 +750,7 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
             switch preset {
             case .flat: return "#00000000"
             case .segmented: return "#2A2F39FF"
-            case .glass: return "#FFFFFF14"
+            case .glass: return "#00000000"
             }
         }
         return moduleBackground
@@ -827,7 +827,7 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
             switch preset {
             case .flat: return 0
             case .segmented: return 8
-            case .glass: return 10
+            case .glass: return 6
             }
         }
         return modulePadding
@@ -838,7 +838,7 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
             switch preset {
             case .flat: return 0
             case .segmented: return 4
-            case .glass: return 6
+            case .glass: return 4
             }
         }
         return moduleVerticalPadding
