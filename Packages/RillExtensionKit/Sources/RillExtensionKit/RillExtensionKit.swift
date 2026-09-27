@@ -22,7 +22,75 @@ public enum RillExtensionContributionKind: String, Codable, Sendable {
 }
 
 public enum RillExtensionNodeKind: String, Codable, CaseIterable, Sendable {
-    case text, symbol, image, hStack, vStack, spacer, divider, progress, button, list, popover
+    case text, symbol, image, hStack, vStack, spacer, divider, progress, button, list, popover, nowPlaying
+}
+
+/// Semantic media content rendered by Rill with native layout and animation.
+/// Action IDs are opaque and routed only to the owning extension.
+public struct RillNowPlayingContent: Codable, Equatable, Sendable {
+    public var title: String
+    public var artist: String
+    public var album: String?
+    public var source: String?
+    public var artworkResource: String?
+    public var artworkRevision: String?
+    public var isPlaying: Bool
+    public var position: Double
+    public var duration: Double
+    public var updatedAt: Double
+    public var previousActionID: String?
+    public var toggleActionID: String?
+    public var nextActionID: String?
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case title, artist, album, source, position, duration
+        case artworkResource = "artwork_resource"
+        case artworkRevision = "artwork_revision"
+        case isPlaying = "is_playing"
+        case updatedAt = "updated_at"
+        case previousActionID = "previous_action_id"
+        case toggleActionID = "toggle_action_id"
+        case nextActionID = "next_action_id"
+    }
+
+    public init(
+        title: String,
+        artist: String,
+        album: String? = nil,
+        source: String? = nil,
+        artworkResource: String? = nil,
+        artworkRevision: String? = nil,
+        isPlaying: Bool,
+        position: Double = 0,
+        duration: Double = 0,
+        updatedAt: Double = 0,
+        previousActionID: String? = nil,
+        toggleActionID: String? = nil,
+        nextActionID: String? = nil
+    ) {
+        self.title = title; self.artist = artist; self.album = album; self.source = source
+        self.artworkResource = artworkResource; self.artworkRevision = artworkRevision
+        self.isPlaying = isPlaying; self.position = position; self.duration = duration
+        self.updatedAt = updatedAt; self.previousActionID = previousActionID
+        self.toggleActionID = toggleActionID; self.nextActionID = nextActionID
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.rillStrictContainer(keyedBy: CodingKeys.self)
+        title = try container.decode(String.self, forKey: .title)
+        artist = try container.decode(String.self, forKey: .artist)
+        album = try container.decodeIfPresent(String.self, forKey: .album)
+        source = try container.decodeIfPresent(String.self, forKey: .source)
+        artworkResource = try container.decodeIfPresent(String.self, forKey: .artworkResource)
+        artworkRevision = try container.decodeIfPresent(String.self, forKey: .artworkRevision)
+        isPlaying = try container.decode(Bool.self, forKey: .isPlaying)
+        position = try container.decodeIfPresent(Double.self, forKey: .position) ?? 0
+        duration = try container.decodeIfPresent(Double.self, forKey: .duration) ?? 0
+        updatedAt = try container.decodeIfPresent(Double.self, forKey: .updatedAt) ?? 0
+        previousActionID = try container.decodeIfPresent(String.self, forKey: .previousActionID)
+        toggleActionID = try container.decodeIfPresent(String.self, forKey: .toggleActionID)
+        nextActionID = try container.decodeIfPresent(String.self, forKey: .nextActionID)
+    }
 }
 
 /// The complete v2 rendering vocabulary. Values are semantic requests; Rill
@@ -35,10 +103,11 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
     public var value: Double?
     public var label: String?
     public var actionID: String?
+    public var media: RillNowPlayingContent?
     public var children: [RillExtensionNode]
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case kind, text, name, resource, value, label
+        case kind, text, name, resource, value, label, media
         case actionID = "action_id"
         case children
     }
@@ -51,6 +120,7 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
         value: Double? = nil,
         label: String? = nil,
         actionID: String? = nil,
+        media: RillNowPlayingContent? = nil,
         children: [RillExtensionNode] = []
     ) {
         self.kind = kind
@@ -60,6 +130,7 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
         self.value = value
         self.label = label
         self.actionID = actionID
+        self.media = media
         self.children = children
     }
 
@@ -72,6 +143,7 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
         value = try container.decodeIfPresent(Double.self, forKey: .value)
         label = try container.decodeIfPresent(String.self, forKey: .label)
         actionID = try container.decodeIfPresent(String.self, forKey: .actionID)
+        media = try container.decodeIfPresent(RillNowPlayingContent.self, forKey: .media)
         children = try container.decodeIfPresent([RillExtensionNode].self, forKey: .children) ?? []
     }
 
@@ -87,6 +159,9 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
     public static func vStack(_ children: [Self]) -> Self { .init(kind: .vStack, children: children) }
     public static func button(_ label: String, actionID: String, children: [Self]) -> Self {
         .init(kind: .button, label: label, actionID: actionID, children: children)
+    }
+    public static func nowPlaying(_ media: RillNowPlayingContent) -> Self {
+        .init(kind: .nowPlaying, media: media)
     }
 }
 
@@ -294,6 +369,34 @@ public extension RillExtensionPresentation {
         if node.kind == .button && (node.actionID?.isEmpty != false) {
             throw RillExtensionProtocolError.invalidTree("Button requires a non-empty opaque action_id")
         }
+        if node.kind == .nowPlaying {
+            guard let media = node.media, node.children.isEmpty else {
+                throw RillExtensionProtocolError.invalidTree("Now Playing requires media and no children")
+            }
+            guard !media.title.isEmpty else {
+                throw RillExtensionProtocolError.invalidTree("Now Playing requires a title")
+            }
+            for value in [media.title, media.artist, media.album, media.source, media.artworkRevision].compactMap({ $0 }) {
+                guard value.count <= RillExtensionAPI.maximumTextCharacters else {
+                    throw RillExtensionProtocolError.invalidTree("Now Playing text exceeds \(RillExtensionAPI.maximumTextCharacters) characters")
+                }
+            }
+            for id in [media.previousActionID, media.toggleActionID, media.nextActionID].compactMap({ $0 }) {
+                guard !id.isEmpty, id.count <= 128 else {
+                    throw RillExtensionProtocolError.invalidTree("Now Playing action IDs must contain 1...128 characters")
+                }
+            }
+            guard media.position.isFinite, (0...10_000_000).contains(media.position),
+                  media.duration.isFinite, (0...10_000_000).contains(media.duration),
+                  media.updatedAt.isFinite, (0...100_000_000_000).contains(media.updatedAt) else {
+                throw RillExtensionProtocolError.invalidTree("Now Playing timing values must be finite and nonnegative")
+            }
+            if let artworkResource = media.artworkResource {
+                try validateImageResource(artworkResource, packageDirectory: packageDirectory)
+            }
+        } else if node.media != nil {
+            throw RillExtensionProtocolError.invalidTree("Only a Now Playing node may carry media")
+        }
         switch node.kind {
         case .text where node.text == nil:
             throw RillExtensionProtocolError.invalidTree("Text node requires text")
@@ -309,26 +412,38 @@ public extension RillExtensionPresentation {
             break
         }
         if node.kind == .image {
-            guard let resource = node.resource, !resource.isEmpty, !resource.hasPrefix("/"), !resource.contains("..") else {
-                throw RillExtensionProtocolError.invalidTree("Image resource must be a package-relative path without '..'")
-            }
-            if let packageDirectory {
-                let url = packageDirectory.appendingPathComponent(resource).standardizedFileURL
-                guard url.path.hasPrefix(packageDirectory.standardizedFileURL.path + "/") else {
-                    throw RillExtensionProtocolError.invalidTree("Image escapes the extension package")
-                }
-                let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
-                guard attributes[.type] as? FileAttributeType != .typeSymbolicLink else {
-                    throw RillExtensionProtocolError.invalidTree("Image resource must not be a symbolic link")
-                }
-                let size = (attributes[.size] as? NSNumber)?.intValue ?? 0
-                guard size <= RillExtensionAPI.maximumImageBytes else {
-                    throw RillExtensionProtocolError.invalidTree("Image exceeds \(RillExtensionAPI.maximumImageBytes) bytes")
-                }
-            }
+            try validateImageResource(node.resource, packageDirectory: packageDirectory)
         }
         for child in node.children {
             try validate(child, depth: depth + 1, count: &count, packageDirectory: packageDirectory)
+        }
+    }
+
+    private func validateImageResource(_ resource: String?, packageDirectory: URL?) throws {
+        guard let resource, !resource.isEmpty, !resource.hasPrefix("/"), !resource.contains("..") else {
+            throw RillExtensionProtocolError.invalidTree("Image resource must be a package-relative path without '..'")
+        }
+        if let packageDirectory {
+            let url = packageDirectory.appendingPathComponent(resource).standardizedFileURL
+            guard url.path.hasPrefix(packageDirectory.standardizedFileURL.path + "/") else {
+                throw RillExtensionProtocolError.invalidTree("Image escapes the extension package")
+            }
+            var componentURL = packageDirectory
+            for component in resource.split(separator: "/") {
+                componentURL.appendPathComponent(String(component))
+                let componentAttributes = try FileManager.default.attributesOfItem(atPath: componentURL.path)
+                guard componentAttributes[.type] as? FileAttributeType != .typeSymbolicLink else {
+                    throw RillExtensionProtocolError.invalidTree("Image resource must not contain a symbolic link")
+                }
+            }
+            let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+            guard attributes[.type] as? FileAttributeType != .typeSymbolicLink else {
+                throw RillExtensionProtocolError.invalidTree("Image resource must not be a symbolic link")
+            }
+            let size = (attributes[.size] as? NSNumber)?.intValue ?? 0
+            guard size <= RillExtensionAPI.maximumImageBytes else {
+                throw RillExtensionProtocolError.invalidTree("Image exceeds \(RillExtensionAPI.maximumImageBytes) bytes")
+            }
         }
     }
 }

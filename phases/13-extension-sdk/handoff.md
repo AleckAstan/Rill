@@ -80,6 +80,14 @@ fixtures, docs and evidence.
   and observes Reduce Motion. The notch panel accepts first mouse/move events
   without becoming key and bypasses visible-frame clamping at the physical
   top edge. Existing widgets default to system glass.
+- Added an experimental semantic `nowPlaying` node to API v2. Rill validates
+  media fields, resource paths, timing and action IDs, then renders a compact
+  artwork/activity layout and expanded native media card. Rill owns the
+  playback-state wave and progress interpolation, accessible controls, soft
+  hover resize and Reduce Motion behavior. The sibling plugin now publishes
+  media state every two seconds while playing instead of animated glyph frames.
+  The visual direction came from studying boring.notch; its GPLv3 code and
+  assets were not copied.
 
 ## Verification record
 
@@ -117,6 +125,8 @@ notched hardware, VoiceOver and Reduce Motion observations were not performed.
 | Single-instance RillNotch integration, 2026-09-27 | Active configuration backed up, `rich-notch` widget replaced by `rill-notch`, sibling extension added, candidate and active files validated; two previous Rill processes stopped and one standard-runtime Rill instance launched. `rillctl status/diagnostics --json` reports generation 1, one Rill process, two visible panels, ready RillNotch/RichSample/Hello/OmniWM and no configuration error. The RichSample bar module remains. | PASS (configuration and runtime); owner visual/media interaction NOT RUN | `~/.config/rill/config.toml.before-rillnotch-20260927-112608`; active `~/.config/rill/config.toml`; `~/Library/Logs/Rill-RillNotch.log`; CLI/process output in session |
 | MacBook display correction, 2026-09-27 | With lid open, `rillctl displays --json` and NSScreen show external 2560×1080 scale 1 plus built-in 1800×1169 scale 2/top safe inset 38. `primary` selected the external, so active and sibling sample widget configs changed to `display = "all"`. After reload and restart, one Rill process, four visible panels, extension/provider health ready and no config error; CoreGraphics lists centered 440×164 panels at each display's top edge, including built-in coordinates `(1156,1080)` in Quartz space. Real visual fit/input await owner confirmation. | PASS (selection/geometry/runtime); visual NOT RUN | `~/.config/rill/config.toml.before-rillnotch-all-20260927-113005`; active config; `../RillNotch/config.toml`; CLI/CoreGraphics output in session |
 | Owner RillNotch POC validation, 2026-09-27 | After the two-display correction, the owner said “super” and declared the POC valid on the opened MacBook. This confirms visible placement for the current setup. No separate result was given for live Music/Spotify metadata/artwork/actions, VoiceOver, fullscreen/sleep/wake or measured pacing. | PASS (user-reported visual POC); remaining detailed checks NOT RUN | Owner feedback in conversation |
+| Semantic nowPlaying protocol and builds, 2026-09-27 | `swift test --package-path Packages/RillExtensionKit` passes 5 tests including round trip, invalid image/timing and intermediate symlink rejection; final `./scripts/build.sh`, `./scripts/test.sh` pass (80 app, 6 IPC); sibling `swift build -c release` passes; framed demo publishes one semantic node and clean shutdown | PASS | `/tmp/rill-nowplaying-sdk-tests-final.log`, `/tmp/rill-nowplaying-host-build-final.log`, `/tmp/rill-nowplaying-host-tests-final.log`, `/tmp/rill-nowplaying-plugin-build-final.log`; Python framed harness output in session |
+| Refined RillNotch active runtime, 2026-09-27 | Active config validates; final relaunch leaves one Rill process (PID 67616) and one RillNotch child (PID 67625), ready extension and providers, generation 1, no configuration error, four visible panels across external and opened MacBook | PASS (health/placement); new design and controls NOT RUN | `rillctl validate/status/diagnostics --json`, `rillctl displays --json` and `pgrep` output in session; `screencapture -x /tmp/rill-nowplaying-desktop.png` failed “could not create image from display” |
 
 The first reload following the display-selector edit reported empty extension
 health for more than a second while a RillNotch child process existed. A clean
@@ -154,7 +164,8 @@ wave currently visualizes the playing state rather than sampled audio.
 - Artifacts: `Packages/RillExtensionKit/`, `Sources/RillExtensions/`,
   `Examples/extensions/`, `docs/extensions.md`, `docs/user/extensions.md`, and
   `evidence/extension-smoke.json`. The sibling RillNotch repository has local
-  `main` commit `f510fad` for the owner-validated POC.
+  `main` commit `f510fad` for the owner-validated POC; this visual refinement
+  is currently an uncommitted working-tree change in both repositories.
 - Cleanup / test-environment changes: the active personal configuration now
   omits the former `module_background = "#FFFFFF14"` override; its pre-change
   backup is `~/.config/rill/config.toml.before-native-glass-20260926-155625`.

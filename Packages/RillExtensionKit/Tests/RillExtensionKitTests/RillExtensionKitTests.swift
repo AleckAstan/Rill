@@ -51,3 +51,41 @@ import Testing
     let presentation = RillExtensionPresentation(compact: .init(kind: .image, resource: "large.bin", label: "Large"))
     #expect(throws: RillExtensionProtocolError.self) { try presentation.validate(packageDirectory: directory) }
 }
+
+@Test func nowPlayingRoundTripAndResourceBounds() throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    try Data([0xFF, 0xD8, 0xFF]).write(to: directory.appendingPathComponent("cover.jpg"))
+
+    let media = RillNowPlayingContent(title: "Song", artist: "Artist", album: "Album",
+        source: "Music", artworkResource: "cover.jpg", artworkRevision: "2", isPlaying: true,
+        position: 12, duration: 120, updatedAt: 1_790_000_000,
+        previousActionID: "previous", toggleActionID: "toggle", nextActionID: "next")
+    let presentation = RillExtensionPresentation(compact: .nowPlaying(media))
+    try presentation.validate(packageDirectory: directory)
+    let message = RillExtensionMessage(kind: .update, extensionID: "dev.rill.notch",
+        contributionID: "now-playing", presentation: presentation)
+    #expect(try RillExtensionFrameCodec.decode(RillExtensionFrameCodec.encode(message)) == message)
+
+    var escaped = media
+    escaped.artworkResource = "../other.jpg"
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .nowPlaying(escaped)).validate(packageDirectory: directory)
+    }
+    let outside = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: outside) }
+    try Data([0xFF, 0xD8, 0xFF]).write(to: outside.appendingPathComponent("cover.jpg"))
+    try FileManager.default.createSymbolicLink(at: directory.appendingPathComponent("linked"), withDestinationURL: outside)
+    var linked = media
+    linked.artworkResource = "linked/cover.jpg"
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .nowPlaying(linked)).validate(packageDirectory: directory)
+    }
+    var nonFinite = media
+    nonFinite.position = .infinity
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .nowPlaying(nonFinite)).validate()
+    }
+}
