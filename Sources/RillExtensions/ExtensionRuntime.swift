@@ -679,12 +679,28 @@ private final class NotchWidgetViewState: ObservableObject {
 
     func expand(_ value: Bool) {
         let animation: Animation? = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil :
-            .spring(response: value ? 0.42 : 0.36, dampingFraction: value ? 0.86 : 1)
+            .smooth(duration: value ? 0.40 : 0.32)
         withAnimation(animation) { expanded = value }
     }
 }
 
+private struct NotchMotionValues {
+    var left: CGFloat = 0
+    var right: CGFloat = 0
+    var height: CGFloat = 0
+}
+
 enum NotchWidgetGeometry {
+    /// Evaluate every animation sample: contraction must never uncover the cutout.
+    static func animatedFrame(compact: CGSize, open: CGSize, left: CGFloat, right: CGFloat, height: CGFloat) -> CGRect {
+        let wing = max(0, open.width - compact.width) / 2
+        let leading = wing * left
+        let trailing = wing * right
+        return CGRect(x: -compact.width / 2 - leading, y: 0,
+                      width: max(1, compact.width + leading + trailing),
+                      height: max(compact.height, compact.height + (open.height - compact.height) * height))
+    }
+
     static func frame(
         screen: CGRect,
         safeTopInset: CGFloat,
@@ -797,7 +813,11 @@ final class NotchWidgetResource: NSObject, ManagedConfigurationResource, @unchec
             let open = NotchWidgetGeometry.frame(screen: screen.frame, safeTopInset: safeTop, spec: spec, state: .expanded, cutout: cutout)
             let state = NotchWidgetViewState(compact: compact, open: open, safeTop: safeTop)
             // AppKit stays still; SwiftUI owns the entire interruptible shape/content spring.
-            let canvas = CGRect(x: open.minX - 16, y: open.minY - 20, width: open.width + 32, height: open.height + 20)
+            // Leave room for spring overshoot and shadow even at large configured sizes.
+            let sideRoom = 16 + max(0, open.width - compact.width) * 0.04
+            let bottomRoom = 20 + max(0, open.height - compact.height) * 0.08
+            let canvas = CGRect(x: open.minX - sideRoom, y: open.minY - bottomRoom,
+                                width: open.width + sideRoom * 2, height: open.height + bottomRoom)
             let panel = RillPanel(surfaceID: SurfaceID("notch.\(spec.id)"), displayID: displayID, frame: canvas)
             panel.usesMenuBarArea = true
             panel.acceptsMouseMovedEvents = true
@@ -830,6 +850,7 @@ private struct NotchWidgetRootView: View {
     @ObservedObject var viewState: NotchWidgetViewState
     @ObservedObject var runtime: ExtensionRuntimeStore
     let dismiss: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var expanded: Bool { viewState.expanded }
     private var isNowPlaying: Bool {
@@ -838,11 +859,37 @@ private struct NotchWidgetRootView: View {
     }
 
     var body: some View {
-        let size = expanded ? viewState.open.size : viewState.compact.size
-        let shape = NotchSurfaceShape(shoulder: expanded ? 12 : 6, radius: expanded ? 28 : 12)
-        surface(shape: shape, size: size)
-            .contentShape(shape)
-            .shadow(color: .black.opacity(expanded ? 0.3 : 0), radius: 8, y: 5)
+        KeyframeAnimator(initialValue: NotchMotionValues(), trigger: expanded) { motion in
+            let target: CGFloat = expanded ? 1 : 0
+            let frame = NotchWidgetGeometry.animatedFrame(
+                compact: viewState.compact.size, open: viewState.open.size,
+                left: reduceMotion ? target : motion.left,
+                right: reduceMotion ? target : motion.right,
+                height: reduceMotion ? target : motion.height)
+            let rounding = min(1, max(0, reduceMotion ? target : motion.height))
+            let shape = NotchSurfaceShape(shoulder: 6 + 6 * rounding, radius: 12 + 16 * rounding)
+            surface(shape: shape, size: frame.size)
+                .contentShape(shape)
+                .shadow(color: .black.opacity(0.3 * rounding), radius: 8, y: 5)
+                .offset(x: frame.midX)
+        } keyframes: { _ in
+            // Different side responses give a slight elastic follow-through, not a mirrored pulse.
+            KeyframeTrack(\.left) {
+                SpringKeyframe(expanded ? 1 : 0, duration: 0.52,
+                    spring: .init(response: expanded ? 0.43 : 0.38, dampingRatio: 0.73))
+            }
+            KeyframeTrack(\.right) {
+                SpringKeyframe(expanded ? 1 : 0, duration: 0.60,
+                    spring: .init(response: expanded ? 0.51 : 0.46, dampingRatio: 0.78))
+            }
+            KeyframeTrack(\.height) {
+                if expanded {
+                    SpringKeyframe(1, duration: 0.52, spring: .init(response: 0.46, dampingRatio: 0.78))
+                } else {
+                    CubicKeyframe(0, duration: 0.40)
+                }
+            }
+        }
             .onTapGesture { if !expanded { viewState.expand(true) } }
             .accessibilityAction(named: expanded ? "Collapse notch widget" : "Expand notch widget") {
                 viewState.expand(!expanded)

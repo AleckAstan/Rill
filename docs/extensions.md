@@ -155,7 +155,11 @@ its configured notch widget into `background_style = "black"` for a true black
 surface beside a MacBook cutout. Hover expands the panel and leaving it
 collapses it; a compact click or accessibility action can also expand it.
 The host keeps a stable transparent AppKit canvas and animates the surface
-outline and content together in SwiftUI. Transparent areas pass mouse events
+outline and content in SwiftUI. Left and right edges use slightly different
+spring responses for an asymmetric elastic motion. Expansion has a small
+vertical rebound; contraction uses a smooth vertical curve without rebound,
+with the rendered height always clamped to at least the compact safe height.
+The top edge remains attached throughout. Transparent areas pass mouse events
 through; opening waits 100 ms and closing waits 260 ms to tolerate pointer
 excursions. Each display owns its hover state. Reduce Motion disables the
 surface spring, artwork travel and button scaling. Dismissal is available as
