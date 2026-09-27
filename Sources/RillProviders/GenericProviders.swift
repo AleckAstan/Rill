@@ -62,33 +62,42 @@ public final class GenericProcessSupervisor: @unchecked Sendable {
     }
 
     private let lock = NSLock()
-    private var process: Process?
+    private var process: ManagedChildProcess?
+    private var stopped = false
 
     public init() {}
 
     public func stop(graceMilliseconds: Int) {
-        let active = lock.withLock { process }
+        let active = lock.withLock { stopped = true; return process }
         guard let active, active.isRunning else { return }
-        let pid = active.processIdentifier
-        Darwin.kill(-pid, SIGTERM)
         active.terminate()
-        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + .milliseconds(graceMilliseconds)) {
-            if active.isRunning { Darwin.kill(-pid, SIGKILL); Darwin.kill(pid, SIGKILL) }
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + .milliseconds(min(250, max(0, graceMilliseconds)))) {
+            if active.isRunning { active.forceTerminate() }
         }
+    }
+
+    public func stopAndWait(graceMilliseconds: Int) async {
+        stop(graceMilliseconds: graceMilliseconds)
+        let active = lock.withLock { process }
+        await Task.detached { active?.waitUntilExit() }.value
     }
 
     public func runCommand(_ spec: ProviderSpec) throws -> Outcome {
         let active = try launch(spec)
         let output = BoundedBytes(limit: spec.maxOutputBytes)
         let errors = BoundedBytes(limit: min(spec.maxOutputBytes, 16_384))
-        let stdout = active.standardOutput as! Pipe
-        let stderr = active.standardError as! Pipe
+        let stdout = active.standardOutput
+        let stderr = active.standardError
         stdout.fileHandleForReading.readabilityHandler = { handle in output.append(handle.availableData) }
         stderr.fileHandleForReading.readabilityHandler = { handle in errors.append(handle.availableData) }
         let timedOut = LockedFlag()
-        let timeout = DispatchWorkItem { [weak self, weak active] in
+        let timeout = DispatchWorkItem { [weak active] in
             guard let active, active.isRunning else { return }
-            timedOut.set(); self?.stop(graceMilliseconds: 250)
+            timedOut.set()
+            active.terminate()
+            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + .milliseconds(250)) {
+                active.forceTerminate()
+            }
         }
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + .milliseconds(spec.timeoutMS), execute: timeout)
         active.waitUntilExit(); timeout.cancel()
@@ -115,17 +124,22 @@ public final class GenericProcessSupervisor: @unchecked Sendable {
         onFrame: @escaping @Sendable (Result<Data, Error>) -> Void
     ) throws -> Outcome {
         let active = try launch(spec)
-        let stdout = active.standardOutput as! Pipe
-        let stderrPipe = active.standardError as! Pipe
+        let stdout = active.standardOutput
+        let stderrPipe = active.standardError
         let errors = BoundedBytes(limit: min(spec.maxOutputBytes, 16_384))
         stderrPipe.fileHandleForReading.readabilityHandler = { handle in errors.append(handle.availableData) }
         var buffer = Data()
-        while true {
+        streamLoop: while true {
             let chunk = stdout.fileHandleForReading.availableData
             if chunk.isEmpty { break }
             buffer.append(chunk)
             while let newline = buffer.firstIndex(of: 0x0A) {
                 let frame = Data(buffer[..<newline]); buffer.removeSubrange(...newline)
+                guard frame.count <= maximumFrameBytes else {
+                    onFrame(.failure(IPCTransportError.oversized)); active.terminate()
+                    DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(250)) { active.forceTerminate() }
+                    buffer.removeAll(); break streamLoop
+                }
                 if !frame.isEmpty { onFrame(.success(frame)) }
             }
             if buffer.count > maximumFrameBytes {
@@ -140,16 +154,18 @@ public final class GenericProcessSupervisor: @unchecked Sendable {
         return .init(exitCode: active.terminationStatus, timedOut: false, output: Data(), stderr: String(decoding: errors.value(), as: UTF8.self))
     }
 
-    private func launch(_ spec: ProviderSpec) throws -> Process {
+    private func launch(_ spec: ProviderSpec) throws -> ManagedChildProcess {
         guard let executable = spec.executable else { throw IPCTransportError.rejected("provider has no executable") }
-        let active = Process()
+        let active = ManagedChildProcess()
         active.executableURL = URL(fileURLWithPath: executable)
         active.arguments = spec.args
         active.environment = ProcessInfo.processInfo.environment.merging(spec.environment) { _, configured in configured }
         active.standardOutput = Pipe(); active.standardError = Pipe()
-        try active.run()
-        _ = Darwin.setpgid(active.processIdentifier, active.processIdentifier)
-        lock.withLock { process = active }
+        try lock.withLock {
+            guard !stopped else { throw CancellationError() }
+            try active.run()
+            process = active
+        }
         return active
     }
 }
@@ -189,8 +205,10 @@ public final class GenericProviderResource: ManagedConfigurationResource, @unche
     }
 
     public func stop() async {
+        let pending = task
         task?.cancel(); task = nil
-        supervisor.stop(graceMilliseconds: spec.timeoutMS)
+        await supervisor.stopAndWait(graceMilliseconds: spec.timeoutMS)
+        await pending?.value
     }
 
     private func run() async {
@@ -210,17 +228,22 @@ public final class GenericProviderResource: ManagedConfigurationResource, @unche
                     let generation = generation
                     let runtime = runtime
                     let acceptsGeneration = acceptsGeneration
-                    let outcome = try await Task.detached { [spec, supervisor] in
-                        try supervisor.runStream(spec) { result in
-                            Task { @MainActor in
-                                guard await acceptsGeneration(generation), case .success(let update) = result else {
-                                    if case .failure(let error) = result { runtime?.setProviderUnavailable(providerID, message: String(describing: error)) }
-                                    return
-                                }
-                                runtime?.publish(update, from: providerID, staleAfterMS: spec.staleAfterMS)
+                    let (updates, continuation) = AsyncStream<Result<CustomModuleUpdate, Error>>.makeStream(bufferingPolicy: .bufferingNewest(1))
+                    let delivery = Task { @MainActor in
+                        for await result in updates {
+                            guard !Task.isCancelled, await acceptsGeneration(generation) else { continue }
+                            switch result {
+                            case .success(let update): runtime?.publish(update, from: providerID, staleAfterMS: spec.staleAfterMS)
+                            case .failure(let error): runtime?.setProviderUnavailable(providerID, message: String(describing: error))
                             }
                         }
+                    }
+                    defer { delivery.cancel(); continuation.finish() }
+                    let outcome = try await Task.detached { [spec, supervisor] in
+                        defer { continuation.finish() }
+                        return try supervisor.runStream(spec) { continuation.yield($0) }
                     }.value
+                    await delivery.value
                     if Task.isCancelled { return }
                     guard outcome.exitCode == 0 else {
                         throw IPCTransportError.rejected("stream exited \(outcome.exitCode): \(outcome.stderr.prefix(512))")
@@ -230,7 +253,7 @@ public final class GenericProviderResource: ManagedConfigurationResource, @unche
                 }
             } catch {
                 if Task.isCancelled { return }
-                runtime?.setProviderUnavailable(spec.id, message: String(describing: error))
+                if await acceptsGeneration(generation) { runtime?.setProviderUnavailable(spec.id, message: String(describing: error)) }
                 let delays = [1, 2, 4, 8, 16, 30]
                 let delay = delays[min(retry, delays.count - 1)]
                 retry += 1

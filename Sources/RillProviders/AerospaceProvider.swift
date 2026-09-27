@@ -152,7 +152,7 @@ public final class AerospaceCommandRunner: @unchecked Sendable {
         }
     }
 
-    public func stop(graceMilliseconds: Int) { supervisor.stop(graceMilliseconds: graceMilliseconds) }
+    public func stop(graceMilliseconds: Int) async { await supervisor.stopAndWait(graceMilliseconds: graceMilliseconds) }
 
     private func query<Value: Decodable>(spec: ProviderSpec, arguments: [String]) throws -> Value {
         let outcome = try run(spec: spec, arguments: arguments)
@@ -231,7 +231,7 @@ public final class AerospaceProviderResource: ManagedConfigurationResource, @unc
     public func stop() async {
         eventTask?.cancel(); reconciliationTask?.cancel(); debounceTask?.cancel()
         eventTask = nil; reconciliationTask = nil; debounceTask = nil
-        runner.stop(graceMilliseconds: spec.timeoutMS)
+        await runner.stop(graceMilliseconds: spec.timeoutMS)
         runtime?.unregisterWorkspaceFocus(providerID: spec.id, owner: focusRegistration)
     }
 

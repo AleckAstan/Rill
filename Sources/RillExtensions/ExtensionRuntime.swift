@@ -1,6 +1,36 @@
 import AppKit
 import Darwin
 import SwiftUI
+import ImageIO
+
+/// Bounded decoded artwork cache. Repeated media positions do not decode the same image again.
+@MainActor
+private enum ExtensionImageCache {
+    static let cache: NSCache<NSString, NSImage> = {
+        let cache = NSCache<NSString, NSImage>()
+        cache.countLimit = 64
+        cache.totalCostLimit = 16 * 1024 * 1024
+        return cache
+    }()
+
+    static func image(at url: URL, revision: String? = nil) -> NSImage? {
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+              attributes[.type] as? FileAttributeType == .typeRegular,
+              let size = attributes[.size] as? NSNumber,
+              size.intValue <= RillExtensionAPI.maximumImageBytes else { return nil }
+        let key = "\(url.path)|\(revision ?? "")|\(attributes[.modificationDate] ?? "")|\(size)" as NSString
+        if let cached = cache.object(forKey: key) { return cached }
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceThumbnailMaxPixelSize: 512,
+                kCGImageSourceCreateThumbnailWithTransform: true
+              ] as CFDictionary) else { return nil }
+        let result = NSImage(cgImage: image, size: .zero)
+        cache.setObject(result, forKey: key, cost: image.bytesPerRow * image.height)
+        return result
+    }
+}
 
 struct ExtensionContributionKey: Hashable, Sendable {
     let extensionID: String
@@ -54,7 +84,8 @@ final class ExtensionRuntimeStore: ObservableObject {
         diagnostics[extensionID] = nil
     }
 
-    func fail(extensionID: String, message: String, terminal: Bool) {
+    func fail(extensionID: String, generation: UInt64, message: String, terminal: Bool) {
+        guard registrations[extensionID] == generation else { return }
         diagnostics[extensionID] = String(message.prefix(2_048))
         health[extensionID] = terminal ? .failed : .stale
     }
@@ -74,7 +105,7 @@ final class ExtensionHostResource: ManagedConfigurationResource, @unchecked Send
     private let generation: UInt64
     private let runtime: ExtensionRuntimeStore
     private let permittedContributions: Set<String>
-    private var process: Process?
+    private var process: ManagedChildProcess?
     private var input: FileHandle?
     private var readTask: Task<Void, Never>?
     private var stderrTask: Task<Data, Never>?
@@ -126,20 +157,12 @@ final class ExtensionHostResource: ManagedConfigurationResource, @unchecked Send
         stopping = true
         restartTask?.cancel(); restartTask = nil
         readTask?.cancel(); readTask = nil
-        let old = process; process = nil
-        if old?.isRunning == true {
-            try? write(.init(kind: .shutdown, extensionID: spec.id))
-            try? await Task.sleep(for: .milliseconds(50))
-        }
-        input?.closeFile(); input = nil
+        let old = process
+        if old?.isRunning == true { try? write(.init(kind: .shutdown, extensionID: spec.id)) }
+        process = nil
+        try? input?.close(); input = nil
         stderrTask?.cancel(); stderrTask = nil
-        if let old, old.isRunning {
-            old.terminate()
-            Task.detached {
-                try? await Task.sleep(for: .milliseconds(250))
-                if old.isRunning { kill(old.processIdentifier, SIGKILL) }
-            }
-        }
+        if let old { await Self.terminate(old) }
         runtime.unregister(extensionID: spec.id, generation: generation)
     }
 
@@ -148,12 +171,12 @@ final class ExtensionHostResource: ManagedConfigurationResource, @unchecked Send
         let now = ContinuousClock.now
         starts.removeAll { now - $0 > .seconds(60) }
         guard starts.count < maximumLaunches else {
-            runtime.fail(extensionID: spec.id, message: "Stopped after \(maximumLaunches) launches in 60 seconds", terminal: true)
+            runtime.fail(extensionID: spec.id, generation: generation, message: "Stopped after \(maximumLaunches) launches in 60 seconds", terminal: true)
             return
         }
         starts.append(now)
 
-        let child = Process()
+        let child = ManagedChildProcess()
         let stdinPipe = Pipe(); let stdoutPipe = Pipe(); let stderrPipe = Pipe()
         child.executableURL = URL(fileURLWithPath: executable)
         child.arguments = spec.args
@@ -173,7 +196,9 @@ final class ExtensionHostResource: ManagedConfigurationResource, @unchecked Send
             // A hostile or immediately crashing child may close stdin before
             // the context write. Convert EPIPE into a Swift error instead of
             // allowing SIGPIPE to terminate the Rill host process.
-            _ = fcntl(stdinPipe.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1)
+            let inputFD = stdinPipe.fileHandleForWriting.fileDescriptor
+            _ = fcntl(inputFD, F_SETNOSIGPIPE, 1)
+            _ = fcntl(inputFD, F_SETFL, fcntl(inputFD, F_GETFL) | O_NONBLOCK)
             let context = RillExtensionHostContext(
                 generation: generation,
                 grantedCapabilities: spec.grant,
@@ -194,28 +219,32 @@ final class ExtensionHostResource: ManagedConfigurationResource, @unchecked Send
                 await self?.readLoop(output: output, errors: errorTask, process: child)
             }
         } catch {
-            if child.isRunning { child.terminate() }
+            Task { await Self.terminate(child) }
+            try? input?.close(); input = nil
             process = nil
-            runtime.fail(extensionID: spec.id, message: "Launch failed: \(error.localizedDescription)", terminal: false)
+            runtime.fail(extensionID: spec.id, generation: generation, message: "Launch failed: \(error.localizedDescription)", terminal: false)
             scheduleRestart()
         }
     }
 
-    private nonisolated func readLoop(output: FileHandle, errors: Task<Data, Never>, process: Process) async {
+    private nonisolated func readLoop(output: FileHandle, errors: Task<Data, Never>, process: ManagedChildProcess) async {
+        defer { try? output.close() }
         do {
             while !Task.isCancelled, let message = try Self.readMessage(from: output) {
-                await receive(message)
+                await receive(message, from: process)
             }
         } catch {
-            await protocolFailure(String(describing: error))
+            if !Task.isCancelled { await protocolFailure(String(describing: error), from: process) }
         }
+        // EOF while still running is a broken session, not evidence of process termination.
+        await Self.terminate(process)
         let errorData = await errors.value
         let errorText = String(data: errorData.prefix(16_384), encoding: .utf8) ?? ""
         await ended(process: process, stderr: errorText)
     }
 
-    private func receive(_ message: RillExtensionMessage) {
-        guard !stopping else { return }
+    private func receive(_ message: RillExtensionMessage, from child: ManagedChildProcess) {
+        guard !stopping, process === child else { return }
         guard message.kind == .hello || message.kind == .update else {
             terminateForViolation("Extension may send only hello or update messages")
             return
@@ -224,18 +253,19 @@ final class ExtensionHostResource: ManagedConfigurationResource, @unchecked Send
             terminateForViolation("Extension attempted to impersonate '\(message.extensionID ?? "")'")
             return
         }
-        if message.kind == .hello { return }
-        guard let contributionID = message.contributionID,
-              permittedContributions.contains(contributionID),
-              let presentation = message.presentation else {
-            terminateForViolation("Update targets an undeclared contribution")
-            return
-        }
+
         let now = ContinuousClock.now
         updateTimes.removeAll { now - $0 > .seconds(1) }
         updateTimes.append(now)
         guard updateTimes.count <= 20 else {
             terminateForViolation("Update rate exceeded 20 frames per second")
+            return
+        }
+        if message.kind == .hello { return }
+        guard let contributionID = message.contributionID,
+              permittedContributions.contains(contributionID),
+              let presentation = message.presentation else {
+            terminateForViolation("Update targets an undeclared contribution")
             return
         }
         do {
@@ -249,25 +279,25 @@ final class ExtensionHostResource: ManagedConfigurationResource, @unchecked Send
         catch { terminateForViolation(String(describing: error)) }
     }
 
-    private func protocolFailure(_ message: String) {
-        guard !stopping else { return }
-        runtime.fail(extensionID: spec.id, message: "Protocol error: \(message)", terminal: false)
-        if process?.isRunning == true { process?.terminate() }
+    private func protocolFailure(_ message: String, from child: ManagedChildProcess) {
+        guard !stopping, process === child else { return }
+        runtime.fail(extensionID: spec.id, generation: generation, message: "Protocol error: \(message)", terminal: false)
+        if let process { Task { await Self.terminate(process) } }
     }
 
     private func terminateForViolation(_ message: String) {
-        runtime.fail(extensionID: spec.id, message: message, terminal: true)
+        runtime.fail(extensionID: spec.id, generation: generation, message: message, terminal: true)
         stopping = true
-        process?.terminate()
+        if let process { Task { await Self.terminate(process) } }
     }
 
-    private func ended(process endedProcess: Process, stderr: String) {
+    private func ended(process endedProcess: ManagedChildProcess, stderr: String) {
         guard process === endedProcess else { return }
-        process = nil; input = nil; readTask = nil
+        process = nil; try? input?.close(); input = nil; readTask = nil
         stderrTask = nil
         guard !stopping else { return }
         let detail = stderr.isEmpty ? "exit \(endedProcess.terminationStatus)" : String(stderr.prefix(2_048))
-        runtime.fail(extensionID: spec.id, message: "Extension stopped: \(detail)", terminal: false)
+        runtime.fail(extensionID: spec.id, generation: generation, message: "Extension stopped: \(detail)", terminal: false)
         scheduleRestart()
     }
 
@@ -285,16 +315,25 @@ final class ExtensionHostResource: ManagedConfigurationResource, @unchecked Send
 
     private func sendAction(contributionID: String, actionID: String) {
         guard spec.grant.contains(.actions) else {
-            runtime.fail(extensionID: spec.id, message: "Action rejected: capability 'actions' was not granted", terminal: false)
+            runtime.fail(extensionID: spec.id, generation: generation, message: "Action rejected: capability 'actions' was not granted", terminal: false)
             return
         }
         do { try write(.init(kind: .action, extensionID: spec.id, contributionID: contributionID, actionID: actionID)) }
-        catch { runtime.fail(extensionID: spec.id, message: "Action delivery failed: \(error)", terminal: false) }
+        catch { if let process { protocolFailure("Action delivery failed: \(error)", from: process) } }
     }
 
     private func write(_ message: RillExtensionMessage) throws {
         guard let input else { throw ExtensionHostError.notRunning(spec.id) }
-        try input.write(contentsOf: RillExtensionFrameCodec.encode(message))
+        let data = try RillExtensionFrameCodec.encode(message)
+        try data.withUnsafeBytes { bytes in
+            var offset = 0
+            while offset < bytes.count {
+                let count = Darwin.write(input.fileDescriptor, bytes.baseAddress!.advanced(by: offset), bytes.count - offset)
+                if count > 0 { offset += count }
+                else if count < 0 && errno == EINTR { continue }
+                else { throw ExtensionHostError.backpressure }
+            }
+        }
     }
 
     private nonisolated static func readMessage(from handle: FileHandle) throws -> RillExtensionMessage? {
@@ -309,35 +348,61 @@ final class ExtensionHostResource: ManagedConfigurationResource, @unchecked Send
         return try RillExtensionFrameCodec.decode(header + body)
     }
 
+    private nonisolated static func terminate(_ child: ManagedChildProcess) async {
+        if child.isRunning {
+            child.terminate()
+            for _ in 0..<25 where child.isRunning {
+                try? await Task.sleep(for: .milliseconds(10))
+            }
+            child.forceTerminate()
+        }
+        await Task.detached { child.waitUntilExit() }.value
+    }
+
     private nonisolated static func readExactly(_ count: Int, from handle: FileHandle) throws -> Data? {
         var result = Data()
         while result.count < count {
-            let part = try handle.read(upToCount: count - result.count) ?? Data()
-            if part.isEmpty { return result.isEmpty ? nil : result }
+            try Task.checkCancellation()
+            var descriptor = pollfd(fd: handle.fileDescriptor, events: Int16(POLLIN), revents: 0)
+            let ready = poll(&descriptor, 1, 100)
+            if ready == 0 || (ready < 0 && errno == EINTR) { continue }
+            guard ready > 0 else { throw POSIXError(.EIO) }
+            let part = try handle.read(upToCount: min(4096, count - result.count)) ?? Data()
+            if part.isEmpty {
+                if result.isEmpty { return nil }
+                throw RillExtensionProtocolError.truncatedFrame
+            }
             result.append(part)
         }
         return result
     }
 
     private nonisolated static func drain(_ handle: FileHandle, retainingAtMost limit: Int) -> Data {
+        defer { try? handle.close() }
         var retained = Data()
         while !Task.isCancelled {
+            var descriptor = pollfd(fd: handle.fileDescriptor, events: Int16(POLLIN), revents: 0)
+            let ready = poll(&descriptor, 1, 100)
+            if ready == 0 || (ready < 0 && errno == EINTR) { continue }
+            guard ready > 0 else { break }
             let chunk: Data
-            do { chunk = try handle.read(upToCount: 4_096) ?? Data() }
+            do { chunk = try handle.read(upToCount: 4096) ?? Data() }
             catch { break }
             guard !chunk.isEmpty else { break }
             if retained.count < limit { retained.append(chunk.prefix(limit - retained.count)) }
         }
         return retained
     }
+
 }
 
 enum ExtensionHostError: Error, CustomStringConvertible {
-    case unresolvedExecutable(String), notExecutable(String), notRunning(String)
+    case unresolvedExecutable(String), notExecutable(String), notRunning(String), backpressure
     var description: String {
         switch self {
         case .unresolvedExecutable(let id): return "Extension '\(id)' has no resolved executable"
         case .notExecutable(let path): return "Extension executable is not executable: \(path)"
+        case .backpressure: return "Extension is not reading host messages; session closed"
         case .notRunning(let id): return "Extension '\(id)' is not running"
         }
     }
@@ -393,7 +458,7 @@ private struct ExtensionNodeView: View {
             return AnyView(Image(systemName: node.name ?? "questionmark"))
         case .image:
             let url = packageDirectory.appendingPathComponent(node.resource ?? "")
-            if let image = NSImage(contentsOf: url) {
+            if let image = ExtensionImageCache.image(at: url) {
                 return AnyView(Image(nsImage: image).resizable().scaledToFit().frame(maxWidth: 64, maxHeight: 64))
             }
             return AnyView(Image(systemName: "photo.badge.exclamationmark"))
@@ -542,7 +607,7 @@ private struct NowPlayingView: View {
 
     @ViewBuilder private func artwork(size: CGFloat) -> some View {
         let path = media.artworkResource.map { packageDirectory.appendingPathComponent($0) }
-        if let path, let image = NSImage(contentsOf: path) {
+        if let path, let image = ExtensionImageCache.image(at: path, revision: media.artworkRevision) {
             Image(nsImage: image).resizable().scaledToFill()
                 .frame(width: size, height: size).clipShape(RoundedRectangle(cornerRadius: size * 0.18))
                 .id(media.artworkRevision)

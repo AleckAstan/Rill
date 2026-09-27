@@ -89,3 +89,16 @@ import Testing
         try RillExtensionPresentation(compact: .nowPlaying(nonFinite)).validate()
     }
 }
+
+@Test func connectionRejectsPartialHeaderAndNonRegularImage() throws {
+    let pipe = Pipe()
+    try pipe.fileHandleForWriting.write(contentsOf: Data([0, 0]))
+    try pipe.fileHandleForWriting.close()
+    let connection = RillExtensionConnection(input: pipe.fileHandleForReading)
+    #expect(throws: RillExtensionProtocolError.self) { try connection.receive() }
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory.appendingPathComponent("folder"), withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let presentation = RillExtensionPresentation(compact: .init(kind: .image, resource: "folder", label: "Invalid"))
+    #expect(throws: RillExtensionProtocolError.self) { try presentation.validate(packageDirectory: directory) }
+}

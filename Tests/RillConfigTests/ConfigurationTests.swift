@@ -628,3 +628,82 @@ private func temporaryDirectory() -> URL {
     FileManager.default.temporaryDirectory
         .appendingPathComponent("rill-tests-\(UUID().uuidString)", isDirectory: true)
 }
+
+final class ProductionConfigurationTests: XCTestCase {
+    func testDuplicatePluginsRejectBeforeManifestResolution() {
+        let text = """
+        schema_version = 1
+        [[plugins]]
+        id = "duplicate"
+        path = "/missing"
+        [[plugins]]
+        id = "duplicate"
+        path = "/missing-too"
+        """
+        XCTAssertThrowsError(try ConfigurationParser().parse(text: text)) { error in
+            XCTAssertTrue(String(describing: error).contains("Duplicate ID"))
+        }
+    }
+
+    func testOversizedAndNonRegularConfigurationReject() throws {
+        XCTAssertThrowsError(try ConfigurationParser().parse(text: String(repeating: "#", count: 1_048_577)))
+        let directory = temporaryDirectory()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        XCTAssertThrowsError(try ConfigurationParser().load(.init(source: .file(directory), wasExplicit: true)))
+    }
+
+    func testConcurrentReloadsHaveUniqueGenerationsAndStopCannotResurrect() async {
+        let recorder = ResourceRecorder()
+        let coordinator = ConfigurationCoordinator { descriptor, _, generation in
+            try await Task.sleep(for: .milliseconds(2))
+            return FakeResource(name: "\(generation):\(descriptor)", recorder: recorder)
+        }
+        let config = AppConfiguration(modules: [.init(id: ModuleID("clock"), kind: .clock)])
+        let generations = await withTaskGroup(of: UInt64.self) { group in
+            for _ in 0..<20 { group.addTask { await coordinator.apply(configuration: config, source: .bundledDefault).generation } }
+            var result: [UInt64] = []
+            for await generation in group { result.append(generation) }
+            return result
+        }
+        XCTAssertEqual(Set(generations), Set(1...20))
+        await coordinator.stop()
+        let afterStop = await coordinator.apply(configuration: config, source: .bundledDefault)
+        XCTAssertFalse(afterStop.applied)
+        let snapshot = await coordinator.snapshot
+        XCTAssertNil(snapshot)
+        let events = await recorder.events
+        XCTAssertEqual(events.filter { $0.hasPrefix("commit:") }.count, 20)
+        XCTAssertEqual(events.filter { $0.hasPrefix("stop:") }.count, 20)
+    }
+
+    @MainActor
+    func testOneHundredReloadsPreserveProviderBindingAndRetireResources() async throws {
+        let runtime = NativeModuleRuntime()
+        let coordinator = ConfigurationCoordinator { descriptor, config, _ in
+            if case .module(let id) = descriptor {
+                return await runtime.resource(for: config.modules.first { $0.id == id }!)
+            }
+            return FakeResource(name: "provider", recorder: ResourceRecorder())
+        }
+        let provider = ProviderID("events")
+        let module = ModuleSpec(id: ModuleID("feed"), kind: .custom, provider: provider)
+        let config = AppConfiguration(modules: [module], providers: [.init(id: provider, kind: .event)])
+        for _ in 0..<100 {
+            let result = await coordinator.apply(configuration: config, source: .bundledDefault)
+            XCTAssertTrue(result.applied)
+            var invalid = config
+            invalid.modules.append(module)
+            let rejected = await coordinator.apply(configuration: invalid, source: .bundledDefault)
+            XCTAssertFalse(rejected.applied)
+            XCTAssertEqual(rejected.generation, result.generation)
+            XCTAssertEqual(runtime.lifecycleCounts.mock, 1)
+        }
+        runtime.publish(try .init(text: "still connected"), from: provider)
+        try? await Task.sleep(for: .milliseconds(80))
+        XCTAssertEqual(runtime.store.mockModules[module.id]?.text, "still connected")
+        await coordinator.stop()
+        XCTAssertEqual(runtime.lifecycleCounts.mock, 0)
+        XCTAssertNil(runtime.store.mockModules[module.id])
+    }
+}

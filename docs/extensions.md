@@ -180,3 +180,17 @@ exercises every initial node. See `docs/user/extensions.md` for build,
 installation, accessibility, security and troubleshooting steps.
 The sibling `../RillNotch` project is a real media extension using this same
 API, with Music and Spotify controls and artwork where those apps expose it.
+
+## Production hardening
+
+The host uses nonblocking stdin writes. If an extension stops consuming host
+messages, the session is terminated and supervised recovery applies instead
+of blocking Rill's UI. Hello frames count toward the same 20-frame/second
+limit as updates. Failures as well as presentations are generation scoped.
+Process groups are owned from spawn, escalated to KILL on shutdown/violation
+and reaped. No daemonization or detached worker session is supported.
+
+Image resources must be regular files. The host caches decoded thumbnails
+with a 512-pixel maximum edge and a 16 MiB cache cost limit; artwork revision
+and file metadata invalidate cached images. The API remains a preview until
+independent authoring, accessibility and performance gates pass.

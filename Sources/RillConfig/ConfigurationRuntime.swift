@@ -109,7 +109,27 @@ public struct ConfigurationSnapshot: Sendable, Equatable {
 }
 
 public struct ConfigurationParser: Sendable {
+    public static let maximumFileBytes = 1_048_576
     public init() {}
+
+    private func readText(_ url: URL) throws -> String {
+        let descriptor = open(url.path, O_RDONLY | O_NONBLOCK | O_CLOEXEC)
+        guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+        let handle = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+        defer { try? handle.close() }
+        var info = stat()
+        guard fstat(descriptor, &info) == 0, info.st_mode & S_IFMT == S_IFREG else {
+            throw ConfigurationLoadError([.init(path: "config", message: "Configuration and manifests must be regular files")])
+        }
+        let data = try handle.read(upToCount: Self.maximumFileBytes + 1) ?? Data()
+        guard data.count <= Self.maximumFileBytes else {
+            throw ConfigurationLoadError([.init(path: "config", message: "File exceeds the 1 MiB limit")])
+        }
+        guard let text = String(data: data, encoding: .utf8) else {
+            throw ConfigurationLoadError([.init(path: "config", message: "File must be UTF-8")])
+        }
+        return text
+    }
 
     public func load(_ resolution: ConfigurationResolution, generation: UInt64 = 0) throws -> ConfigurationSnapshot {
         switch resolution.source {
@@ -120,17 +140,12 @@ public struct ConfigurationParser: Sendable {
                 generation: generation
             )
         case .file(let url):
-            let data: Data
-            do {
-                data = try Data(contentsOf: url)
-            } catch {
+            let text: String
+            do { text = try readText(url) }
+            catch let error as ConfigurationLoadError { throw error }
+            catch {
                 throw ConfigurationLoadError([
                     .init(path: "config", message: "Cannot read \(url.path): \(error.localizedDescription)")
-                ])
-            }
-            guard let text = String(data: data, encoding: .utf8) else {
-                throw ConfigurationLoadError([
-                    .init(path: "config", message: "Configuration must be UTF-8")
                 ])
             }
             return try parse(text: text, source: .file(url), generation: generation)
@@ -142,6 +157,9 @@ public struct ConfigurationParser: Sendable {
         source: ConfigurationSource = .bundledDefault,
         generation: UInt64 = 0
     ) throws -> ConfigurationSnapshot {
+        guard text.utf8.count <= Self.maximumFileBytes else {
+            throw ConfigurationLoadError([.init(path: "config", message: "Configuration exceeds the 1 MiB limit")])
+        }
         let decoded: AppConfiguration
         do {
             decoded = try TOMLDecoder().decode(AppConfiguration.self, from: text)
@@ -233,7 +251,7 @@ public struct ConfigurationParser: Sendable {
             let manifestURL = package.appendingPathComponent("extension.toml")
             try validateTrustedExtensionItem(manifestURL, field: field, requiresExecutable: false)
             let text: String
-            do { text = try String(contentsOf: manifestURL, encoding: .utf8) }
+            do { text = try readText(manifestURL) }
             catch { throw ConfigurationLoadError([.init(path: field, message: "Cannot read extension manifest at \(manifestURL.path): \(error.localizedDescription)")]) }
             let file: ExtensionManifestFile
             do { file = try TOMLDecoder().decode(ExtensionManifestFile.self, from: text) }
@@ -284,14 +302,19 @@ public struct ConfigurationParser: Sendable {
     ) throws -> AppConfiguration {
         guard !configuration.plugins.isEmpty else { return configuration }
         var result = configuration
-        let plugins = Dictionary(uniqueKeysWithValues: result.plugins.map { ($0.id, $0.path) })
+        var plugins: [String: String] = [:]
+        for (index, plugin) in result.plugins.enumerated() {
+            guard plugins.updateValue(plugin.path, forKey: plugin.id) == nil else {
+                throw ConfigurationLoadError([.init(path: "plugins[\(index)].id", message: "Duplicate ID '\(plugin.id)'")])
+            }
+        }
         for index in result.providers.indices where result.providers[index].kind == .plugin {
             let provider = result.providers[index]
             guard let pluginID = provider.plugin, let packagePath = plugins[pluginID] else { continue }
             let packageURL = URL(fileURLWithPath: packagePath, isDirectory: true)
             let manifestURL = packageURL.appendingPathComponent("plugin.toml", isDirectory: false)
             let text: String
-            do { text = try String(contentsOf: manifestURL, encoding: .utf8) }
+            do { text = try readText(manifestURL) }
             catch {
                 throw ConfigurationLoadError([.init(
                     path: "providers[\(index)].plugin",
@@ -333,6 +356,11 @@ public struct ConfigurationParser: Sendable {
 
 private struct PluginManifestFile: Decodable {
     let plugin: PluginManifest
+    enum CodingKeys: String, CodingKey, CaseIterable { case plugin }
+    init(from decoder: Decoder) throws {
+        let container = try decoder.strictContainer(keyedBy: CodingKeys.self)
+        plugin = try container.decode(PluginManifest.self, forKey: .plugin)
+    }
 }
 
 private struct ExtensionManifestFile: Decodable {
@@ -513,14 +541,25 @@ public actor ConfigurationCoordinator {
     private let factory: ManagedResourceFactory
     private var resources: [any ManagedConfigurationResource] = []
     private var activeSnapshot: ConfigurationSnapshot?
+    private var applying = false
+    private var stopping = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private let activate: @Sendable (UInt64?, AppConfiguration?) async -> Void
 
-    public init(factory: @escaping ManagedResourceFactory) {
+    public init(activate: @escaping @Sendable (UInt64?, AppConfiguration?) async -> Void = { _, _ in }, factory: @escaping ManagedResourceFactory) {
         self.factory = factory
+        self.activate = activate
     }
 
     public var snapshot: ConfigurationSnapshot? { activeSnapshot }
 
     public func apply(configuration: AppConfiguration, source: ConfigurationSource) async -> ConfigurationApplyResult {
+        await acquire()
+        defer { release() }
+        guard !stopping, !Task.isCancelled else {
+            return .init(applied: false, generation: activeSnapshot?.generation ?? 0,
+                         diagnostics: [.init(path: "reload", message: "Rill is stopping or the reload was cancelled")])
+        }
         let diagnostics = configuration.validate()
         guard diagnostics.isEmpty else {
             return .init(applied: false, generation: activeSnapshot?.generation ?? 0, diagnostics: diagnostics)
@@ -537,8 +576,12 @@ public actor ConfigurationCoordinator {
 
         do {
             for descriptor in descriptors {
+                try Task.checkCancellation()
+                guard !stopping else { throw CancellationError() }
                 staged.append(try await factory(descriptor, configuration, generation))
             }
+            try Task.checkCancellation()
+            guard !stopping else { throw CancellationError() }
         } catch {
             for resource in staged.reversed() {
                 await resource.stop()
@@ -550,6 +593,8 @@ public actor ConfigurationCoordinator {
             )
         }
 
+        // Preparation is side-effect free. Once commit begins, finish it even if the caller cancels.
+        await activate(generation, configuration)
         for resource in staged { await resource.commit() }
         let retired = resources
         resources = staged
@@ -562,7 +607,21 @@ public actor ConfigurationCoordinator {
         activeSnapshot?.generation == generation
     }
 
+    private func acquire() async {
+        if !applying { applying = true; return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    private func release() {
+        if waiters.isEmpty { applying = false }
+        else { waiters.removeFirst().resume() }
+    }
+
     public func stop() async {
+        stopping = true
+        await acquire()
+        defer { release() }
+        await activate(nil, nil)
         let retired = resources
         resources = []
         activeSnapshot = nil
@@ -624,10 +683,12 @@ public actor ConfigurationWatcher {
         var previous = signature()
         while !Task.isCancelled {
             try? await Task.sleep(for: pollInterval)
+            guard !Task.isCancelled else { return }
             let current = signature()
             guard current != previous else { continue }
             previous = current
             try? await Task.sleep(for: debounce)
+            guard !Task.isCancelled else { return }
             let settled = signature()
             previous = settled
             generation += 1

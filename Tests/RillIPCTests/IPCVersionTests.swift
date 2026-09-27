@@ -105,6 +105,31 @@ final class IPCVersionTests: XCTestCase {
         XCTAssertTrue(alive.ok)
     }
 
+    func testTrickledFrameHasTotalDeadlineAndCapacityRecovers() throws {
+        let directory = URL(fileURLWithPath: "/tmp/rill-slow-\(UUID().uuidString.prefix(8))")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let socket = directory.appendingPathComponent("control.sock")
+        let server = IPCServer(socketURL: socket) { request in .init(requestID: request.requestID, result: .null) }
+        try server.start(); defer { server.stop() }
+        let client = try rawConnection(to: socket.path)
+        defer { Darwin.close(client) }
+        var byte: UInt8 = 32
+        let start = Date()
+        var disconnected = false
+        while Date().timeIntervalSince(start) < 3 {
+            if Darwin.write(client, &byte, 1) < 0 { disconnected = true; break }
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+        XCTAssertTrue(disconnected, "Sending a byte every 100 ms must not reset the deadline")
+        // Saturation may be rejected by the kernel backlog before application admission.
+        let clients = (0..<40).compactMap { _ in try? rawConnection(to: socket.path) }
+        XCTAssertFalse(clients.isEmpty)
+        Thread.sleep(forTimeInterval: 0.1)
+        clients.forEach { Darwin.close($0) }
+        Thread.sleep(forTimeInterval: 0.1)
+        XCTAssertTrue(try IPCClient(socketURL: socket).send(.init(requestID: "after-flood", command: "status")).ok)
+    }
+
     private func rawConnection(to path: String) throws -> Int32 {
         let descriptor = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
         var noSignal: Int32 = 1
@@ -117,7 +142,29 @@ final class IPCVersionTests: XCTestCase {
                 Darwin.connect(descriptor, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
             }
         }
-        guard result == 0 else { throw POSIXError(.ECONNREFUSED) }
+        guard result == 0 else { Darwin.close(descriptor); throw POSIXError(.ECONNREFUSED) }
         return descriptor
+    }
+}
+
+final class ProductionDiagnosticsTests: XCTestCase {
+    func testRedactedDiagnosticsDropsErrorsAndArbitraryPayloads() throws {
+        let value = RedactedDiagnostics.value(generation: 4, configurationPathPresent: true,
+            configurationErrorPresent: true, providerHealth: ["feed": "failed: SECRET_TOKEN private-title", "healthy": "ready"],
+            extensionHealth: ["bad": "PRIVATE_PAYLOAD"], visiblePanelCount: 2)
+        let encoded = String(decoding: try JSONEncoder().encode(value), as: UTF8.self)
+        XCTAssertFalse(encoded.contains("SECRET_TOKEN"))
+        XCTAssertFalse(encoded.contains("private-title"))
+        XCTAssertFalse(encoded.contains("PRIVATE_PAYLOAD"))
+        XCTAssertTrue(encoded.contains("ready"))
+    }
+
+    func testClientRejectsMismatchedReplyID() throws {
+        let directory = URL(fileURLWithPath: "/tmp/rill-mismatch-\(UUID().uuidString.prefix(8))")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let socket = directory.appendingPathComponent("control.sock")
+        let server = IPCServer(socketURL: socket) { _ in .init(requestID: "wrong", result: .null) }
+        try server.start(); defer { server.stop() }
+        XCTAssertThrowsError(try IPCClient(socketURL: socket).send(.init(requestID: "expected", command: "status")))
     }
 }

@@ -9,7 +9,7 @@ final class YabaiNormalizationTests: XCTestCase {
         let displays = try decode([YabaiDisplayRecord].self, "displays-multi.json")
         let spaces = try decode([YabaiSpaceRecord].self, "spaces-multi.json")
         let window = try decode(YabaiWindowRecord.self, "window-focused.json")
-        let snapshot = YabaiNormalizer.snapshot(providerID: ProviderID("wm"), displays: displays, spaces: spaces, window: window)
+        let snapshot = try YabaiNormalizer.snapshot(providerID: ProviderID("wm"), displays: displays, spaces: spaces, window: window)
 
         XCTAssertEqual(snapshot.workspaces.map(\.name), ["main", "2", "chat"])
         XCTAssertEqual(snapshot.workspaces.map(\.display?.rawValue), ["DISPLAY-A", "DISPLAY-A", "DISPLAY-B"])
@@ -21,10 +21,18 @@ final class YabaiNormalizationTests: XCTestCase {
 
     func testMissingFieldsKeepUnknownOccupancyAndStableProviderNamespace() throws {
         let spaces = try decode([YabaiSpaceRecord].self, "spaces-missing-fields.json")
-        let snapshot = YabaiNormalizer.snapshot(providerID: ProviderID("other"), displays: [], spaces: spaces, window: nil)
+        let snapshot = try YabaiNormalizer.snapshot(providerID: ProviderID("other"), displays: [], spaces: spaces, window: nil)
         XCTAssertEqual(snapshot.workspaces.map(\.name), ["renamed", "5"])
         XCTAssertTrue(snapshot.workspaces.allSatisfy { $0.occupied == nil && $0.display == nil })
         XCTAssertTrue(snapshot.workspaces.allSatisfy { $0.id.provider == ProviderID("other") })
+    }
+
+    func testDuplicateManagerIdentitiesRejectInsteadOfTrapping() throws {
+        let displays = try decode([YabaiDisplayRecord].self, "displays-multi.json")
+        XCTAssertThrowsError(try YabaiNormalizer.snapshot(providerID: ProviderID("wm"),
+            displays: displays + displays, spaces: [], window: nil))
+        XCTAssertThrowsError(try YabaiNormalizer.snapshot(providerID: ProviderID("wm"),
+            displays: [], spaces: [.init(index: 1), .init(index: 1)], window: nil))
     }
 
     func testRunnerPreservesQueryAndFocusFailures() throws {

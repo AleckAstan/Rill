@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import ServiceManagement
 
 actor EmptyManagedResource: ManagedConfigurationResource {
     func commit() {}
@@ -36,7 +37,12 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
     private let extensionRuntime = ExtensionRuntimeStore()
     private let generationGate = ActiveGenerationGate()
     private let providerInvalidations = ProviderInvalidationCenter()
-    private lazy var coordinator = ConfigurationCoordinator { descriptor, configuration, generation in
+    private lazy var coordinator = ConfigurationCoordinator(activate: { [weak self] generation, configuration in
+        guard let self else { return }
+        await self.generationGate.set(generation)
+        await self.moduleRuntime.activateConfiguration(configuration)
+    }) { [weak self] descriptor, configuration, generation in
+        guard let self else { throw CancellationError() }
         switch descriptor {
         case .surface(let surfaceID):
             return try await SurfaceResource(
@@ -105,6 +111,10 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
     private var activeConfigurationPath: String?
     private var activeGeneration: UInt64 = 0
     private var terminationInProgress = false
+    private var reloadRevision: UInt64 = 0
+    private var ipcFailure: String?
+    private var signalSources: [DispatchSourceSignal] = []
+    private var loginItem: NSMenuItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -126,6 +136,11 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
         let reload = NSMenuItem(title: "Reload Configuration", action: #selector(reloadConfiguration), keyEquivalent: "r")
         reload.target = self
         menu.addItem(reload)
+        let login = NSMenuItem(title: "Launch at Login", action: #selector(toggleLogin), keyEquivalent: "")
+        login.target = self
+        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        menu.addItem(login)
+        loginItem = login
         let quit = NSMenuItem(title: "Quit Rill", action: #selector(quit), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
@@ -141,7 +156,22 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
             try server.start()
             ipcServer = server
         } catch {
-            configurationStatus = "IPC unavailable: \(error)"
+            // Never launch a second provider/panel graph without owning its control socket.
+            ipcFailure = "IPC unavailable: \(error)"
+            configurationStatus = ipcFailure!
+            lastConfigurationError = configurationStatus
+            return
+        }
+        for number in [SIGTERM, SIGINT] {
+            signal(number, SIG_IGN)
+            let source = DispatchSource.makeSignalSource(signal: number, queue: .main)
+            source.setEventHandler {
+                // AppKit enters a termination run loop; leave the dispatch callback first
+                // so MainActor cleanup can execute instead of deadlocking its own queue.
+                NSApp.perform(#selector(NSApplication.terminate(_:)), with: nil, afterDelay: 0)
+            }
+            source.resume()
+            signalSources.append(source)
         }
         startupTask = Task { [weak self] in
             await self?.loadConfiguration()
@@ -152,6 +182,8 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
         guard !terminationInProgress else { return .terminateLater }
         terminationInProgress = true
         startupTask?.cancel()
+        reloadRevision &+= 1
+        ipcServer?.stop(); ipcServer = nil
         Task { [weak self] in
             guard let self else {
                 sender.reply(toApplicationShouldTerminate: true)
@@ -165,6 +197,23 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
             sender.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater
+    }
+
+    @objc private func toggleLogin() {
+        Task {
+            do {
+                if SMAppService.mainApp.status == .enabled || SMAppService.mainApp.status == .requiresApproval {
+                    try await SMAppService.mainApp.unregister()
+                } else {
+                    try SMAppService.mainApp.register()
+                    if SMAppService.mainApp.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
+                }
+                loginItem?.state = SMAppService.mainApp.status == .enabled ? .on : .off
+            } catch {
+                configurationStatus = "Launch at login could not be changed: \(error.localizedDescription)"
+                showDiagnostics()
+            }
+        }
     }
 
     @objc private func showDiagnostics() {
@@ -182,6 +231,7 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
 
         Visible panels: \(NSApp.windows.compactMap { $0 as? RillPanel }.filter(\.isVisible).count)
         """
+        window?.close()
         let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 420, height: 220),
             styleMask: [.titled, .closable, .utilityWindow], backing: .buffered, defer: false)
         panel.title = "Rill Diagnostics"
@@ -211,21 +261,20 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func diagnosticsValue() -> JSONValue {
+        RedactedDiagnostics.value(
+            generation: activeGeneration,
+            configurationPathPresent: activeConfigurationPath != nil,
+            configurationErrorPresent: lastConfigurationError != nil,
+            providerHealth: Dictionary(uniqueKeysWithValues: moduleRuntime.store.providerHealth.map { ($0.key.rawValue, $0.value) }),
+            extensionHealth: extensionRuntime.health.mapValues(\.rawValue),
+            visiblePanelCount: NSApp.windows.compactMap { $0 as? RillPanel }.filter(\.isVisible).count)
+    }
+
     private func redactedDiagnosticsData() throws -> Data {
-        let providers = moduleRuntime.store.providerHealth.reduce(into: [String: String]()) { result, item in
-            result[item.key.rawValue] = item.value
-        }
-        let object: [String: Any] = [
-            "schema_version": 1,
-            "app": "Rill",
-            "configuration_path_present": activeConfigurationPath != nil,
-            "generation": activeGeneration,
-            "provider_health": providers,
-            "visible_panel_count": NSApp.windows.compactMap { $0 as? RillPanel }.filter(\.isVisible).count,
-            "configuration_error_present": lastConfigurationError != nil,
-            "note": "Window titles, script output, workspace names and arbitrary module data are omitted."
-        ]
-        return try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys])
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try encoder.encode(diagnosticsValue())
     }
 
     @objc private func quit() { NSApp.terminate(nil) }
@@ -237,69 +286,69 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func loadConfiguration() async {
-        do {
-            await watcher?.stop()
-            watcher = nil
-            let arguments = ProcessInfo.processInfo.arguments
-            let explicitPath: String?
-            if let index = arguments.firstIndex(of: "--config"), arguments.indices.contains(index + 1) {
-                explicitPath = arguments[index + 1]
-            } else {
-                explicitPath = nil
+    @discardableResult
+    private func loadConfiguration() async -> Bool {
+        guard !terminationInProgress, ipcFailure == nil else { return false }
+        reloadRevision &+= 1
+        let revision = reloadRevision
+        let arguments = ProcessInfo.processInfo.arguments
+        let explicitPath: String?
+        if let index = arguments.firstIndex(of: "--config") {
+            guard arguments.indices.contains(index + 1), !arguments[index + 1].hasPrefix("--") else {
+                configurationStatus = "--config requires a file path"
+                lastConfigurationError = configurationStatus
+                return false
             }
-            let resolution = try ConfigurationResolver().resolve(explicitPath: explicitPath)
-            let snapshot = try ConfigurationParser().load(resolution)
-            activeConfigurationPath = resolution.source.fileURL?.path
-            let result = await coordinator.apply(
-                configuration: snapshot.configuration,
-                source: snapshot.source
-            )
-            configurationStatus = result.applied
-                ? "Configuration generation \(result.generation) is active."
-                : result.diagnostics.map(\.description).joined(separator: "\n")
-            lastConfigurationError = result.applied ? nil : configurationStatus
-            if result.applied { activeGeneration = result.generation }
-            if result.applied { await generationGate.set(result.generation) }
-            if case .file(let url) = resolution.source {
-                let watcher = ConfigurationWatcher(url: url, generation: result.generation) { [weak self] update in
-                    guard let self else { return }
-                    await self.handleConfigurationUpdate(update)
-                }
-                self.watcher = watcher
-                await watcher.start()
+            explicitPath = arguments[index + 1]
+        } else { explicitPath = nil }
+        let resolver = ConfigurationResolver()
+        let watchedURL = explicitPath.map { URL(fileURLWithPath: $0, relativeTo: resolver.workingDirectory).standardizedFileURL }
+            ?? resolver.defaultConfigurationURL
+        activeConfigurationPath = watchedURL.path
+        // Watch even an initially missing/malformed file so editing it can recover the app.
+        if watcher == nil {
+            let watcher = ConfigurationWatcher(url: watchedURL) { [weak self] update in
+                await self?.handleConfigurationUpdate(update)
             }
-            if result.applied {
-                await runSmokeIfRequested(sourceURL: resolution.source.fileURL)
-            }
-        } catch {
-            configurationStatus = String(describing: error)
-            lastConfigurationError = configurationStatus
+            self.watcher = watcher
+            await watcher.start()
         }
+        let update = await Task.detached(priority: .utility) { () -> Result<ConfigurationSnapshot, ConfigurationLoadError> in
+            do { return .success(try ConfigurationParser().load(resolver.resolve(explicitPath: explicitPath))) }
+            catch let error as ConfigurationLoadError { return .failure(error) }
+            catch { return .failure(ConfigurationLoadError([.init(path: "config", message: String(describing: error))])) }
+        }.value
+        guard revision == reloadRevision, !Task.isCancelled, !terminationInProgress else { return false }
+        let applied = await handleConfigurationUpdate(update)
+        #if DEBUG
+        if applied {
+            await runSmokeIfRequested(sourceURL: watchedURL)
+        }
+        #endif
+        return applied
     }
 
+    @discardableResult
     private func handleConfigurationUpdate(
         _ update: Result<ConfigurationSnapshot, ConfigurationLoadError>
-    ) async {
+    ) async -> Bool {
+        guard !terminationInProgress, !Task.isCancelled else { return false }
+        reloadRevision &+= 1
+        let revision = reloadRevision
         switch update {
         case .success(let snapshot):
-            let result = await coordinator.apply(
-                configuration: snapshot.configuration,
-                source: snapshot.source
-            )
+            let result = await coordinator.apply(configuration: snapshot.configuration, source: snapshot.source)
+            guard revision == reloadRevision, !terminationInProgress else { return false }
             configurationStatus = result.applied
                 ? "Configuration generation \(result.generation) is active."
                 : result.diagnostics.map(\.description).joined(separator: "\n")
             lastConfigurationError = result.applied ? nil : configurationStatus
             if result.applied { activeGeneration = result.generation }
-            if result.applied { await generationGate.set(result.generation) }
+            return result.applied
         case .failure(let error):
-            let generation = await coordinator.snapshot?.generation ?? 0
-            configurationStatus = """
-            Reload rejected; generation \(generation) remains active.
-            \(error.description)
-            """
+            configurationStatus = "Reload rejected; generation \(activeGeneration) remains active.\n\(error.description)"
             lastConfigurationError = error.description
+            return false
         }
     }
 
@@ -345,23 +394,7 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
                 "workspaces": .object(workspaces)
             ]))
         case "diagnostics":
-            let providers = Dictionary(uniqueKeysWithValues: moduleRuntime.store.providerHealth.map {
-                ($0.key.rawValue, JSONValue.string($0.value))
-            })
-            let extensions = Dictionary(uniqueKeysWithValues: extensionRuntime.health.map {
-                ($0.key, JSONValue.string($0.value.rawValue))
-            })
-            return .init(requestID: request.requestID, result: .object([
-                "schema_version": .number(1),
-                "app": .string("Rill"),
-                "configuration_path_present": .bool(activeConfigurationPath != nil),
-                "generation": .number(Double(activeGeneration)),
-                "provider_health": .object(providers),
-                "extension_health": .object(extensions),
-                "visible_panel_count": .number(Double(NSApp.windows.compactMap { $0 as? RillPanel }.filter(\.isVisible).count)),
-                "configuration_error_present": .bool(lastConfigurationError != nil),
-                "redaction": .string("Window titles, script output, workspace names and arbitrary module data are omitted.")
-            ]))
+            return .init(requestID: request.requestID, result: diagnosticsValue())
         case "displays":
             let displays: [JSONValue] = ScreenInventory.descriptors().map { display in
                 .object([
@@ -373,7 +406,10 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
             }
             return .init(requestID: request.requestID, result: .array(displays))
         case "reload":
-            await loadConfiguration()
+            guard await loadConfiguration() else {
+                return .init(requestID: request.requestID, code: "reload_rejected",
+                             message: lastConfigurationError ?? "Reload superseded or Rill is stopping")
+            }
             let snapshot = await coordinator.snapshot
             return .init(requestID: request.requestID, result: .object(["generation": .number(Double(snapshot?.generation ?? 0))]))
         case "emit":
@@ -415,6 +451,7 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
         }
     }
 
+    #if DEBUG
     private func runSmokeIfRequested(sourceURL: URL?) async {
         let arguments = ProcessInfo.processInfo.arguments
         guard let reportIndex = arguments.firstIndex(of: "--smoke-report"),
@@ -587,6 +624,9 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
         } catch {
             passed = false
         }
+        await watcher?.stop()
+        await coordinator.stop()
+        ipcServer?.stop()
         exit(passed ? 0 : 1)
     }
 
@@ -663,6 +703,7 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
 
         return walk(root)
     }
+    #endif
 }
 
 @main

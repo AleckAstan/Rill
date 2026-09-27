@@ -1,6 +1,6 @@
 # Phase 10 verification
 
-Current result: NOT RUN. Run from the Rill project root unless noted. Read [description](description.md) for scope and [handoff](handoff.md) for evidence recording.
+Current result: PARTIAL PASS. Automated and isolated Release recovery/reload/shutdown evidence is recorded in the handoff; sleep/wake, fresh-login and full resource-instrumentation checks remain open. Run from the Rill project root unless noted. Read [description](description.md) for scope and [handoff](handoff.md) for evidence recording.
 
 ## Setup
 
