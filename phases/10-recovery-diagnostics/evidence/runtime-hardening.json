@@ -1,0 +1,12 @@
+{
+  "cycles": 100,
+  "passed": true,
+  "invalid_start_no_children": true,
+  "automatic_recovery": true,
+  "baseline_panels": 1,
+  "baseline_descriptors": 36,
+  "final_descriptors": 35,
+  "final_direct_children": 1,
+  "second_instance_no_children": true,
+  "graceful_shutdown_no_owned_children_or_socket": true
+}

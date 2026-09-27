@@ -84,7 +84,11 @@ public enum YabaiNormalizer {
         displays: [YabaiDisplayRecord],
         spaces: [YabaiSpaceRecord],
         window: YabaiWindowRecord?
-    ) -> YabaiSnapshot {
+    ) throws -> YabaiSnapshot {
+        guard Set(displays.map(\.index)).count == displays.count,
+              Set(spaces.map(\.index)).count == spaces.count else {
+            throw YabaiProviderError.invalidJSON("yabai returned duplicate display or space indexes")
+        }
         let displaysByIndex = Dictionary(uniqueKeysWithValues: displays.map { ($0.index, $0.uuid) })
         let workspaces = spaces
             .sorted { $0.index < $1.index }
@@ -126,7 +130,7 @@ public final class YabaiCommandRunner: @unchecked Sendable {
             let displays: [YabaiDisplayRecord] = try query(spec: spec, arguments: ["-m", "query", "--displays"])
             let spaces: [YabaiSpaceRecord] = try query(spec: spec, arguments: ["-m", "query", "--spaces"])
             let window: YabaiWindowRecord? = try? query(spec: spec, arguments: ["-m", "query", "--windows", "--window"])
-            return YabaiNormalizer.snapshot(providerID: spec.id, displays: displays, spaces: spaces, window: window)
+            return try YabaiNormalizer.snapshot(providerID: spec.id, displays: displays, spaces: spaces, window: window)
         }
     }
 
@@ -139,7 +143,7 @@ public final class YabaiCommandRunner: @unchecked Sendable {
         }
     }
 
-    public func stop(graceMilliseconds: Int) { supervisor.stop(graceMilliseconds: graceMilliseconds) }
+    public func stop(graceMilliseconds: Int) async { await supervisor.stopAndWait(graceMilliseconds: graceMilliseconds) }
 
     private func query<Value: Decodable>(spec: ProviderSpec, arguments: [String]) throws -> Value {
         let outcome = try run(spec: spec, arguments: arguments)
@@ -218,7 +222,7 @@ public final class YabaiProviderResource: ManagedConfigurationResource, @uncheck
     public func stop() async {
         eventTask?.cancel(); reconciliationTask?.cancel(); debounceTask?.cancel()
         eventTask = nil; reconciliationTask = nil; debounceTask = nil
-        runner.stop(graceMilliseconds: spec.timeoutMS)
+        await runner.stop(graceMilliseconds: spec.timeoutMS)
         runtime?.unregisterWorkspaceFocus(providerID: spec.id, owner: focusRegistration)
     }
 

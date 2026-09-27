@@ -237,3 +237,15 @@ Owner visual validation, 2026-09-27: the owner tested the contour/motion refinem
 2026-09-27 organic-motion correction: owner reported that vertical contraction bounce exposed the physical notch and requested asymmetric sides. Replaced the shared geometry spring with coordinated keyframe tracks: different left/right spring responses, a small opening height spring, and smooth cubic closing height. Every rendered height sample is clamped to the compact safe height, including interrupted motion. Reduce Motion renders target dimensions immediately. Added a regression check for negative height progress, independent side displacement and settled compact geometry. Build and 84 app + 6 IPC tests PASS (`/tmp/rill-notch-organic-build.log`, `/tmp/rill-notch-organic-tests.log`). Updated desktop appearance awaits owner observation; phase 13 stays IN PROGRESS.
 
 Owner animation validation, 2026-09-27: the owner approved the asymmetric organic motion and contraction correction (“super!”), then explicitly requested a commit. Record user-reported PASS for this visual refinement. The relaunched runtime reports four visible panels, ready extensions/providers and no configuration error. Dedicated accessibility, lifecycle and measured frame-pacing gates remain open.
+
+## Host production-hardening follow-up — 2026-09-27
+
+The owner resumed phase 10 for engineering hardening. Extension supervision
+now uses shared owned process groups, awaited escalation, nonblocking host
+writes, generation-scoped failures and bounded image thumbnails. SDK input
+checks reject incomplete headers and nonregular images. Accepted notch
+geometry/motion and the API vocabulary remain unchanged. Final phase-10 CI
+passes 6 SDK tests, host regressions and standalone sample compilation; a
+relocated clean SDK/sample build also passes. These checks do not establish
+independent third-party authoring or full accessibility/performance support.
+See `docs/production-readiness.md` and the phase-10 handoff.

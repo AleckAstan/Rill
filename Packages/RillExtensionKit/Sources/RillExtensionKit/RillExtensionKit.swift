@@ -440,6 +440,9 @@ public extension RillExtensionPresentation {
             guard attributes[.type] as? FileAttributeType != .typeSymbolicLink else {
                 throw RillExtensionProtocolError.invalidTree("Image resource must not be a symbolic link")
             }
+            guard attributes[.type] as? FileAttributeType == .typeRegular else {
+                throw RillExtensionProtocolError.invalidTree("Image resource must be a regular file")
+            }
             let size = (attributes[.size] as? NSNumber)?.intValue ?? 0
             guard size <= RillExtensionAPI.maximumImageBytes else {
                 throw RillExtensionProtocolError.invalidTree("Image exceeds \(RillExtensionAPI.maximumImageBytes) bytes")
@@ -503,7 +506,10 @@ public final class RillExtensionConnection {
         var result = Data()
         while result.count < count {
             let chunk = try input.read(upToCount: count - result.count) ?? Data()
-            if chunk.isEmpty { return result.isEmpty ? nil : result }
+            if chunk.isEmpty {
+                if result.isEmpty { return nil }
+                throw RillExtensionProtocolError.truncatedFrame
+            }
             result.append(chunk)
         }
         return result

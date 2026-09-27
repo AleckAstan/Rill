@@ -55,3 +55,17 @@ Query at startup and after reconnect; use notifications/invalidation to refresh.
 ## Manager integration strategy
 
 For yabai, use documented query commands and user-installed signal hooks. Supply idempotent, labeled hook examples and cleanup instructions without altering unrelated signals. For AeroSpace, use documented CLI queries and callbacks as the compatibility baseline. For OmniWM, use its versioned CLI/IPC workspace queries, literal workspace action, and subscription stream; re-query authoritative state after events and keep periodic reconciliation. Never replace the user's manager configuration. Ship copyable snippets and explain how to compose existing callbacks where required. Record versions and real output fixtures. The generic protocol must work with no manager installed.
+
+Hardening clarification (2026-09-27): frames must end with a newline. Socket
+reads enforce a total two-second frame deadline, even with trickled bytes;
+at most 16 client connections are served concurrently. Excess clients are
+closed and may retry. Reply IDs must match the request. Rejected reloads use
+`reload_rejected` and CLI exit 4. Diagnostics expose only allowlisted health
+states; stderr and arbitrary failure text are available through local status,
+not through redacted export. Process shutdown grace is capped at 250 ms.
+
+A current-user-owned `control.lock` uses an exclusive advisory lock for runtime
+ownership, retained across the server lifetime. This prevents saturation from
+being misinterpreted as a stale socket by another current Rill instance. The
+lock file remains after exit; its presence alone does not indicate a running
+server. The socket itself is removed at orderly shutdown.

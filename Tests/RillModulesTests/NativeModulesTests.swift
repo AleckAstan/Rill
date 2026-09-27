@@ -504,3 +504,46 @@ final class GenericProviderTests: XCTestCase {
         await provider.stop()
     }
 }
+
+final class ProductionProcessTests: XCTestCase {
+    func testLeaderExitDoesNotLeaveDescendantHoldingPipes() throws {
+        let spec = ProviderSpec(id: ProviderID("descendant"), kind: .command, executable: "/bin/sh",
+            args: ["-c", "sleep 30 & printf done"], timeoutMS: 500, maxOutputBytes: 1024, intervalMS: 1000)
+        let start = ContinuousClock.now
+        let outcome = try GenericProcessSupervisor().runCommand(spec)
+        XCTAssertEqual(String(decoding: outcome.output, as: UTF8.self), "done")
+        XCTAssertLessThan(start.duration(to: .now), .seconds(2))
+    }
+
+    func testStoppedSupervisorCannotLaunchLateWork() {
+        let supervisor = GenericProcessSupervisor()
+        supervisor.stop(graceMilliseconds: 100)
+        let spec = ProviderSpec(id: ProviderID("late"), kind: .command, executable: "/usr/bin/true", intervalMS: 1000)
+        XCTAssertThrowsError(try supervisor.runCommand(spec))
+    }
+
+    @MainActor
+    func testOldExtensionFailureCannotCorruptNewGeneration() {
+        let runtime = ExtensionRuntimeStore()
+        runtime.register(extensionID: "extension", generation: 2, packageDirectory: .init(fileURLWithPath: "/tmp")) { _, _ in }
+        runtime.fail(extensionID: "extension", generation: 1, message: "late", terminal: true)
+        XCTAssertEqual(runtime.health["extension"], .starting)
+        XCTAssertNil(runtime.diagnostics["extension"])
+    }
+
+    @MainActor
+    func testExtensionNotReadingActionsCannotBlockMainActor() async throws {
+        let runtime = ExtensionRuntimeStore()
+        let spec = ExtensionSpec(id: "blocked", path: "/tmp", grant: [.actions], executable: "/bin/sleep",
+            args: ["30"], contributions: [.init(id: "module", kind: .module)])
+        let host = try ExtensionHostResource(spec: spec, generation: 1, runtime: runtime)
+        await host.commit()
+        let start = ContinuousClock.now
+        for _ in 0..<2000 {
+            runtime.perform(extensionID: "blocked", contributionID: "module", actionID: String(repeating: "a", count: 64))
+        }
+        XCTAssertLessThan(start.duration(to: .now), .seconds(1))
+        XCTAssertNotNil(runtime.diagnostics["blocked"])
+        await host.stop()
+    }
+}

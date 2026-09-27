@@ -528,89 +528,39 @@ private enum ApplicationMenuError: Error {
     case empty
 }
 
-private final class ProcessOutputState: @unchecked Sendable {
-    private let lock = NSLock()
-    private let limit: Int
-    private var bytes = Data()
-    private var timeout = false
-
-    init(limit: Int) {
-        self.limit = limit
-    }
-
-    func append(_ data: Data) {
-        lock.lock()
-        defer { lock.unlock() }
-        guard bytes.count < limit else { return }
-        bytes.append(data.prefix(limit - bytes.count))
-    }
-
-    func markTimedOut() {
-        lock.lock()
-        timeout = true
-        lock.unlock()
-    }
-
-    func result() -> (String, Bool) {
-        lock.lock()
-        defer { lock.unlock() }
-        return (String(decoding: bytes, as: UTF8.self), timeout)
-    }
-}
-
 public actor BoundedActionRunner {
     public let maxOutputBytes: Int
+    private var active: [UUID: (GenericProcessSupervisor, Task<GenericProcessSupervisor.Outcome, Error>)] = [:]
+    private var stopping = false
 
-    public init(maxOutputBytes: Int = 65_536) {
-        self.maxOutputBytes = maxOutputBytes
-    }
+    public init(maxOutputBytes: Int = 65_536) { self.maxOutputBytes = maxOutputBytes }
 
-    public func run(_ action: ActionSpec) -> ActionExecutionResult {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: action.executable)
-        process.arguments = action.args
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        let state = ProcessOutputState(limit: maxOutputBytes)
-        pipe.fileHandleForReading.readabilityHandler = { handle in
-            let data = handle.availableData
-            if !data.isEmpty { state.append(data) }
+    public func run(_ action: ActionSpec) async -> ActionExecutionResult {
+        guard !stopping, active.count < 8 else {
+            return .init(exitCode: nil, output: "", timedOut: false, launchError: "Action capacity reached or Rill is stopping")
         }
-
+        let id = UUID()
+        let supervisor = GenericProcessSupervisor()
+        let spec = ProviderSpec(id: ProviderID("action"), kind: .command, executable: action.executable,
+            args: action.args, timeoutMS: action.timeoutMS, maxOutputBytes: maxOutputBytes, intervalMS: 1000)
+        let task = Task.detached { try supervisor.runCommand(spec) }
+        active[id] = (supervisor, task)
+        defer { active[id] = nil }
         do {
-            try process.run()
+            let outcome = try await task.value
+            let text = String(decoding: outcome.output, as: UTF8.self) + outcome.stderr
+            return .init(exitCode: outcome.exitCode, output: String(text.prefix(maxOutputBytes)),
+                         timedOut: outcome.timedOut, launchError: nil)
         } catch {
-            pipe.fileHandleForReading.readabilityHandler = nil
             return .init(exitCode: nil, output: "", timedOut: false, launchError: error.localizedDescription)
         }
+    }
 
-        let timeout = DispatchWorkItem {
-            guard process.isRunning else { return }
-            state.markTimedOut()
-            process.terminate()
-            let processIdentifier = process.processIdentifier
-            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + .milliseconds(250)) {
-                if process.isRunning {
-                    Darwin.kill(processIdentifier, SIGKILL)
-                }
-            }
-        }
-        DispatchQueue.global(qos: .utility).asyncAfter(
-            deadline: .now() + .milliseconds(action.timeoutMS),
-            execute: timeout
-        )
-        process.waitUntilExit()
-        timeout.cancel()
-        pipe.fileHandleForReading.readabilityHandler = nil
-        state.append(pipe.fileHandleForReading.readDataToEndOfFile())
-        let (output, timedOut) = state.result()
-        return .init(
-            exitCode: process.terminationStatus,
-            output: output,
-            timedOut: timedOut,
-            launchError: nil
-        )
+    public func stop() async {
+        stopping = true
+        let pending = Array(active.values)
+        for (supervisor, _) in pending { supervisor.stop(graceMilliseconds: 250) }
+        for (_, task) in pending { _ = await task.result }
     }
 }
 
@@ -625,8 +575,8 @@ public final class NativeModuleRuntime: NSObject {
     private var wifiReferences: [ModuleID: Int] = [:]
     private var volumeReferences: [ModuleID: Int] = [:]
     private var mockReferences: [ModuleID: Int] = [:]
-    private var customModulesByProvider: [ProviderID: Set<ModuleID>] = [:]
-    private var workspaceModulesByProvider: [ProviderID: Set<ModuleID>] = [:]
+    private var customModulesByProvider: [ProviderID: [ModuleID: Int]] = [:]
+    private var workspaceModulesByProvider: [ProviderID: [ModuleID: Int]] = [:]
     private struct WorkspaceFocusRegistration {
         let owner: UUID
         let handler: (WorkspaceID) async throws -> Void
@@ -655,6 +605,19 @@ public final class NativeModuleRuntime: NSObject {
             volumeReferences.values.reduce(0, +),
             mockReferences.values.reduce(0, +)
         )
+    }
+
+    /// Retire delayed values before admitting a new generation; old IDs cannot leak into diagnostics.
+    public func activateConfiguration(_ configuration: AppConfiguration?) async {
+        customUpdateTasks.values.forEach { $0.cancel() }; customUpdateTasks.removeAll()
+        staleTasks.values.forEach { $0.cancel() }; staleTasks.removeAll()
+        pendingCustomUpdates.removeAll()
+        if configuration == nil { await actionRunner.stop() }
+        let ids = Set(configuration?.providers.map(\.id) ?? [])
+        store.providerHealth = store.providerHealth.filter { ids.contains($0.key) }
+        store.workspaceStates = store.workspaceStates.filter { ids.contains($0.key) }
+        store.workspaceUpdatedAt = store.workspaceUpdatedAt.filter { ids.contains($0.key) }
+        store.focusedWindows = store.focusedWindows.filter { ids.contains($0.key) }
     }
 
     public func resource(for module: ModuleSpec) -> ModuleLifecycleResource {
@@ -770,7 +733,7 @@ public final class NativeModuleRuntime: NSObject {
 
     private func applyCustomUpdate(_ update: CustomModuleUpdate, from providerID: ProviderID) {
         store.providerHealth[providerID] = "ready"
-        for moduleID in customModulesByProvider[providerID] ?? [] {
+        for moduleID in Array(customModulesByProvider[providerID]?.keys ?? [:].keys) {
             store.mockModules[moduleID] = .init(
                 text: update.text,
                 tooltip: update.tooltip,
@@ -783,7 +746,7 @@ public final class NativeModuleRuntime: NSObject {
 
     private func markProviderStale(_ providerID: ProviderID) {
         store.providerHealth[providerID] = "stale"
-        for moduleID in customModulesByProvider[providerID] ?? [] {
+        for moduleID in Array(customModulesByProvider[providerID]?.keys ?? [:].keys) {
             guard var previous = store.mockModules[moduleID] else { continue }
             previous.health = .stale
             store.mockModules[moduleID] = previous
@@ -793,7 +756,7 @@ public final class NativeModuleRuntime: NSObject {
     public func setProviderUnavailable(_ providerID: ProviderID, message: String) {
         staleTasks[providerID]?.cancel()
         store.providerHealth[providerID] = "failed: \(message.prefix(512))"
-        for moduleID in customModulesByProvider[providerID] ?? [] {
+        for moduleID in Array(customModulesByProvider[providerID]?.keys ?? [:].keys) {
             let previous = store.mockModules[moduleID]
             store.mockModules[moduleID] = .init(
                 text: previous?.text ?? "—",
@@ -849,7 +812,7 @@ public final class NativeModuleRuntime: NSObject {
         store.focusedWindows[providerID] = focusedWindow
         store.providerHealth[providerID] = "ready"
         let summary = workspaces.map(\.name).joined(separator: " ")
-        for moduleID in workspaceModulesByProvider[providerID] ?? [] {
+        for moduleID in Array(workspaceModulesByProvider[providerID]?.keys ?? [:].keys) {
             store.mockModules[moduleID] = .init(
                 text: summary.isEmpty ? "No spaces" : summary,
                 tooltip: focusedWindow.map { "Focused: \($0.appName)" },
@@ -860,7 +823,7 @@ public final class NativeModuleRuntime: NSObject {
 
     public func setWorkspaceProviderUnavailable(_ providerID: ProviderID, message: String) {
         store.providerHealth[providerID] = "failed: \(message.prefix(512))"
-        for moduleID in workspaceModulesByProvider[providerID] ?? [] {
+        for moduleID in Array(workspaceModulesByProvider[providerID]?.keys ?? [:].keys) {
             let previous = store.mockModules[moduleID]
             store.mockModules[moduleID] = .init(
                 text: previous?.text ?? "—",
@@ -892,10 +855,10 @@ public final class NativeModuleRuntime: NSObject {
         case .workspaces, .custom:
             mockReferences[module.id, default: 0] += 1
             if module.kind == .custom, let provider = module.provider {
-                customModulesByProvider[provider, default: []].insert(module.id)
+                customModulesByProvider[provider, default: [:]][module.id, default: 0] += 1
             }
             if module.kind == .workspaces, let provider = module.provider {
-                workspaceModulesByProvider[provider, default: []].insert(module.id)
+                workspaceModulesByProvider[provider, default: [:]][module.id, default: 0] += 1
             }
             if store.mockModules[module.id] == nil {
                 store.mockModules[module.id] = .init(
@@ -929,11 +892,15 @@ public final class NativeModuleRuntime: NSObject {
         case .workspaces, .custom:
             decrement(module.id, in: &mockReferences)
             if module.kind == .custom, let provider = module.provider {
-                customModulesByProvider[provider]?.remove(module.id)
+                if let count = customModulesByProvider[provider]?[module.id] {
+                    customModulesByProvider[provider]?[module.id] = count > 1 ? count - 1 : nil
+                }
                 if customModulesByProvider[provider]?.isEmpty == true { customModulesByProvider[provider] = nil }
             }
             if module.kind == .workspaces, let provider = module.provider {
-                workspaceModulesByProvider[provider]?.remove(module.id)
+                if let count = workspaceModulesByProvider[provider]?[module.id] {
+                    workspaceModulesByProvider[provider]?[module.id] = count > 1 ? count - 1 : nil
+                }
                 if workspaceModulesByProvider[provider]?.isEmpty == true { workspaceModulesByProvider[provider] = nil }
             }
             if mockReferences[module.id] == nil { store.mockModules[module.id] = nil }
@@ -1390,7 +1357,7 @@ public final class NativeModuleRuntime: NSObject {
         return value?.takeUnretainedValue() as String?
     }
 
-    private func readAudioProperty<T>(
+    private func readAudioProperty<T: BitwiseCopyable>(
         objectID: AudioObjectID,
         selector: AudioObjectPropertySelector,
         scope: AudioObjectPropertyScope,

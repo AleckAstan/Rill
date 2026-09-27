@@ -187,8 +187,8 @@ public final class OmniWMCommandRunner: @unchecked Sendable {
         }
     }
 
-    public func stop(graceMilliseconds: Int) {
-        supervisor.stop(graceMilliseconds: graceMilliseconds)
+    public func stop(graceMilliseconds: Int) async {
+        await supervisor.stopAndWait(graceMilliseconds: graceMilliseconds)
     }
 
     private func query<Payload: Decodable>(
@@ -309,8 +309,8 @@ public final class OmniWMProviderResource: ManagedConfigurationResource, @unchec
         subscriptionTask = nil
         reconciliationTask = nil
         debounceTask = nil
-        runner.stop(graceMilliseconds: spec.timeoutMS)
-        subscriptionSupervisor.stop(graceMilliseconds: spec.timeoutMS)
+        await runner.stop(graceMilliseconds: spec.timeoutMS)
+        await subscriptionSupervisor.stopAndWait(graceMilliseconds: spec.timeoutMS)
         runtime?.unregisterWorkspaceFocus(providerID: spec.id, owner: focusRegistration)
     }
 

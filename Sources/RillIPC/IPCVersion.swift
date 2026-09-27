@@ -149,30 +149,61 @@ private enum UnixSocket {
         .unavailable("\(operation): \(String(cString: strerror(errno)))")
     }
 
-    static func readFrame(_ descriptor: Int32) throws -> Data {
-        var data = Data(); var byte: UInt8 = 0
-        while data.count <= IPCVersion.maximumFrameBytes {
-            let count = Darwin.read(descriptor, &byte, 1)
-            if count == 1 { if byte == 0x0A { return data }; data.append(byte) }
-            else if count == 0 { if data.isEmpty { throw IPCTransportError.malformed("connection closed before a frame arrived") }; return data }
-            else if errno == EAGAIN || errno == EWOULDBLOCK { throw IPCTransportError.timeout }
-            else if errno != EINTR { throw systemError("read IPC frame") }
+    private static func wait(_ descriptor: Int32, event: Int16, until deadline: ContinuousClock.Instant) throws {
+        while true {
+            let remaining = ContinuousClock.now.duration(to: deadline)
+            guard remaining > .zero else { throw IPCTransportError.timeout }
+            let parts = remaining.components
+            let milliseconds = max(1, min(2_000, Int(parts.seconds * 1_000 + parts.attoseconds / 1_000_000_000_000_000)))
+            var item = pollfd(fd: descriptor, events: event, revents: 0)
+            let result = poll(&item, 1, Int32(milliseconds))
+            if result > 0 { return }
+            if result == 0 { throw IPCTransportError.timeout }
+            if errno != EINTR { throw systemError("poll IPC socket") }
         }
-        throw IPCTransportError.oversized
+    }
+
+    static func readFrame(_ descriptor: Int32, timeout: TimeInterval = 2) throws -> Data {
+        let deadline = ContinuousClock.now + .seconds(timeout)
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        while true {
+            try wait(descriptor, event: Int16(POLLIN), until: deadline)
+            let count = recv(descriptor, &buffer, buffer.count, MSG_DONTWAIT)
+            if count > 0 {
+                let bytes = buffer.prefix(count)
+                if let newline = bytes.firstIndex(of: 0x0A) {
+                    data.append(contentsOf: bytes.prefix(newline))
+                    guard data.count <= IPCVersion.maximumFrameBytes else { throw IPCTransportError.oversized }
+                    return data
+                }
+                data.append(contentsOf: bytes)
+                guard data.count <= IPCVersion.maximumFrameBytes else { throw IPCTransportError.oversized }
+            } else if count == 0 {
+                throw IPCTransportError.malformed("connection closed before a complete newline-terminated frame arrived")
+            } else if errno != EINTR && errno != EAGAIN && errno != EWOULDBLOCK {
+                throw systemError("read IPC frame")
+            }
+        }
     }
 
     static func writeFrame(_ data: Data, to descriptor: Int32) throws {
         guard data.count <= IPCVersion.maximumFrameBytes else { throw IPCTransportError.oversized }
+        let deadline = ContinuousClock.now + .seconds(2)
         var frame = data; frame.append(0x0A)
         try frame.withUnsafeBytes { bytes in
             var written = 0
             while written < bytes.count {
-                let count = Darwin.write(descriptor, bytes.baseAddress!.advanced(by: written), bytes.count - written)
+                try wait(descriptor, event: Int16(POLLOUT), until: deadline)
+                let count = send(descriptor, bytes.baseAddress!.advanced(by: written), bytes.count - written, MSG_DONTWAIT)
                 if count > 0 { written += count }
-                else if errno != EINTR { throw systemError("write IPC frame") }
+                else if count == 0 || (errno != EINTR && errno != EAGAIN && errno != EWOULDBLOCK) {
+                    throw systemError("write IPC frame")
+                }
             }
         }
     }
+
 }
 
 public struct IPCClient: Sendable {
@@ -184,7 +215,8 @@ public struct IPCClient: Sendable {
         let descriptor = try UnixSocket.connect(path: socketURL.path, timeout: timeout)
         defer { Darwin.close(descriptor) }
         try UnixSocket.writeFrame(try JSONEncoder().encode(request), to: descriptor)
-        let reply = try JSONDecoder().decode(IPCReplyEnvelope.self, from: UnixSocket.readFrame(descriptor))
+        let reply = try JSONDecoder().decode(IPCReplyEnvelope.self, from: UnixSocket.readFrame(descriptor, timeout: timeout))
+        guard reply.requestID == request.requestID else { throw IPCTransportError.malformed("Reply request_id does not match the request") }
         guard reply.version == IPCVersion.current else { throw IPCTransportError.malformed("Unsupported reply version \(reply.version)") }
         return reply
     }
@@ -199,10 +231,14 @@ public final class IPCServer: @unchecked Sendable {
     private var descriptor: Int32 = -1
     private var running = false
     private var ownsSocket = false
+    private var ownershipDescriptor: Int32 = -1
+    private var clients: Set<Int32> = []
+    private let maximumClients = 16
 
     public init(socketURL: URL = IPCPaths.socketURL(), handler: @escaping Handler) { self.socketURL = socketURL; self.handler = handler }
 
     public func start() throws {
+        guard !lock.withLock({ running }) else { throw IPCTransportError.unavailable("IPC server already started") }
         let directory = socketURL.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         var directoryInfo = stat()
@@ -211,6 +247,17 @@ public final class IPCServer: @unchecked Sendable {
             throw IPCTransportError.unavailable("Runtime directory is not an owned directory: \(directory.path)")
         }
         chmod(directory.path, 0o700)
+        // A filesystem lock makes ownership independent of a saturated socket backlog.
+        let ownership = open(directory.appendingPathComponent("control.lock").path, O_CREAT | O_RDWR | O_NOFOLLOW | O_CLOEXEC, 0o600)
+        guard ownership >= 0 else { throw UnixSocket.systemError("open runtime ownership lock") }
+        var lockInfo = stat()
+        guard fstat(ownership, &lockInfo) == 0, lockInfo.st_mode & S_IFMT == S_IFREG,
+              lockInfo.st_uid == getuid(), flock(ownership, LOCK_EX | LOCK_NB) == 0 else {
+            Darwin.close(ownership)
+            throw IPCTransportError.unavailable("Another Rill instance owns the runtime, or its lock file is unsafe")
+        }
+        var started = false
+        defer { if !started { Darwin.close(ownership) } }
         try recoverStaleSocketIfNeeded()
         let server = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
         guard server >= 0 else { throw UnixSocket.systemError("create server socket") }
@@ -225,20 +272,24 @@ public final class IPCServer: @unchecked Sendable {
             chmod(socketURL.path, 0o600)
             guard Darwin.listen(server, 16) == 0 else { throw UnixSocket.systemError("listen on Rill socket") }
         } catch { Darwin.close(server); throw error }
-        lock.withLock { descriptor = server; running = true; ownsSocket = true }
+        lock.withLock { descriptor = server; running = true; ownsSocket = true; ownershipDescriptor = ownership }
+        started = true
         queue.async { [weak self] in self?.acceptLoop() }
     }
 
     public func stop() {
-        let state: (Int32, Bool) = lock.withLock {
-            let value = (descriptor, ownsSocket)
-            descriptor = -1; running = false; ownsSocket = false
+        let state: (Int32, Bool, Int32) = lock.withLock {
+            // Workers own close(); shutdown wakes their reads without racing descriptor reuse.
+            clients.forEach { Darwin.shutdown($0, SHUT_RDWR) }
+            let value = (descriptor, ownsSocket, ownershipDescriptor)
+            descriptor = -1; running = false; ownsSocket = false; ownershipDescriptor = -1
             return value
         }
         let server = state.0
         if server >= 0 { Darwin.shutdown(server, SHUT_RDWR); Darwin.close(server) }
         var info = stat()
         if state.1, lstat(socketURL.path, &info) == 0, (info.st_mode & S_IFMT) == S_IFSOCK, info.st_uid == getuid() { unlink(socketURL.path) }
+        if state.2 >= 0 { Darwin.close(state.2) }
     }
 
     private func recoverStaleSocketIfNeeded() throws {
@@ -260,14 +311,27 @@ public final class IPCServer: @unchecked Sendable {
             guard state.1, state.0 >= 0 else { return }
             let client = Darwin.accept(state.0, nil, nil)
             if client < 0 { if errno == EINTR { continue }; return }
-            queue.async { [weak self] in self?.serve(client) }
+            let admitted = lock.withLock { () -> Bool in
+                guard running, clients.count < maximumClients else { return false }
+                clients.insert(client)
+                return true
+            }
+            guard admitted else { Darwin.close(client); continue }
+            queue.async { [self] in serve(client) }
         }
     }
 
-    private final class ReplyBox: @unchecked Sendable { var value: IPCReplyEnvelope? }
+    private final class ReplyBox: @unchecked Sendable {
+        private let lock = NSLock()
+        private var stored: IPCReplyEnvelope?
+        var value: IPCReplyEnvelope? { lock.withLock { stored } }
+        func set(_ value: IPCReplyEnvelope) { lock.withLock { stored = value } }
+    }
 
     private func serve(_ client: Int32) {
-        defer { Darwin.close(client) }
+        defer {
+            lock.withLock { _ = clients.remove(client); Darwin.close(client) }
+        }
         var requestID: String?
         do {
             try UnixSocket.setTimeout(client, 2)
@@ -289,7 +353,8 @@ public final class IPCServer: @unchecked Sendable {
                 throw IPCTransportError.rejected("command must contain 1...64 characters")
             }
             let semaphore = DispatchSemaphore(value: 0); let box = ReplyBox()
-            Task { box.value = await handler(request); semaphore.signal() }
+            let task = Task { box.set(await handler(request)); semaphore.signal() }
+            defer { task.cancel() }
             guard semaphore.wait(timeout: .now() + 2) == .success, let reply = box.value else { throw IPCTransportError.timeout }
             try UnixSocket.writeFrame(try JSONEncoder().encode(reply), to: client)
         } catch {
@@ -300,4 +365,25 @@ public final class IPCServer: @unchecked Sendable {
     }
 
     deinit { stop() }
+}
+
+/// One allowlisted representation shared by CLI and exported reports.
+public enum RedactedDiagnostics {
+    public static func value(generation: UInt64, configurationPathPresent: Bool,
+                             configurationErrorPresent: Bool, providerHealth: [String: String],
+                             extensionHealth: [String: String], visiblePanelCount: Int) -> JSONValue {
+        func redact(_ values: [String: String]) -> JSONValue {
+            let allowed: Set<String> = ["starting", "ready", "stale", "unavailable", "failed"]
+            return .object(values.mapValues { .string(allowed.contains($0) ? $0 : "failed") })
+        }
+        return .object([
+            "schema_version": .number(1), "app": .string("Rill"),
+            "generation": .number(Double(generation)),
+            "configuration_path_present": .bool(configurationPathPresent),
+            "configuration_error_present": .bool(configurationErrorPresent),
+            "provider_health": redact(providerHealth), "extension_health": redact(extensionHealth),
+            "visible_panel_count": .number(Double(visiblePanelCount)),
+            "redaction": .string("Window titles, script output, workspace names and arbitrary module data are omitted.")
+        ])
+    }
 }

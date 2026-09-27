@@ -104,3 +104,15 @@ display. No input-monitoring grant or private API is requested. The reference
 was boring.notch at `d58240cc160d5e54da1a8a5925e095d067a8e1e0`;
 implementation and shape path were written independently, with no copied
 source/assets. Physical fit and frame pacing still require hardware review.
+
+## Production engineering scope — 2026-09-27
+
+Owner explicitly requested engineering hardening after the RillNotch proof.
+Resume phase 10 without changing the accepted visual design or declaring
+phase-13 API stable. Keep useful sample/prototype sources out of the shipped
+product; compile intrusive smoke helpers only in Debug. Centralize process
+ownership (posix_spawn process groups), serialize lifecycle transactions,
+bound IPC admission and asynchronous producer delivery, and share one
+redacted diagnostics serializer. Retain existing config/plugin contracts with
+documented stricter limits/error reporting. Public signing/license/manual
+release gates remain separate evidence requirements.

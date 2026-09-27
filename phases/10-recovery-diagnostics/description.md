@@ -1,6 +1,6 @@
 # Phase 10: Harden reload, lifecycle and diagnostics
 
-Status: NOT STARTED. Dependencies: 07, 08, 09. Release target: 0.1.0.
+Status: IN PROGRESS (resumed 2026-09-27 by owner direction for production hardening). Dependencies: 07, 08, 09. Release target: 0.1.0.
 
 ## Context and objective
 

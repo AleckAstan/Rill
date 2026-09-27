@@ -109,3 +109,9 @@ and bounded compact/expanded geometry. Manifest resolution
 is preparation-only and checks API 2, identity, capabilities, contributions,
 ownership, modes and executable presence without launch. Failed migration or
 reload preserves the active generation and last valid extension presentation.
+
+Production hardening: configuration and manifest inputs must be regular UTF-8
+files no larger than 1 MiB. Duplicate plugin IDs are rejected before manifest
+lookup. The watcher remains active for an initially missing or invalid file,
+and `rillctl reload` returns a rejected-request exit status when application
+fails while preserving the last valid generation.
