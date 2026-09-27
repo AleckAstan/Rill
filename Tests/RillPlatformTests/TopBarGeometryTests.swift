@@ -144,6 +144,47 @@ final class TopBarGeometryTests: XCTestCase {
         XCTAssertEqual(expanded.size, CGSize(width: 420, height: 180))
     }
 
+    func testNotchCutoutUsesAuxiliaryAreasAndActualHeight() {
+        let screen = CGRect(x: -1800, y: -100, width: 1800, height: 1169)
+        let cutout = NotchWidgetGeometry.cutout(screen: screen, safeTopInset: 32,
+            left: CGRect(x: -1800, y: 1037, width: 790, height: 32),
+            right: CGRect(x: -810, y: 1037, width: 810, height: 32))
+        XCTAssertEqual(cutout, CGRect(x: -1010, y: 1037, width: 200, height: 32))
+        let spec = NotchWidgetSpec(id: "media", extensionID: "extension", contribution: "notch", backgroundStyle: .black)
+        let compact = NotchWidgetGeometry.frame(screen: screen, safeTopInset: 32, spec: spec, state: .compact, cutout: cutout)
+        XCTAssertEqual(compact.height, 32, "Never extend a 32-point physical notch to a 36-point fallback")
+        XCTAssertEqual(compact.midX, cutout!.midX, "Use the cutout center even with asymmetric auxiliary areas")
+        XCTAssertEqual(compact.width, 304)
+        XCTAssertEqual(cutout!.minX - compact.minX, 52, "Artwork must have a complete wing outside the camera")
+        let open = NotchWidgetGeometry.frame(screen: screen, safeTopInset: 32, spec: spec, state: .expanded, cutout: cutout)
+        XCTAssertEqual(open.height, spec.expandedHeight + 32, "Media content lives below the hardware cutout")
+        XCTAssertEqual(open.maxY, screen.maxY)
+    }
+
+    func testNotchFallbackAndBoundedSmallScreen() {
+        let screen = CGRect(x: 120, y: -800, width: 280, height: 600)
+        let spec = NotchWidgetSpec(id: "media", extensionID: "extension", contribution: "notch", backgroundStyle: .black)
+        XCTAssertNil(NotchWidgetGeometry.cutout(screen: screen, safeTopInset: 0, left: .zero, right: .zero))
+        XCTAssertNil(NotchWidgetGeometry.cutout(screen: screen, safeTopInset: 38, left: nil, right: nil))
+        for state in [NotchWidgetState.compact, .expanded] {
+            let frame = NotchWidgetGeometry.frame(screen: screen, safeTopInset: 0, spec: spec, state: state)
+            XCTAssertTrue(screen.contains(frame))
+            XCTAssertEqual(frame.midX, screen.midX)
+            XCTAssertEqual(frame.height, state == .compact ? 36 : spec.expandedHeight)
+        }
+    }
+
+    func testNotchOutlineExcludesTransparentCornersFromInput() {
+        let shape = NotchSurfaceShape(shoulder: 12, radius: 28)
+        let path = shape.path(in: CGRect(x: 0, y: 0, width: 440, height: 202))
+        XCTAssertTrue(path.contains(CGPoint(x: 220, y: 1)))
+        XCTAssertTrue(path.contains(CGPoint(x: 220, y: 201)))
+        XCTAssertTrue(path.contains(CGPoint(x: 24, y: 60)))
+        XCTAssertFalse(path.contains(CGPoint(x: 1, y: 100)))
+        XCTAssertFalse(path.contains(CGPoint(x: 14, y: 200)))
+        XCTAssertFalse(path.contains(CGPoint(x: 439, y: 200)))
+    }
+
     private func assertDisjoint(
         _ lhs: CGRect,
         _ rhs: CGRect,

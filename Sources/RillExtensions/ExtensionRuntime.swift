@@ -458,29 +458,30 @@ private struct NowPlayingView: View {
     let packageDirectory: URL
     let action: (String) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var artworkMotion
 
     var body: some View {
         Group {
             if expanded {
-                expandedContent.transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
+                expandedContent.transition(.opacity)
             } else {
                 compactContent.transition(.opacity)
             }
         }
         .foregroundStyle(.white)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .animation(reduceMotion ? nil : .spring(response: 0.38, dampingFraction: 0.84), value: expanded)
     }
 
     private var compactContent: some View {
         HStack(spacing: 0) {
-            artwork(size: 28)
-                .frame(width: 46, alignment: .leading)
+            artwork(size: 24)
+                .matchedGeometryEffect(id: "artwork", in: artworkMotion)
+                .frame(width: 36, alignment: .center)
             Spacer(minLength: 0)
             activityWave
-                .frame(width: 46, alignment: .trailing)
+                .frame(width: 36, alignment: .center)
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 8)
         .frame(maxHeight: .infinity)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Now playing: \(media.title), \(media.artist)")
@@ -490,7 +491,8 @@ private struct NowPlayingView: View {
     private var expandedContent: some View {
         VStack(spacing: 9) {
             HStack(alignment: .center, spacing: 13) {
-                artwork(size: 76)
+                artwork(size: 68)
+                    .matchedGeometryEffect(id: "artwork", in: artworkMotion)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(media.source?.uppercased() ?? "NOW PLAYING")
                         .font(.system(size: 9, weight: .bold, design: .rounded))
@@ -532,9 +534,9 @@ private struct NowPlayingView: View {
             }
             .frame(height: 31)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 12)
-        .padding(.bottom, 10)
+        .padding(.horizontal, 22)
+        .padding(.top, 10)
+        .padding(.bottom, 16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
@@ -613,17 +615,73 @@ private struct NowPlayingView: View {
             Image(systemName: symbol).font(.system(size: size, weight: .semibold))
                 .frame(width: 32, height: 30)
         }
-        .buttonStyle(.plain).focusable().focusEffectDisabled()
+        .buttonStyle(NotchPlaybackButtonStyle()).focusable().focusEffectDisabled()
+        .help(label)
         .disabled(id == nil)
         .accessibilityLabel(label)
     }
 }
 
+/// Subtle feedback without changing a control's hit target.
+private struct NotchPlaybackButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .contentShape(Rectangle())
+            .opacity(configuration.isPressed ? 0.55 : 1)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.9 : 1)
+            .animation(reduceMotion ? nil : .smooth(duration: 0.16), value: configuration.isPressed)
+    }
+}
+
 enum NotchWidgetState: String, Sendable { case compact, expanded, dismissed }
+
+/// The top corners turn out toward the menu bar; the bottom corners turn in.
+/// One animatable outline keeps the attachment flush during expansion.
+struct NotchSurfaceShape: Shape {
+    var shoulder: CGFloat
+    var radius: CGFloat
+    var animatableData: AnimatablePair<CGFloat, CGFloat> {
+        get { AnimatablePair(shoulder, radius) }
+        set { shoulder = newValue.first; radius = newValue.second }
+    }
+    func path(in rect: CGRect) -> Path {
+        let s = min(shoulder, rect.height / 2)
+        let r = min(radius, (rect.width - 2 * s) / 2, rect.height - s)
+        let left = rect.minX, right = rect.maxX, top = rect.minY, bottom = rect.maxY
+        var p = Path()
+        p.move(to: CGPoint(x: left, y: top))
+        p.addLine(to: CGPoint(x: right, y: top))
+        p.addQuadCurve(to: CGPoint(x: right - s, y: top + s), control: CGPoint(x: right - s, y: top))
+        p.addLine(to: CGPoint(x: right - s, y: bottom - r))
+        p.addQuadCurve(to: CGPoint(x: right - s - r, y: bottom), control: CGPoint(x: right - s, y: bottom))
+        p.addLine(to: CGPoint(x: left + s + r, y: bottom))
+        p.addQuadCurve(to: CGPoint(x: left + s, y: bottom - r), control: CGPoint(x: left + s, y: bottom))
+        p.addLine(to: CGPoint(x: left + s, y: top + s))
+        p.addQuadCurve(to: CGPoint(x: left, y: top), control: CGPoint(x: left + s, y: top))
+        p.closeSubpath()
+        return p
+    }
+}
 
 @MainActor
 private final class NotchWidgetViewState: ObservableObject {
     @Published var expanded = false
+    var hovering = false
+    var pendingHover: Task<Void, Never>?
+    let compact: CGRect
+    let open: CGRect
+    let safeTop: CGFloat
+
+    init(compact: CGRect, open: CGRect, safeTop: CGFloat) {
+        self.compact = compact; self.open = open; self.safeTop = safeTop
+    }
+
+    func expand(_ value: Bool) {
+        let animation: Animation? = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil :
+            .spring(response: value ? 0.42 : 0.36, dampingFraction: value ? 0.86 : 1)
+        withAnimation(animation) { expanded = value }
+    }
 }
 
 enum NotchWidgetGeometry {
@@ -631,12 +689,27 @@ enum NotchWidgetGeometry {
         screen: CGRect,
         safeTopInset: CGFloat,
         spec: NotchWidgetSpec,
-        state: NotchWidgetState
+        state: NotchWidgetState,
+        cutout: CGRect? = nil
     ) -> CGRect {
-        let compactHeight = max(safeTopInset, 36)
-        let width = state == .expanded ? spec.expandedWidth : spec.compactWidth
-        let height = state == .expanded ? spec.expandedHeight : compactHeight
-        return CGRect(x: screen.midX - width / 2, y: screen.maxY - height, width: width, height: height)
+        let hasCutout = safeTopInset > 0 && cutout != nil
+        let compactHeight = safeTopInset > 0 ? safeTopInset : 36
+        // Reserve two equal 44-point wings outside the physical cutout plus shoulders.
+        let compactWidth = hasCutout ? cutout!.width + 104 : spec.compactWidth
+        let width = min(screen.width, state == .expanded ? max(spec.expandedWidth, compactWidth) : compactWidth)
+        let height = state == .expanded
+            ? min(screen.height, spec.expandedHeight + (spec.backgroundStyle == .black ? safeTopInset : 0))
+            : compactHeight
+        let center = hasCutout ? cutout!.midX : screen.midX
+        let x = min(max(screen.minX, center - width / 2), screen.maxX - width)
+        return CGRect(x: x, y: screen.maxY - height, width: width, height: height)
+    }
+
+    static func cutout(screen: CGRect, safeTopInset: CGFloat, left: CGRect?, right: CGRect?) -> CGRect? {
+        guard safeTopInset > 0, let left, let right,
+              left.maxX < right.minX, left.maxX >= screen.minX, right.minX <= screen.maxX else { return nil }
+        return CGRect(x: left.maxX, y: screen.maxY - safeTopInset,
+                      width: right.minX - left.maxX, height: safeTopInset)
     }
 }
 
@@ -645,10 +718,11 @@ final class NotchWidgetResource: NSObject, ManagedConfigurationResource, @unchec
     private let spec: NotchWidgetSpec
     private let configuration: AppConfiguration
     private let runtime: ExtensionRuntimeStore
-    private let viewState = NotchWidgetViewState()
-    private var panels: [RillPanel] = []
-    private var state: NotchWidgetState = .compact
+    private var panels: [(panel: RillPanel, state: NotchWidgetViewState)] = []
     private var committed = false
+    private var dismissed = false
+    private var globalMouseMonitor: Any?
+    private var localMouseMonitor: Any?
 
     init(id: String, configuration: AppConfiguration, runtime: ExtensionRuntimeStore) throws {
         guard let spec = configuration.notchWidgets.first(where: { $0.id == id }) else {
@@ -656,74 +730,85 @@ final class NotchWidgetResource: NSObject, ManagedConfigurationResource, @unchec
         }
         self.spec = spec; self.configuration = configuration; self.runtime = runtime
         super.init()
-        panels = makePanels()
+        makePanels()
     }
 
     func commit() async {
         guard !committed else { return }; committed = true
         NotificationCenter.default.addObserver(self, selector: #selector(reconcile), name: NSApplication.didChangeScreenParametersNotification, object: nil)
-        panels.forEach { $0.orderFrontRegardless() }
+        // Monitor only pointer movement. No accessibility/input-monitoring permission is needed.
+        globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] _ in
+            Task { @MainActor in self?.trackPointer() }
+        }
+        localMouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] event in
+            MainActor.assumeIsolated { self?.trackPointer() }
+            return event
+        }
+        panels.forEach { $0.panel.orderFrontRegardless() }
+        trackPointer()
     }
 
     func stop() async {
         NotificationCenter.default.removeObserver(self)
-        panels.forEach { $0.close() }; panels = []; committed = false
+        if let globalMouseMonitor { NSEvent.removeMonitor(globalMouseMonitor) }
+        if let localMouseMonitor { NSEvent.removeMonitor(localMouseMonitor) }
+        globalMouseMonitor = nil; localMouseMonitor = nil
+        closePanels(); committed = false
+    }
+
+    private func closePanels() {
+        panels.forEach { $0.state.pendingHover?.cancel(); $0.panel.close() }
+        panels = []
     }
 
     @objc private func reconcile() {
-        panels.forEach { $0.close() }; panels = makePanels()
-        if committed && state != .dismissed { panels.forEach { $0.orderFrontRegardless() } }
+        closePanels(); makePanels()
+        if committed { panels.forEach { $0.panel.orderFrontRegardless() }; trackPointer() }
     }
 
-    private func setState(_ newState: NotchWidgetState) {
-        guard state != newState else { return }
-        state = newState
-        viewState.expanded = newState == .expanded
-        if state == .dismissed {
-            panels.forEach { $0.close() }
-            panels = []
-            return
-        }
-        let screens = ScreenInventory.screens(for: spec.display)
-        guard screens.count == panels.count else { reconcile(); return }
-        for (panel, selected) in zip(panels, screens) {
-            let screen = selected.0
-            let frame = NotchWidgetGeometry.frame(screen: screen.frame, safeTopInset: screen.safeAreaInsets.top, spec: spec, state: state)
-            if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-                panel.setFrame(frame, display: true)
-            } else {
-                NSAnimationContext.runAnimationGroup { context in
-                    context.duration = 0.36
-                    context.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.75, 0.2, 1)
-                    panel.animator().setFrame(frame, display: true)
-                }
+    private func trackPointer() {
+        let mouse = NSEvent.mouseLocation
+        for (panel, state) in panels {
+            let frame = state.expanded ? state.open : state.compact
+            let local = CGPoint(x: mouse.x - frame.minX, y: frame.maxY - mouse.y)
+            let outline = NotchSurfaceShape(shoulder: state.expanded ? 12 : 6, radius: state.expanded ? 28 : 12)
+            let inside = outline.path(in: CGRect(origin: .zero, size: frame.size)).contains(local)
+            // The stable animation canvas must never intercept clicks on the desktop around it.
+            panel.ignoresMouseEvents = !inside
+            guard inside != state.hovering else { continue }
+            state.hovering = inside
+            state.pendingHover?.cancel()
+            state.pendingHover = Task { @MainActor [weak self, weak state] in
+                try? await Task.sleep(for: .milliseconds(inside ? 100 : 260))
+                guard !Task.isCancelled, let self, let state else { return }
+                state.expand(inside)
+                self.trackPointer()
             }
         }
     }
 
-    private func makeContentView() -> NSView {
-        NotchHostingView(rootView: NotchWidgetRootView(
-            spec: spec,
-            viewState: viewState,
-            runtime: runtime,
-            expand: { [weak self] in self?.setState($0 ? .expanded : .compact) },
-            dismiss: { [weak self] in self?.setState(.dismissed) }
-        ))
-    }
-
-    private func makePanels() -> [RillPanel] {
-        guard state != .dismissed, isCollisionWinner else { return [] }
-        return ScreenInventory.screens(for: spec.display).map { screen, displayID in
-            let frame = NotchWidgetGeometry.frame(screen: screen.frame, safeTopInset: screen.safeAreaInsets.top, spec: spec, state: state)
-            let panel = RillPanel(surfaceID: SurfaceID("notch.\(spec.id)"), displayID: displayID, frame: frame)
+    private func makePanels() {
+        guard !dismissed, isCollisionWinner else { return }
+        panels = ScreenInventory.screens(for: spec.display).map { screen, displayID in
+            let safeTop = screen.safeAreaInsets.top
+            let cutout = NotchWidgetGeometry.cutout(screen: screen.frame, safeTopInset: safeTop,
+                left: screen.auxiliaryTopLeftArea, right: screen.auxiliaryTopRightArea)
+            let compact = NotchWidgetGeometry.frame(screen: screen.frame, safeTopInset: safeTop, spec: spec, state: .compact, cutout: cutout)
+            let open = NotchWidgetGeometry.frame(screen: screen.frame, safeTopInset: safeTop, spec: spec, state: .expanded, cutout: cutout)
+            let state = NotchWidgetViewState(compact: compact, open: open, safeTop: safeTop)
+            // AppKit stays still; SwiftUI owns the entire interruptible shape/content spring.
+            let canvas = CGRect(x: open.minX - 16, y: open.minY - 20, width: open.width + 32, height: open.height + 20)
+            let panel = RillPanel(surfaceID: SurfaceID("notch.\(spec.id)"), displayID: displayID, frame: canvas)
             panel.usesMenuBarArea = true
             panel.acceptsMouseMovedEvents = true
             panel.level = .floating
             panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenNone]
-            panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = true
+            panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = false
             panel.isMovable = false; panel.isReleasedWhenClosed = false
-            panel.contentView = makeContentView()
-            return panel
+            panel.contentView = NotchHostingView(rootView: NotchWidgetRootView(
+                spec: spec, viewState: state, runtime: runtime,
+                dismiss: { [weak self] in self?.dismissed = true; self?.closePanels() }))
+            return (panel, state)
         }
     }
 
@@ -744,9 +829,7 @@ private struct NotchWidgetRootView: View {
     let spec: NotchWidgetSpec
     @ObservedObject var viewState: NotchWidgetViewState
     @ObservedObject var runtime: ExtensionRuntimeStore
-    let expand: (Bool) -> Void
     let dismiss: () -> Void
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var expanded: Bool { viewState.expanded }
     private var isNowPlaying: Bool {
@@ -754,60 +837,52 @@ private struct NotchWidgetRootView: View {
         return runtime.presentations[key]?.compact.kind == .nowPlaying
     }
 
-    @ViewBuilder
     var body: some View {
-        let shape = UnevenRoundedRectangle(
-            bottomLeadingRadius: expanded && isNowPlaying ? 28 : 14,
-            bottomTrailingRadius: expanded && isNowPlaying ? 28 : 14)
+        let size = expanded ? viewState.open.size : viewState.compact.size
+        let shape = NotchSurfaceShape(shoulder: expanded ? 12 : 6, radius: expanded ? 28 : 12)
+        surface(shape: shape, size: size)
+            .contentShape(shape)
+            .shadow(color: .black.opacity(expanded ? 0.3 : 0), radius: 8, y: 5)
+            .onTapGesture { if !expanded { viewState.expand(true) } }
+            .accessibilityAction(named: expanded ? "Collapse notch widget" : "Expand notch widget") {
+                viewState.expand(!expanded)
+            }
+            .accessibilityAction(named: "Dismiss notch widget", dismiss)
+            .onExitCommand { viewState.expand(false) }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    @ViewBuilder private func surface(shape: NotchSurfaceShape, size: CGSize) -> some View {
         if spec.backgroundStyle == .black {
-            content.background(Color.black).clipShape(shape).foregroundStyle(.white)
-                .onHover { hovering in expand(hovering) }
-                .onTapGesture { if !expanded { expand(true) } }
-                .accessibilityAction(named: "Expand notch widget") { expand(true) }
+            content.frame(width: size.width, height: size.height, alignment: .top)
+                .background(.black, in: shape).clipShape(shape).foregroundStyle(.white)
         } else if #available(macOS 26.0, *) {
-            content.glassEffect(.regular, in: shape)
-                .onHover { hovering in expand(hovering) }
-                .onTapGesture { if !expanded { expand(true) } }
-                .accessibilityAction(named: "Expand notch widget") { expand(true) }
+            content.frame(width: size.width, height: size.height, alignment: .top)
+                .glassEffect(.regular, in: shape)
         } else {
-            content.background(.regularMaterial).clipShape(shape)
-                .onHover { hovering in expand(hovering) }
-                .onTapGesture { if !expanded { expand(true) } }
-                .accessibilityAction(named: "Expand notch widget") { expand(true) }
+            content.frame(width: size.width, height: size.height, alignment: .top)
+                .background(.regularMaterial, in: shape).clipShape(shape)
         }
     }
 
     private var content: some View {
-        VStack(spacing: 8) {
-            HStack {
-                ExtensionContributionView(
-                    extensionID: spec.extensionID,
-                    contributionID: spec.contribution,
-                    expanded: expanded,
-                    runtime: runtime
-                )
-                .frame(maxWidth: .infinity)
+        VStack(spacing: 0) {
+            if expanded && spec.backgroundStyle == .black {
+                Color.clear.frame(height: viewState.safeTop).accessibilityHidden(true)
+            }
+            HStack(spacing: 8) {
+                ExtensionContributionView(extensionID: spec.extensionID, contributionID: spec.contribution,
+                    expanded: expanded, runtime: runtime)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 if expanded && !isNowPlaying {
-                    Button { expand(false) } label: { Image(systemName: "chevron.up") }
-                        .buttonStyle(.plain).focusable().focusEffectDisabled()
-                        .accessibilityLabel("Collapse notch widget")
+                    Button { viewState.expand(false) } label: { Image(systemName: "chevron.up") }
+                        .buttonStyle(.plain).accessibilityLabel("Collapse notch widget")
                     Button(action: dismiss) { Image(systemName: "xmark.circle.fill") }
                         .buttonStyle(.plain).accessibilityLabel("Dismiss notch widget")
                 }
             }
+            .padding(.horizontal, isNowPlaying ? 6 : (expanded ? 20 : 12))
+            .padding(.vertical, isNowPlaying ? 0 : (expanded ? 10 : 3))
         }
-        .overlay(alignment: .topTrailing) {
-            if expanded && isNowPlaying {
-                Button(action: dismiss) { Image(systemName: "xmark").font(.system(size: 9, weight: .semibold)) }
-                    .buttonStyle(.plain).focusable().focusEffectDisabled()
-                    .foregroundStyle(.white.opacity(0.36))
-                    .padding(.top, 12).padding(.trailing, 12)
-                    .accessibilityLabel("Dismiss notch widget")
-            }
-        }
-        .padding(.horizontal, isNowPlaying ? 0 : (expanded ? 14 : 8))
-        .padding(.vertical, isNowPlaying ? 0 : (expanded ? 10 : 3))
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.86), value: expanded)
     }
 }
