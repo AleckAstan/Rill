@@ -364,6 +364,7 @@ struct BarSurfaceView: View {
                         module: module,
                         displayID: displayID,
                         isHorizontal: surface.edge.isHorizontal,
+                        isEndGroup: surface.end.contains(identifier),
                         theme: theme,
                         store: store,
                         extensionRuntime: extensionRuntime,
@@ -389,6 +390,7 @@ struct BarSurfaceView: View {
                         module: module,
                         displayID: displayID,
                         isHorizontal: surface.edge.isHorizontal,
+                        isEndGroup: false,
                         theme: theme,
                         store: store,
                         extensionRuntime: extensionRuntime,
@@ -408,6 +410,7 @@ private struct ModuleView: View {
     let module: ModuleSpec
     let displayID: DisplayID
     let isHorizontal: Bool
+    let isEndGroup: Bool
     let theme: ThemeSpec
     @ObservedObject var store: NativeModuleStore
     @ObservedObject var extensionRuntime: ExtensionRuntimeStore
@@ -434,14 +437,14 @@ private struct ModuleView: View {
                 .accessibilityLabel(module.id.rawValue)
                 .accessibilityValue(extensionRuntime.health[extensionID]?.rawValue ?? "starting")
                 .accessibilityIdentifier("rill.module.\(module.id.rawValue)")
-                .modifier(ModuleChrome(theme: theme, style: module.style, isHorizontal: isHorizontal))
+                .modifier(ModuleChrome(theme: theme, style: module.style, isHorizontal: isHorizontal, isEndGroup: isEndGroup))
             } else if module.kind == .workspaces {
                 workspaceContent
             } else if module.kind == .separator {
                 separatorContent
             } else {
                 standardContent
-                    .modifier(ModuleChrome(theme: theme, style: module.style, isHorizontal: isHorizontal))
+                    .modifier(ModuleChrome(theme: theme, style: module.style, isHorizontal: isHorizontal, isEndGroup: isEndGroup))
             }
         }
     }
@@ -682,6 +685,9 @@ private struct ModuleView: View {
 
     private func workspaceForeground(focused: Bool) -> Color {
         if focused {
+            if theme.preset == .glass && theme.resolvedFocusedWorkspaceBackground.isTransparentColor {
+                return theme.resolvedAdaptiveText ? .primary : Color(hex: theme.foreground)
+            }
             return Color(hex: theme.resolvedFocusedWorkspaceForeground)
         }
         if let foreground = module.style?.foreground {
@@ -705,6 +711,9 @@ private struct ModuleView: View {
                     if let symbolName = presentation.symbolName {
                         Image(systemName: symbolName)
                             .symbolRenderingMode(.hierarchical)
+                            .font(theme.preset == .glass
+                                  ? .system(size: module.style?.fontSize ?? max(theme.fontSize + 5, 18))
+                                  : font)
                             .frame(maxWidth: isHorizontal ? nil : 22, maxHeight: isHorizontal ? nil : 22)
                     }
                     if !presentation.text.isEmpty {
@@ -1153,15 +1162,22 @@ private struct WorkspaceFocusIndicator: View {
     let theme: ThemeSpec
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: theme.resolvedWorkspaceCornerRadius)
-        shape
-            .fill(Color(hex: theme.resolvedFocusedWorkspaceBackground))
-            .overlay {
-                shape.stroke(
-                    Color(hex: theme.resolvedBorderColor),
-                    lineWidth: theme.resolvedBorderWidth
-                )
-            }
+        if theme.preset == .glass && theme.resolvedFocusedWorkspaceBackground.isTransparentColor {
+            Capsule()
+                .fill(Color.primary)
+                .frame(width: 12, height: 2)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        } else {
+            let shape = RoundedRectangle(cornerRadius: theme.resolvedWorkspaceCornerRadius)
+            shape
+                .fill(Color(hex: theme.resolvedFocusedWorkspaceBackground))
+                .overlay {
+                    shape.stroke(
+                        Color(hex: theme.resolvedBorderColor),
+                        lineWidth: theme.resolvedBorderWidth
+                    )
+                }
+        }
     }
 }
 
@@ -1205,6 +1221,7 @@ private struct ModuleChrome: ViewModifier {
     let theme: ThemeSpec
     let style: ModuleStyle?
     let isHorizontal: Bool
+    let isEndGroup: Bool
 
     @ViewBuilder
     func body(content: Content) -> some View {
@@ -1212,9 +1229,11 @@ private struct ModuleChrome: ViewModifier {
             .padding(.horizontal, isHorizontal ? (style?.padding ?? theme.resolvedModulePadding) : min(4, style?.padding ?? theme.resolvedModulePadding))
             .padding(.vertical, theme.resolvedModuleVerticalPadding)
         if theme.preset == .glass {
-            if #available(macOS 26.0, *) {
+            if isEndGroup && (style?.background ?? theme.resolvedModuleBackground).isTransparentColor {
+                padded
+            } else if #available(macOS 26.0, *) {
                 let shape = RoundedRectangle(cornerRadius: theme.resolvedModuleCornerRadius)
-                if let tint = style?.background ?? theme.moduleBackground {
+                if let tint = style?.background ?? theme.moduleBackground, !tint.isTransparentColor {
                     padded.glassEffect(.regular.tint(Color(hex: tint)).interactive(), in: shape)
                 } else {
                     padded.glassEffect(.regular.interactive(), in: shape)
@@ -1229,7 +1248,7 @@ private struct ModuleChrome: ViewModifier {
 
     private func fallback<Content: View>(content: Content) -> some View {
         content
-            .background(Color(hex: style?.background ?? theme.resolvedModuleBackground))
+            .background(Color(hex: style?.background ?? theme.moduleBackground ?? (theme.preset == .glass && !isEndGroup ? "#FFFFFF14" : theme.resolvedModuleBackground)))
             .clipShape(RoundedRectangle(cornerRadius: theme.resolvedModuleCornerRadius))
             .overlay {
                 RoundedRectangle(cornerRadius: theme.resolvedModuleCornerRadius)
@@ -1238,6 +1257,12 @@ private struct ModuleChrome: ViewModifier {
                         lineWidth: theme.resolvedBorderWidth
                     )
             }
+    }
+}
+
+private extension String {
+    var isTransparentColor: Bool {
+        count == 9 && suffix(2).lowercased() == "00"
     }
 }
 
