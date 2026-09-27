@@ -185,6 +185,24 @@ final class TopBarGeometryTests: XCTestCase {
         XCTAssertFalse(path.contains(CGPoint(x: 439, y: 200)))
     }
 
+    func testNotchMotionKeepsHardwareCoveredAndAllowsIndependentSides() {
+        let compact = CGSize(width: 304, height: 38)
+        let open = CGSize(width: 440, height: 202)
+        for progress in [-0.12, -0.04, 0, 0.5, 1, 1.06] {
+            let frame = NotchWidgetGeometry.animatedFrame(compact: compact, open: open,
+                left: progress, right: progress, height: progress)
+            XCTAssertGreaterThanOrEqual(frame.height, compact.height)
+            XCTAssertEqual(frame.minY, 0)
+        }
+        let asymmetric = NotchWidgetGeometry.animatedFrame(compact: compact, open: open,
+            left: 0.8, right: 0.6, height: 0.7)
+        XCTAssertLessThan(asymmetric.midX, 0)
+        let settled = NotchWidgetGeometry.animatedFrame(compact: compact, open: open,
+            left: 0, right: 0, height: 0)
+        XCTAssertEqual(settled.size, compact)
+        XCTAssertEqual(settled.midX, 0)
+    }
+
     private func assertDisjoint(
         _ lhs: CGRect,
         _ rhs: CGRect,
