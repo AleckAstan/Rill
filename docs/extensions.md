@@ -140,17 +140,27 @@ generation's action route.
 
 `[[notch_widgets]]` binds a declared `notchWidget` contribution to a display.
 It has compact, expanded and dismissed runtime states. Public `NSScreen`
-geometry centers a nonactivating panel at the physical top edge; compact
-height uses the positive top safe-area inset or 36 points, and configured
-expanded geometry is bounded. Potential collisions use distinct priorities;
+geometry attaches a nonactivating surface at the physical top edge. With a
+reported cutout, the auxiliary top areas determine its center and compact
+width (cutout plus 104 points for side content and shoulders); otherwise the
+configured compact width applies. Compact height uses the exact positive top
+safe-area inset or 36 points. Width is bounded to the display. For black
+surfaces, expanded height is the configured content height plus the top safe
+inset, so content starts below the camera. System glass retains its configured
+expanded height. Potential collisions use distinct priorities;
 the highest priority wins.
 The default `background_style = "system_glass"` uses untinted native Liquid
 Glass on macOS 26+ and regular material on macOS 14–25. An extension may opt
 its configured notch widget into `background_style = "black"` for a true black
 surface beside a MacBook cutout. Hover expands the panel and leaving it
 collapses it; a compact click or accessibility action can also expand it.
-The host animates the same panel's frame and disables frame animation when
-Reduce Motion is enabled.
+The host keeps a stable transparent AppKit canvas and animates the surface
+outline and content together in SwiftUI. Transparent areas pass mouse events
+through; opening waits 100 ms and closing waits 260 ms to tolerate pointer
+excursions. Each display owns its hover state. Reduce Motion disables the
+surface spring, artwork travel and button scaling. Dismissal is available as
+an accessibility action; Escape collapses when keyboard focus is inside the
+widget.
 
 The surface can visually connect around or below a cutout. It cannot draw in
 the physical cutout, reserve system work area, replace the menu bar or claim a

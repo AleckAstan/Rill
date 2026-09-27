@@ -187,3 +187,47 @@ wave currently visualizes the playing state rather than sampled audio.
   running with the standard runtime and log `~/Library/Logs/Rill-RillNotch.log`.
 - Completion date / evidence reviewer: incomplete; owner/manual evidence still
   required.
+
+## Contour and animation refinement — 2026-09-27
+
+- Owner requested closer notch fit and animation polish comparable to
+  boring.notch. Changes live in the host renderer; the sibling RillNotch
+  executable and its protocol need no rebuild or configuration migration.
+- Compact width uses the public auxiliary-area gap plus 104 points on
+  notched hardware, exact positive safe height, and the cutout center.
+  Fallback uses configured width/36-point height. Black expanded height adds
+  safe-top clearance to configured content height. Shape has outward top
+  shoulders and interpolated bottom corners.
+- Stationary AppKit canvas replaces frame animation; one interruptible
+  SwiftUI spring drives outline, layout and matched artwork. Per-display
+  hover waits 100 ms to open/260 ms to close. Pointer monitors release mouse
+  input outside the target outline; monitors/tasks are removed on stop.
+  Reduce Motion removes travel/spring/scaling. Media buttons retain labels,
+  gain tooltips and press feedback. Dismiss is an accessibility action.
+- PASS: `./scripts/build.sh` (`/tmp/rill-notch-polish-build.log`);
+  `./scripts/test.sh` (83 app + 6 IPC tests,
+  `/tmp/rill-notch-polish-tests.log`). New tests cover asymmetric cutouts,
+  exact 32-point safe height, negative origins, content clearance, small
+  screens, missing auxiliary areas and transparent outline corners.
+- PASS, compact rendering only: isolated `RILL_NOTCH_DEMO=1` with
+  `--smoke-report` / `--snapshots` on one external 2560×1080 scale-1 display;
+  panel visible, app inactive, panel non-key/non-main. Evidence in
+  `evidence/notch-polish/`. This is a view bitmap, not a desktop capture.
+- NOT RUN: real hover/click pass-through, expanded visual inspection,
+  MacBook fit, full accessibility/Reduce Motion and Instruments frame pacing.
+  A synthetic pointer attempt could not exercise expansion: this terminal
+  reports `CGPreflightPostEventAccess() == false`; the resulting snapshot
+  remained compact. No permission prompt was requested. Desktop screen
+  capture is also unavailable (`CGPreflightScreenCaptureAccess() == false`).
+- Next: open the MacBook, hover repeatedly in/out and across the side wings,
+  check media controls below the cutout and clicks beside the closed widget,
+  then observe Reduce Motion and record Instruments timings. Phase remains
+  IN PROGRESS.
+
+- Deployment PASS: active configuration validates; rebuilt Debug app
+  relaunched through Launch Services. One Rill process, two visible panels on
+  the external display, both extensions plus Hello/OmniWM ready, no
+  configuration error. Initial launch raced with termination (`-600`);
+  retry after process exit succeeded. Personal configuration was unchanged.
+
+Owner visual validation, 2026-09-27: the owner tested the contour/motion refinement and described it as “magnifique maintenant”, then authorized committing it. Record user-reported PASS for the visual result; dedicated media controls, accessibility, lifecycle and measured frame pacing remain open. A small bubble-like rebound on expansion and contraction is requested next.

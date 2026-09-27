@@ -91,3 +91,16 @@ opaque action IDs. The animated compact wave indicates playback state and is
 not a measured audio-frequency spectrum. A local demo proves protocol/runtime
 integration; neither live media automation nor physical notch fit has been
 observed in this session.
+
+## RillNotch contour and motion refinement — 2026-09-27
+
+Replaced the competing AppKit frame tween and SwiftUI spring with one
+SwiftUI-owned surface animation inside a stationary panel. Public auxiliary
+screen regions determine cutout width/center; black expanded content reserves
+the top safe inset. Outward top shoulders connect the surface to the screen
+edge, with interpolated bottom radii. Pointer monitors use the visible target
+outline to pass events through the transparent canvas and debounce hover per
+display. No input-monitoring grant or private API is requested. The reference
+was boring.notch at `d58240cc160d5e54da1a8a5925e095d067a8e1e0`;
+implementation and shape path were written independently, with no copied
+source/assets. Physical fit and frame pacing still require hardware review.
