@@ -179,7 +179,9 @@ only `RillExtensionKit`. It supplies a rich bar module and a notch widget and
 exercises every initial node. See `docs/user/extensions.md` for build,
 installation, accessibility, security and troubleshooting steps.
 The sibling `../RillNotch` project is a real media extension using this same
-API, with Music and Spotify controls and artwork where those apps expose it.
+API. It consumes system Now Playing metadata through a bundled MediaRemote
+Adapter (including participating browsers and video apps), with Music/Spotify
+AppleScript fallback. Artwork is displayed when the active source exposes it.
 
 ## Production hardening
 

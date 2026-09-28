@@ -18,6 +18,7 @@
 | D14 | Rich UI extensions use a separately buildable SDK and bounded bidirectional declarative protocol while remaining out of process; notch widgets use Rill-owned public-AppKit panels | Implemented experimentally in phase 13; API stabilization and real-notch evidence remain open |
 | D15 | Notch widgets may opt into a black surface and hover expansion; real media plugins stay separate SDK clients | Implemented for sibling RillNotch proof on 2026-09-27; physical notch and media-app behavior remain unverified |
 | D16 | A semantic `nowPlaying` node lets Rill own media layout and animation while an extension supplies bounded data and opaque controls | Experimental phase-13 addition, 2026-09-27; real media and visual quality still need owner observation |
+| D17 | RillNotch may use a bundled MediaRemote Adapter as an experimental, out-of-process system media source, with Music/Spotify AppleScript fallback | Implemented 2026-09-28; private framework workaround needs OS, signing and media-control validation before release |
 
 Append evidence, alternatives, consequences and date when accepting or changing a decision. Update every affected contract, example and phase before changing a public interface. No branding availability, license choice, developer account or release destination has been established.
 
@@ -91,6 +92,19 @@ opaque action IDs. The animated compact wave indicates playback state and is
 not a measured audio-frequency spectrum. A local demo proves protocol/runtime
 integration; neither live media automation nor physical notch fit has been
 observed in this session.
+
+## RillNotch system media source — 2026-09-28
+
+D17 keeps MediaRemote access inside the separately supervised RillNotch
+process. The extension vendors BSD-licensed MediaRemote Adapter source pinned
+to commit `73f14ab`; its build script places the Perl entry point and signed
+framework beside the extension. The adapter's JSON stream is bounded and
+normalized into the existing semantic `nowPlaying` node. Music/Spotify
+AppleScript remains the fallback when the stream has no usable track. The
+adapter relies on a private framework and the `/usr/bin/perl` entitlement
+behavior, so compatibility and signing/notarization require explicit release
+validation. Its subprocess joins the extension process group so generation
+retirement cannot leave a live Perl stream.
 
 ## RillNotch contour and motion refinement — 2026-09-27
 

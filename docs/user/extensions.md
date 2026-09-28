@@ -25,7 +25,9 @@ regular material fallback.
 Use `background_style = "black"` in a `[[notch_widgets]]` entry for a black
 notch surface. It expands on hover or compact click and collapses when the
 pointer leaves. The separate `../RillNotch` project demonstrates a media
-plugin with this style.
+plugin with this style. Build it with its `scripts/build.sh` to include the
+system Now Playing adapter; its README covers the private-API dependency,
+Music/Spotify fallback and distribution steps.
 
 ## Authoring
 
