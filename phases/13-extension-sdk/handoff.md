@@ -8,9 +8,10 @@ The user explicitly advanced this post-0.1 phase while manual/external gates
 in phases 09–12 remain open; do not mark those predecessors complete by
 inference. Read the phase packet and `docs/extensions.md`. Core implementation
 and automated checks are present. Resume with the sibling `../RillNotch` on
-real notched hardware and a playing Music/Spotify track, then complete
-VoiceOver/keyboard/Reduce Motion and extension-specific Instruments work.
-Fix any observed behavior before considering API stability.
+real notched hardware, switch among live system media sources, verify artwork
+and controls, then complete VoiceOver/keyboard/Reduce Motion and
+extension-specific Instruments work. Fix observed behavior before considering
+API stability.
 
 ## Expected output for downstream agents
 
@@ -249,3 +250,82 @@ passes 6 SDK tests, host regressions and standalone sample compilation; a
 relocated clean SDK/sample build also passes. These checks do not establish
 independent third-party authoring or full accessibility/performance support.
 See `docs/production-readiness.md` and the phase-10 handoff.
+
+## MediaRemote Adapter research — 2026-09-27
+
+At the owner's request, inspected `ungive/mediaremote-adapter` at commit
+`73f14ab` before any RillNotch integration. It offers a system-wide now-playing
+`stream` (JSON lines with full/diff payloads), artwork, bundle identifier,
+playback timing/state and MediaRemote transport/seek/shuffle/repeat commands.
+The existing RillNotch semantic `nowPlaying` node can consume normalized
+metadata without changing the host protocol; richer controls/metadata would
+require separate bounded API and renderer work.
+
+The adapter dynamically loads a framework using `/usr/bin/perl` to gain access
+to Apple's private MediaRemote framework. This is an OS-dependent workaround,
+not a public API. The repository reports macOS 27.0 testing, but no local
+functional check was performed: `/usr/bin/perl` exists on macOS 27.0 arm64,
+while `cmake` is unavailable, so the local source build did not start. Its
+`test` command can briefly publish a fake Now Playing entry; it was not run.
+Music/Spotify AppleScript remains a possible fallback. No app, extension,
+configuration or runtime files were changed for this research. Phase 13's
+manual media, accessibility and performance gates remain open.
+
+## MediaRemote Adapter implementation — 2026-09-28
+
+- The owner authorized implementation after the research. The sibling
+  `../RillNotch` now vendors the upstream BSD-3 source at `73f14ab` under
+  `Vendor/mediaremote-adapter`. `scripts/build.sh` builds the framework with
+  CMake and copies it, the Perl script and license into package `Resources`.
+  The vendored CMake file was changed only for caller-selected architecture
+  and path-safe codesign invocation. CMake 4.4.3 was installed locally through
+  Homebrew to perform the build.
+- RillNotch streams full/diff system Now Playing updates, accepts only a fixed
+  metadata key set and bounded lines/images, converts playback timing and
+  artwork into the existing semantic node, and retains two-second
+  Music/Spotify AppleScript fallback. Its existing three actions route through
+  MediaRemote for an active system source. The host API and configuration
+  schema did not change.
+- The first Rill reload exposed an orphan Perl stream: `Foundation.Process`
+  placed it in a separate process group. RillNotch now uses `posix_spawn` to
+  join the extension's owned process group at creation. A process-group test
+  and two subsequent live reloads verified replacement of the previous
+  extension and stream; the old orphan was terminated. The final live state
+  has one RillNotch and one Perl stream.
+- PASS: `../RillNotch/scripts/build.sh` and `swift test` (3 tests: full/diff
+  snapshots, bounds/null clearing and process-group ownership). Logs:
+  `/tmp/rillnotch-media-build.log`, `/tmp/rillnotch-media-tests.log`.
+  Read-only adapter `get` returned a valid object; `stream` emitted an initial
+  empty snapshot followed by metadata on macOS 27.0 arm64. The framed
+  RillNotch protocol published a live source and exited cleanly. Personal
+  configuration validates; local Rill generation 5 reports extension ready,
+  no configuration error and two visible panels.
+- NOT RUN: actual media control clicks (to avoid changing the owner's active
+  playback), reliable artwork observation, transitions across several apps,
+  MacBook notch visual behavior, full accessibility/Reduce Motion, measured
+  performance, and distribution signing/notarization with the bundled
+  framework. The adapter's intrusive `test` command was not run.
+
+## Live artwork stream correction — 2026-09-28
+
+The owner reported that Now Playing artwork still did not appear. A read-only
+adapter `get` and raw `stream` both returned JPEG artwork from the active Dia
+browser session, while a framed RillNotch run published a Music fallback with
+no artwork. The cause was `FileHandle.readData(ofLength: 8192)` waiting for a
+full pipe buffer: the first 8-KiB read contained an empty event plus only part
+of the next JSON line, and the remaining bytes were delivered only when the
+child exited. RillNotch now uses POSIX `read` to consume available stream
+bytes immediately, retaining its existing bounded line parser.
+
+- PASS: `../RillNotch/scripts/build.sh` (`/tmp/rillnotch-artwork-build.log`)
+  and `swift test` (5 tests, `/tmp/rillnotch-artwork-tests.log`), including a
+  fake Perl stream that keeps its pipe open after a short artwork frame.
+- PASS: a framed live RillNotch run progressed from no artwork to an
+  `artwork_resource` update and exited cleanly. The resulting file matched
+  the raw adapter `get` artwork byte-for-byte. The active Rill process was
+  reloaded to generation 6; diagnostics report `dev.rill.notch` ready, no
+  configuration error and two visible panels, with one extension and one
+  adapter stream process in the same process group.
+- NOT RUN: owner-visible confirmation of the displayed image, artwork across
+  other media apps, media control clicks, accessibility and measured pacing.
+  Sibling implementation committed as `16931c8` in `../RillNotch`.
