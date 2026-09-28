@@ -84,7 +84,7 @@ Clicking the battery symbol opens a native status popover with charge state, per
 {"version":1,"type":"module.update","data":{"text":"Build passed","tooltip":"Local build","state":"success","value":1}}
 ```
 
-Text is limited to 4096 characters, tooltip to 8192, value must be finite, and state is `normal`, `warning`, `error`, or `success`. Data cannot add actions or execute code. See [`Examples/custom`](../../Examples/custom/) and the [event protocol](../events.md).
+Text is limited to 4096 characters, tooltip to 8192, value must be finite, and state is `normal`, `warning`, `error`, or `success`. Data cannot add actions or execute code. See the [custom module example](../../Examples/custom/README.md) for event format and usage.
 
 `workspaces` renders typed state from a configured yabai, AeroSpace, or OmniWM provider. AeroSpace and OmniWM workspace buttons also show one native application icon per managed app; within the focused workspace, the focused application's icon is followed by its application name. This label truncates within the surface rather than moving other bar groups. Its foreground is automatically selected for contrast against the configured focused-workspace background. The workspace tooltip lists app names and window counts. A generic app symbol is used when a provider does not expose a bundle identifier or macOS cannot resolve it. Yabai continues to show workspace labels and occupancy because its current adapter does not yet query application identities. Provider failures remain visible in the module instead of hiding the workspace control.
 

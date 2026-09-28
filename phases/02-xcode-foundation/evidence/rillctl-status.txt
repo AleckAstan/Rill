@@ -1,3 +1,0 @@
-rillctl: status is not available until the runtime IPC phase
-
-exit code: 3

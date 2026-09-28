@@ -158,4 +158,4 @@ Runtime behavior and examples for each kind are documented in the [built-in modu
 
 Rill watches the containing directory semantics, debounces changes for approximately 150 ms, and reparses the complete file. Atomic replacement and delete/recreate saves are supported. A valid candidate is prepared and committed as one generation; replaced resources are then retired. Invalid syntax, validation errors, or failed preparation preserve the previous active generation and surface diagnostics through the status menu.
 
-The distributable no-manager starter is [`Examples/default/config.toml`](../../Examples/default/config.toml). The optional manager example in the shared [configuration contract](../configuration.md) uses the same accepted keys.
+The distributable no-manager starter is [`Examples/default/config.toml`](../../Examples/default/config.toml). Optional manager examples for [AeroSpace](../../Examples/aerospace/config.toml) and [OmniWM](../../Examples/omniwm/config.toml) use the same accepted keys.

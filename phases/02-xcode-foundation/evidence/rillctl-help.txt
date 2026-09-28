@@ -1,7 +1,0 @@
-rillctl — control a running Rill instance
-
-Usage:
-  rillctl --help       Show this help
-  rillctl --version    Show the CLI version
-
-Runtime commands are introduced in a later phase; unsupported commands fail explicitly.
