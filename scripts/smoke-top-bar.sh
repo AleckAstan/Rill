@@ -2,7 +2,7 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-evidence="${1:-$root/phases/04-top-bar/evidence}"
+evidence="${1:-$root/../RillDocs/Rill/phases/04-top-bar/evidence}"
 mkdir -p "$evidence"
 
 "$root/scripts/build.sh" > "$evidence/build.log" 2>&1
