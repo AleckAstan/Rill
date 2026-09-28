@@ -1,9 +1,0 @@
-{
-  "event": "window_created/focused",
-  "before_updated_at": 1790334770.645183,
-  "after_updated_at": 1790334800.637157,
-  "observed_ms": 7288.0,
-  "result": "PASS",
-  "note": "A real Calculator launch caused a yabai signal and a refreshed Rill snapshot; Calculator was then closed.",
-  "space_switch_follow_up": "The active desktop also contained a native-fullscreen Helium space. yabai refused space lifecycle operations without its scripting addition, so ordinary-space switching remains to be measured on a non-fullscreen desktop."
-}

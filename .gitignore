@@ -3,3 +3,11 @@
 DerivedData/
 *.xcuserstate
 xcuserdata/
+
+# Local planning and implementation records
+/AGENTS.md
+/description.md
+/progression.md
+/phases/
+/docs/*.md
+/Prototypes/*/README.md

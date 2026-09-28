@@ -1,2 +1,0 @@
-drwx------ antsajudicael /tmp/rill-phase06-acceptance/run
-srw------- antsajudicael /tmp/rill-phase06-acceptance/run/control.sock

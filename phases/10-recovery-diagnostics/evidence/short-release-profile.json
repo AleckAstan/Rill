@@ -1,9 +1,0 @@
-{
-  "scenario": "Release, isolated clock-only bar, no providers/extensions",
-  "sample_seconds": 30.26,
-  "cpu_percent_of_one_core": 0.33,
-  "rss_mib_start": 61.53,
-  "rss_mib_max": 61.53,
-  "rss_mib_end": 61.34,
-  "qualification": "Short observation only; not the phase-11 five-minute/ten-minute budgets or Instruments frame-pacing gate."
-}

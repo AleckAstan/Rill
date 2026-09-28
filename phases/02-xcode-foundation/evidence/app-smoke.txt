@@ -1,5 +1,0 @@
-launched pid: 71763
-process: /Volumes/PROJECTS & UTILS/DEV/PERSO/Rill/.build/DerivedData/Build/Products/Debug/Rill.app/Contents/MacOS/Rill
-quit: clean via application quit event
-note: automated menu-bar inspection was unavailable because System Events UI scripting did not return; the phase verification checklist already records the interactive status-menu check.
-user verification: `Rill ◇` is visible in the macOS menu bar after launching the validated build (2026-09-24 23:06 +03:00).
