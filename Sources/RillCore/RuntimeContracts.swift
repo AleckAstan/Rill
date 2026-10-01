@@ -126,7 +126,7 @@ public typealias PanelEdge = SurfaceEdge
 public enum SurfaceKind: String, Codable, Sendable { case bar }
 public enum ProviderKind: String, Codable, Sendable { case yabai, aerospace, omniwm, event, command, stream, plugin }
 public enum ModuleKind: String, Codable, Sendable {
-    case text, clock, frontmostApp, battery, wifi, volume, separator, workspaces, custom
+    case text, clock, frontmostApp, battery, wifi, volume, cpu, memory, separator, workspaces, custom
     case extensionModule = "extension"
 }
 public enum TopPlacement: String, Codable, Sendable { case menuBarArea, belowSystemUI }
@@ -323,6 +323,39 @@ public struct SurfaceSpec: Codable, Sendable, Equatable {
     }
 }
 
+public enum ModuleTextFormat {
+    public static func render(_ format: String, text: String, percent: String) -> String? {
+        var result = ""
+        var index = format.startIndex
+        while index < format.endIndex {
+            let character = format[index]
+            let next = format.index(after: index)
+            if character == "{" {
+                if next < format.endIndex, format[next] == "{" {
+                    result.append("{")
+                    index = format.index(after: next)
+                    continue
+                }
+                guard let end = format[next...].firstIndex(of: "}") else { return nil }
+                switch format[next..<end] {
+                case "text": result += text
+                case "percent": result += percent
+                default: return nil
+                }
+                index = format.index(after: end)
+            } else if character == "}" {
+                guard next < format.endIndex, format[next] == "}" else { return nil }
+                result.append("}")
+                index = format.index(after: next)
+            } else {
+                result.append(character)
+                index = next
+            }
+        }
+        return result
+    }
+}
+
 public struct ModuleSpec: Codable, Sendable, Equatable {
     public var id: ModuleID
     public var kind: ModuleKind
@@ -330,6 +363,9 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
     public var text: String?
     public var format: String?
     public var placeholder: String?
+    public var icon: String?
+    public var formatIcons: [String]?
+    public var showIcon: Bool
     public var onClick: ActionSpec?
     public var style: ModuleStyle?
     public var states: [String: ModuleStyle]
@@ -337,7 +373,9 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
     public var contribution: String?
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case id, kind, provider, text, format, placeholder, style, states, contribution
+        case id, kind, provider, text, format, placeholder, style, states, contribution, icon
+        case formatIcons = "format_icons"
+        case showIcon = "show_icon"
         case extensionID = "extension"
         case onClick = "on_click"
     }
@@ -349,6 +387,9 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
         text: String? = nil,
         format: String? = nil,
         placeholder: String? = nil,
+        icon: String? = nil,
+        formatIcons: [String]? = nil,
+        showIcon: Bool = true,
         onClick: ActionSpec? = nil,
         style: ModuleStyle? = nil,
         states: [String: ModuleStyle] = [:],
@@ -361,6 +402,9 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
         self.text = text
         self.format = format
         self.placeholder = placeholder
+        self.icon = icon
+        self.formatIcons = formatIcons
+        self.showIcon = showIcon
         self.onClick = onClick
         self.style = style
         self.states = states
@@ -376,6 +420,9 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
         text = try container.decodeIfPresent(String.self, forKey: .text)
         format = try container.decodeIfPresent(String.self, forKey: .format)
         placeholder = try container.decodeIfPresent(String.self, forKey: .placeholder)
+        icon = try container.decodeIfPresent(String.self, forKey: .icon)
+        formatIcons = try container.decodeIfPresent([String].self, forKey: .formatIcons)
+        showIcon = try container.decodeIfPresent(Bool.self, forKey: .showIcon) ?? true
         onClick = try container.decodeIfPresent(ActionSpec.self, forKey: .onClick)
         style = try container.decodeIfPresent(ModuleStyle.self, forKey: .style)
         states = try container.decodeIfPresent([String: ModuleStyle].self, forKey: .states) ?? [:]
@@ -1334,6 +1381,26 @@ public extension AppConfiguration {
                 }
             } else if [.workspaces, .custom].contains(module.kind) {
                 append("\(path).provider", "\(module.kind.rawValue) modules require a provider")
+            }
+            let hasStandardPresentation = ![ModuleKind.workspaces, .separator, .extensionModule].contains(module.kind)
+            if let format = module.format, module.kind != .clock, hasStandardPresentation {
+                if format.count > 256 || ModuleTextFormat.render(format, text: "", percent: "?") == nil {
+                    append("\(path).format", "Expected at most 256 characters using {text}, {percent}, {{ or }}")
+                }
+            }
+            if !hasStandardPresentation, module.icon != nil || module.formatIcons != nil || !module.showIcon {
+                append("\(path).icon", "Icon options require a standard module")
+            }
+            if let icon = module.icon, icon.isEmpty || icon.count > 128 {
+                append("\(path).icon", "Expected an SF Symbol name of 1...128 characters")
+            }
+            if let icons = module.formatIcons {
+                if icons.isEmpty || icons.count > 20 || icons.contains(where: { $0.isEmpty || $0.count > 128 }) {
+                    append("\(path).format_icons", "Expected 1...20 SF Symbol names of 1...128 characters")
+                }
+                if ![ModuleKind.battery, .volume, .cpu, .memory, .custom].contains(module.kind) {
+                    append("\(path).format_icons", "Value-based icons require battery, volume, cpu, memory or custom")
+                }
             }
             if let action = module.onClick {
                 validateExecutable(action.executable, path: "\(path).on_click.executable")

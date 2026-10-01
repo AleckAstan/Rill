@@ -42,6 +42,26 @@ public struct ModuleData: Equatable, Sendable {
     }
 }
 
+public enum ModulePresentationFormatter {
+    public static func apply(_ module: ModuleSpec, to original: ModuleData) -> ModuleData {
+        var result = original
+        let value = original.value.flatMap { $0.isFinite ? min(1, max(0, $0)) : nil }
+        if let format = module.format, module.kind != .clock {
+            let percent = value.map { String(Int(($0 * 100).rounded())) } ?? "?"
+            result.text = ModuleTextFormat.render(format, text: original.text, percent: percent) ?? original.text
+        }
+        if !module.showIcon {
+            result.symbolName = nil
+        } else if let icons = module.formatIcons, !icons.isEmpty, let value {
+            let index = min(icons.count - 1, Int(value * Double(icons.count)))
+            result.symbolName = icons[index]
+        } else if let icon = module.icon {
+            result.symbolName = icon
+        }
+        return result
+    }
+}
+
 public struct CustomModuleUpdate: Codable, Equatable, Sendable {
     public let text: String
     public let tooltip: String?
@@ -128,7 +148,8 @@ public enum BatterySnapshot: Equatable, Sendable {
             return .init(
                 text: "",
                 symbolName: "battery.100percent.bolt",
-                tooltip: "Battery charging: \(percent)%"
+                tooltip: "Battery charging: \(percent)%",
+                value: Double(percent) / 100
             )
         case .discharging(let percent):
             let health: ModuleHealth = percent <= 15 ? .stale : .healthy
@@ -136,10 +157,11 @@ public enum BatterySnapshot: Equatable, Sendable {
                 text: "",
                 symbolName: batterySymbol(percent: percent),
                 tooltip: "Battery: \(percent)%",
-                health: health
+                health: health,
+                value: Double(percent) / 100
             )
         case .full:
-            return .init(text: "", symbolName: "battery.100percent", tooltip: "Battery fully charged")
+            return .init(text: "", symbolName: "battery.100percent", tooltip: "Battery fully charged", value: 1)
         }
     }
 
@@ -190,7 +212,7 @@ public enum VolumeSnapshot: Equatable, Sendable {
     public var presentation: ModuleData {
         switch self {
         case .muted:
-            return .init(text: "", symbolName: "speaker.slash.fill", tooltip: "Sound muted")
+            return .init(text: "", symbolName: "speaker.slash.fill", tooltip: "Sound muted", value: 0)
         case .level(let percent):
             let symbol: String
             switch percent {
@@ -199,7 +221,7 @@ public enum VolumeSnapshot: Equatable, Sendable {
             case 34...66: symbol = "speaker.wave.2.fill"
             default: symbol = "speaker.wave.3.fill"
             }
-            return .init(text: "", symbolName: symbol, tooltip: "Volume: \(percent)%")
+            return .init(text: "", symbolName: symbol, tooltip: "Volume: \(percent)%", value: Double(percent) / 100)
         case .unavailable:
             return .init(
                 text: "",
@@ -313,7 +335,24 @@ public enum ClockPrecision: Sendable {
     case second
 
     public static func infer(from format: String) -> ClockPrecision {
-        format.range(of: #"(?<!')s"#, options: .regularExpression) == nil ? .minute : .second
+        var inLiteral = false
+        var characters = format.makeIterator()
+        var character = characters.next()
+        while let current = character {
+            if current == "'" {
+                let next = characters.next()
+                if next == "'" {
+                    character = characters.next()
+                    continue
+                }
+                inLiteral.toggle()
+                character = next
+                continue
+            }
+            if !inLiteral && "sSA".contains(current) { return .second }
+            character = characters.next()
+        }
+        return .minute
     }
 
     public var interval: TimeInterval {
@@ -341,6 +380,7 @@ public enum ClockFormatter {
 
 @MainActor
 public final class NativeModuleStore: ObservableObject {
+    @Published var systemMetrics = SystemMetricsSnapshot.unavailable
     @Published public var now = Date()
     @Published public var frontmostApplication = ModuleData(
         text: "No active app",
@@ -585,6 +625,16 @@ public final class NativeModuleRuntime: NSObject {
     private var pendingCustomUpdates: [ProviderID: CustomModuleUpdate] = [:]
     private var customUpdateTasks: [ProviderID: Task<Void, Never>] = [:]
     private var staleTasks: [ProviderID: Task<Void, Never>] = [:]
+    private var cpuReferences: [ModuleID: Int] = [:]
+    private var memoryReferences: [ModuleID: Int] = [:]
+    private var systemMetricsTask: Task<Void, Never>?
+    private var actionRequests: [ModuleID: UUID] = [:]
+    private var actionGeneration = UUID()
+
+    var systemMetricReferenceCount: Int {
+        cpuReferences.values.reduce(0, +) + memoryReferences.values.reduce(0, +)
+    }
+
     private var clockTimer: Timer?
     private var batteryTimer: Timer?
     private var wifiMonitor: NWPathMonitor?
@@ -612,6 +662,9 @@ public final class NativeModuleRuntime: NSObject {
         customUpdateTasks.values.forEach { $0.cancel() }; customUpdateTasks.removeAll()
         staleTasks.values.forEach { $0.cancel() }; staleTasks.removeAll()
         pendingCustomUpdates.removeAll()
+        actionGeneration = UUID()
+        actionRequests.removeAll()
+        store.actionFailures.removeAll()
         if configuration == nil { await actionRunner.stop() }
         let ids = Set(configuration?.providers.map(\.id) ?? [])
         store.providerHealth = store.providerHealth.filter { ids.contains($0.key) }
@@ -626,9 +679,14 @@ public final class NativeModuleRuntime: NSObject {
 
     public func performAction(moduleID: ModuleID, action: ActionSpec) {
         store.actionFailures[moduleID] = nil
+        let request = UUID()
+        let generation = actionGeneration
+        actionRequests[moduleID] = request
         Task { [weak self] in
             guard let self else { return }
             let result = await actionRunner.run(action)
+            guard generation == actionGeneration, actionRequests[moduleID] == request else { return }
+            actionRequests[moduleID] = nil
             if result.succeeded {
                 store.actionFailures[moduleID] = nil
             } else if result.timedOut {
@@ -838,8 +896,12 @@ public final class NativeModuleRuntime: NSObject {
         switch module.kind {
         case .clock:
             let current = clockReferences[module.id] ?? (0, module.format ?? "HH:mm")
-            clockReferences[module.id] = (current.count + 1, module.format ?? current.format)
+            clockReferences[module.id] = (current.count + 1, module.format ?? "HH:mm")
             startClockIfNeeded()
+        case .cpu, .memory:
+            if module.kind == .cpu { cpuReferences[module.id, default: 0] += 1 }
+            else { memoryReferences[module.id, default: 0] += 1 }
+            startSystemMetricsIfNeeded()
         case .frontmostApp:
             frontmostReferences[module.id, default: 0] += 1
             startFrontmostIfNeeded()
@@ -877,6 +939,14 @@ public final class NativeModuleRuntime: NSObject {
         case .clock:
             decrement(module.id, in: &clockReferences)
             if clockReferences.isEmpty { stopClock() } else { scheduleClock() }
+        case .cpu, .memory:
+            if module.kind == .cpu { decrement(module.id, in: &cpuReferences) }
+            else { decrement(module.id, in: &memoryReferences) }
+            if systemMetricReferenceCount == 0 {
+                systemMetricsTask?.cancel()
+                systemMetricsTask = nil
+                store.systemMetrics = .unavailable
+            }
         case .frontmostApp:
             decrement(module.id, in: &frontmostReferences)
             if frontmostReferences.isEmpty { stopFrontmost() }
@@ -924,6 +994,24 @@ public final class NativeModuleRuntime: NSObject {
     ) {
         guard let value = values[id] else { return }
         values[id] = value.count > 1 ? (value.count - 1, value.format) : nil
+    }
+
+    private func startSystemMetricsIfNeeded() {
+        guard systemMetricsTask == nil else { return }
+        let sampler = SystemMetricsSampler()
+        systemMetricsTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                let snapshot = await sampler.sample(
+                    includeCPU: !cpuReferences.isEmpty,
+                    includeMemory: !memoryReferences.isEmpty
+                )
+                guard !Task.isCancelled else { return }
+                if store.systemMetrics != snapshot { store.systemMetrics = snapshot }
+                do { try await Task.sleep(for: .seconds(3)) }
+                catch { return }
+            }
+        }
     }
 
     private func startClockIfNeeded() {

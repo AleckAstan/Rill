@@ -3,6 +3,37 @@ import XCTest
 final class ConfigurationParserTests: XCTestCase {
     private let parser = ConfigurationParser()
 
+    func testModuleFormatConfigurationRoundTrips() throws {
+        let text = """
+        schema_version = 1
+        [[modules]]
+        id = "battery"
+        kind = "battery"
+        format = "{percent}%"
+        icon = "battery.100percent"
+        format_icons = ["battery.0percent", "battery.100percent"]
+        show_icon = false
+        """
+        let configuration = try parser.parse(text: text).configuration
+        let module = try XCTUnwrap(configuration.modules.first)
+        XCTAssertEqual(module.format, "{percent}%")
+        XCTAssertEqual(module.formatIcons, ["battery.0percent", "battery.100percent"])
+        XCTAssertFalse(module.showIcon)
+        let encoded = try JSONEncoder().encode(configuration)
+        XCTAssertEqual(try JSONDecoder().decode(AppConfiguration.self, from: encoded), configuration)
+    }
+
+    func testInvalidModuleFormatsReportFieldPaths() {
+        let base = "schema_version = 1\n[[modules]]\nid = \"battery\"\nkind = \"battery\"\n"
+        for format in ["{unknown}", "{percent", "percent}", String(repeating: "x", count: 257)] {
+            assertInvalid(base + "format = \"\(format)\"", contains: "modules[0].format")
+        }
+        assertInvalid(base + "format_icons = []", contains: "modules[0].format_icons")
+        assertInvalid(base + "icon = \"\"", contains: "modules[0].icon")
+        assertInvalid(base + "show_icon = 1", contains: "show_icon")
+        assertInvalid(base.replacingOccurrences(of: "battery", with: "separator") + "icon = \"cpu\"", contains: "modules[0].icon")
+    }
+
     func testDefaultConfigurationIsValidAndHasNoManager() throws {
         let snapshot = try parser.parse(text: DefaultConfiguration.contents)
         XCTAssertTrue(snapshot.configuration.providers.isEmpty)

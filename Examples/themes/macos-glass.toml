@@ -1,0 +1,50 @@
+schema_version = 1
+
+[theme]
+preset = "glass"
+font = "SF Pro Text"
+font_size = 13
+spacing = 8
+animation_ms = 160
+
+[[surfaces]]
+id = "main"
+display = "all"
+edge = "top"
+top_placement = "menuBarArea"
+start = ["frontmost"]
+center = ["clock"]
+end = ["cpu", "memory", "separator", "wifi", "volume", "battery"]
+
+[[modules]]
+id = "frontmost"
+kind = "frontmostApp"
+
+[[modules]]
+id = "clock"
+kind = "clock"
+format = "EEE HH:mm"
+
+[[modules]]
+id = "cpu"
+kind = "cpu"
+
+[[modules]]
+id = "memory"
+kind = "memory"
+
+[[modules]]
+id = "separator"
+kind = "separator"
+
+[[modules]]
+id = "wifi"
+kind = "wifi"
+
+[[modules]]
+id = "volume"
+kind = "volume"
+
+[[modules]]
+id = "battery"
+kind = "battery"

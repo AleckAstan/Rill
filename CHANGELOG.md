@@ -9,6 +9,13 @@
 - AeroSpace, OmniWM and yabai adapters, examples and recovery documentation.
 - Unsigned local archive preparation; signing, notarization and publication remain owner-controlled gates.
 
+### Desktop customization
+
+- Configurable module text/percentage templates, SF Symbol overrides, value-based icon bands and text-only/icon-only presentation.
+
+- Optional native CPU and memory modules with shared sampling, accessible readings and detail popovers.
+- Catppuccin-inspired floating bar and macOS glass example configurations, with a ricing guide.
+
 ### Production hardening
 
 - Serialize reload/shutdown transactions and preserve provider bindings across generations.
@@ -19,3 +26,7 @@
 - Remove smoke/configuration-mutation hooks from Release; add opt-in native launch at login.
 - Cache bounded extension image thumbnails and reject nonregular resources.
 - Add a reproducible build/test/archive/example/runtime verification entry point in `ci/verify.sh`.
+
+- Ignore obsolete command-action results after reload or a newer click.
+- Respect quoted clock-format literals and fractional-second fields when scheduling updates.
+- Use manager-neutral workspace accessibility hints.
