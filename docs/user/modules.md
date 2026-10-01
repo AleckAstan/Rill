@@ -172,3 +172,19 @@ icon = "cpu"
 Omit `format` for the original text, use `format = ""` for icon-only presentation, or `show_icon = false` for text only. `{text}` preserves the native or custom label, while `{percent}` uses a normalized reading. Missing battery/CPU data displays `?`, not a fabricated zero; muted volume displays 0. Native labels and readings remain available to accessibility even when the visual text is hidden. Details popovers and native controls retain their existing click behavior.
 
 See the [configuration contract](configuration.md) for escaping, bounds and icon selection. Use `format_alt` for click-to-toggle labels, `on_right_click` / `on_middle_click` for secondary actions, and `on_scroll_up` / `on_scroll_down` for bounded scroll commands. On volume, `scroll_volume_step = 5` enables native adjustment. See the configuration reference for precedence and rate limits.
+
+## Native state styling
+
+Use `states.charging`, `states.full` and `states.critical` for battery; `states.connected`, `states.disconnected` and `states.off` for Wi-Fi; `states.muted` for volume; and `states.active`, `states.visible`, `states.occupied`, `states.empty` for individual workspaces. Generic custom states now apply the complete style, including background, border, font, padding and symbol, rather than foreground alone.
+
+```toml
+[[modules]]
+id = "battery"
+kind = "battery"
+format = "{percent}%"
+states.charging = { foreground = "#A6E3A1", background = "#203529" }
+states.warning = { foreground = "#F9E2AF" }
+states.critical = { foreground = "#F38BA8", background = "#452432", border_color = "#F38BA8", border_width = 2 }
+```
+
+See the [state precedence and capability contract](configuration.md#styles-by-state) and [complete example](../../Examples/states/config.toml).

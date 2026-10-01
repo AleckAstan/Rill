@@ -19,6 +19,15 @@ public struct ModuleData: Equatable, Sendable {
     public var tooltip: String?
     public var health: ModuleHealth
     public var state: ModuleState
+    public var semanticState: ModuleSemanticState?
+
+    public var effectiveState: ModuleState {
+        switch health {
+        case .unavailable: return .error
+        case .stale: return state == .error ? .error : .warning
+        case .healthy: return state
+        }
+    }
     public var value: Double?
     /// Plain text rendered by Rill in a native popover when present.
     public var popover: String?
@@ -29,6 +38,7 @@ public struct ModuleData: Equatable, Sendable {
         tooltip: String? = nil,
         health: ModuleHealth = .healthy,
         state: ModuleState = .normal,
+        semanticState: ModuleSemanticState? = nil,
         value: Double? = nil,
         popover: String? = nil
     ) {
@@ -37,6 +47,7 @@ public struct ModuleData: Equatable, Sendable {
         self.tooltip = tooltip
         self.health = health
         self.state = state
+        self.semanticState = semanticState
         self.value = value
         self.popover = popover
     }
@@ -52,6 +63,8 @@ public enum ModulePresentationFormatter {
         }
         if !module.showIcon {
             result.symbolName = nil
+        } else if let icon = module.resolvedStyle(state: original.effectiveState, semantic: original.semanticState).icon {
+            result.symbolName = icon
         } else if let icons = module.formatIcons, !icons.isEmpty, let value {
             let index = min(icons.count - 1, Int(value * Double(icons.count)))
             result.symbolName = icons[index]
@@ -149,6 +162,7 @@ public enum BatterySnapshot: Equatable, Sendable {
                 text: "",
                 symbolName: "battery.100percent.bolt",
                 tooltip: "Battery charging: \(percent)%",
+                semanticState: .charging,
                 value: Double(percent) / 100
             )
         case .discharging(let percent):
@@ -158,10 +172,11 @@ public enum BatterySnapshot: Equatable, Sendable {
                 symbolName: batterySymbol(percent: percent),
                 tooltip: "Battery: \(percent)%",
                 health: health,
+                semanticState: percent <= 5 ? .critical : nil,
                 value: Double(percent) / 100
             )
         case .full:
-            return .init(text: "", symbolName: "battery.100percent", tooltip: "Battery fully charged", value: 1)
+            return .init(text: "", symbolName: "battery.100percent", tooltip: "Battery fully charged", semanticState: .full, value: 1)
         }
     }
 
@@ -189,14 +204,15 @@ public enum WiFiSnapshot: Equatable, Sendable {
     public var presentation: ModuleData {
         switch self {
         case .off:
-            return .init(text: "", symbolName: "wifi.slash", tooltip: "Wi-Fi is off", health: .stale)
+            return .init(text: "", symbolName: "wifi.slash", tooltip: "Wi-Fi is off", health: .stale, semanticState: .off)
         case .disconnected:
-            return .init(text: "", symbolName: "wifi.exclamationmark", tooltip: "Wi-Fi is not connected", health: .stale)
+            return .init(text: "", symbolName: "wifi.exclamationmark", tooltip: "Wi-Fi is not connected", health: .stale, semanticState: .disconnected)
         case .connected(let ssid):
             return .init(
                 text: "",
                 symbolName: "wifi",
-                tooltip: ssid.map { "Wi-Fi: \($0)" } ?? "Wi-Fi connected"
+                tooltip: ssid.map { "Wi-Fi: \($0)" } ?? "Wi-Fi connected",
+                semanticState: .connected
             )
         case .unavailable:
             return .init(text: "", symbolName: "wifi.slash", tooltip: "Wi-Fi unavailable", health: .unavailable)
@@ -212,7 +228,7 @@ public enum VolumeSnapshot: Equatable, Sendable {
     public var presentation: ModuleData {
         switch self {
         case .muted:
-            return .init(text: "", symbolName: "speaker.slash.fill", tooltip: "Sound muted", value: 0)
+            return .init(text: "", symbolName: "speaker.slash.fill", tooltip: "Sound muted", semanticState: .muted, value: 0)
         case .level(let percent):
             let symbol: String
             switch percent {

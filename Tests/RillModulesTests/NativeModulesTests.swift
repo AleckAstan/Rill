@@ -27,6 +27,68 @@ final class NativeModuleValueTests: XCTestCase {
         XCTAssertFalse(menu.items[0].submenu?.items[2].isEnabled ?? true)
     }
 
+    func testSemanticStylesMergeEveryTokenAndErrorsOverrideNativeState() {
+        let module = ModuleSpec(id: ModuleID("battery"), kind: .battery,
+            style: .init(foreground: "#FFFFFF", font: "SF Mono", padding: 6),
+            states: [
+                "normal": .init(background: "#111111", borderWidth: 1),
+                "warning": .init(foreground: "#FFFF00", borderColor: "#FFFF00"),
+                "critical": .init(background: "#880000", fontSize: 15, icon: "exclamationmark.triangle"),
+                "error": .init(foreground: "#FF0000", background: "#222222", icon: "questionmark")
+            ])
+        let low = BatterySnapshot.discharging(percent: 3).presentation
+        let style = module.resolvedStyle(state: low.effectiveState, semantic: low.semanticState)
+        XCTAssertEqual(style.foreground, "#FFFF00")
+        XCTAssertEqual(style.background, "#880000")
+        XCTAssertEqual(style.font, "SF Mono")
+        XCTAssertEqual(style.fontSize, 15)
+        XCTAssertEqual(style.padding, 6)
+        XCTAssertEqual(style.borderColor, "#FFFF00")
+        XCTAssertEqual(style.borderWidth, 1)
+        XCTAssertEqual(style.icon, "exclamationmark.triangle")
+        let failed = module.resolvedStyle(state: .error, semantic: .critical)
+        XCTAssertEqual(failed.background, "#222222")
+        XCTAssertEqual(failed.icon, "questionmark")
+    }
+
+    func testNativeSemanticStatesAndHealthRemainDistinct() {
+        XCTAssertEqual(BatterySnapshot.charging(percent: 3).presentation.semanticState, .charging)
+        XCTAssertEqual(BatterySnapshot.full.presentation.semanticState, .full)
+        XCTAssertEqual(BatterySnapshot.discharging(percent: 5).presentation.semanticState, .critical)
+        XCTAssertNil(BatterySnapshot.discharging(percent: 6).presentation.semanticState)
+        XCTAssertEqual(BatterySnapshot.discharging(percent: 15).presentation.effectiveState, .warning)
+        XCTAssertEqual(WiFiSnapshot.connected(ssid: nil).presentation.semanticState, .connected)
+        XCTAssertEqual(WiFiSnapshot.disconnected.presentation.semanticState, .disconnected)
+        XCTAssertEqual(WiFiSnapshot.off.presentation.semanticState, .off)
+        XCTAssertEqual(WiFiSnapshot.unavailable.presentation.effectiveState, .error)
+        XCTAssertEqual(VolumeSnapshot.muted.presentation.semanticState, .muted)
+        XCTAssertEqual(ModuleData(text: "Last value", health: .unavailable, state: .success).effectiveState, .error)
+        XCTAssertEqual(ModuleData(text: "Last value", health: .stale, state: .success).effectiveState, .warning)
+    }
+
+    func testStateIconsOverrideBandsButNeverShowHiddenIcons() {
+        var module = ModuleSpec(id: ModuleID("battery"), kind: .battery, icon: "fallback", formatIcons: ["low", "high"],
+                                states: ["charging": .init(icon: "bolt.fill")])
+        let battery = BatterySnapshot.charging(percent: 10).presentation
+        XCTAssertEqual(ModulePresentationFormatter.apply(module, to: battery).symbolName, "bolt.fill")
+        module.showIcon = false
+        XCTAssertNil(ModulePresentationFormatter.apply(module, to: battery).symbolName)
+    }
+
+    func testWorkspaceSemanticsPreserveUnknownOccupancy() {
+        let id = WorkspaceID(provider: ProviderID("wm"), rawID: "one")
+        XCTAssertEqual(WorkspaceState(id: id, name: "1", focused: true, visible: true, occupied: false).semanticState, .active)
+        XCTAssertEqual(WorkspaceState(id: id, name: "1", visible: true, occupied: true).semanticState, .visible)
+        XCTAssertEqual(WorkspaceState(id: id, name: "1", occupied: true).semanticState, .occupied)
+        XCTAssertEqual(WorkspaceState(id: id, name: "1", occupied: false).semanticState, .empty)
+        XCTAssertNil(WorkspaceState(id: id, name: "1").semanticState)
+    }
+
+    func testCustomProtocolDoesNotAcceptNativeOnlyStateNames() {
+        let data = Data(#"{"text":"custom","state":"charging"}"#.utf8)
+        XCTAssertThrowsError(try JSONDecoder().decode(CustomModuleUpdate.self, from: data))
+    }
+
     func testModuleFormatsComposeTextAndPercentWithoutInterpretingPayload() {
         let module = ModuleSpec(id: ModuleID("custom"), kind: .custom, format: "{{{text}}}: {percent}%", icon: "cpu")
         let original = ModuleData(text: "{percent}", tooltip: "Details", health: .stale, state: .warning, value: 0.425, popover: "More")

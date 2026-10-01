@@ -11,6 +11,8 @@
 
 ### Desktop customization
 
+- Full state styling for module backgrounds, borders, fonts and symbols, with native battery, Wi-Fi, mute and workspace states.
+
 - Optional right/middle-click and bounded scroll commands, native volume scrolling and accessible alternate-format toggles.
 
 - Configurable module text/percentage templates, SF Symbol overrides, value-based icon bands and text-only/icon-only presentation.

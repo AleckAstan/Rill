@@ -150,13 +150,30 @@ All modules require `id` and `kind`. Kinds are `text`, `clock`, `frontmostApp`, 
 
 `on_click` accepts `executable`, optional `args = []`, and `timeout_ms = 5000` in the range 100–300000. It follows the same explicit executable-path rules. On `wifi`, `volume`, `battery`, `frontmostApp`, `cpu`, and `memory`, an explicit action intentionally replaces the built-in native popover or application menu.
 
-`style` and entries in `states` accept `foreground`, `background`, `accent`, `font`, `font_size`, and `padding`. Numeric and color bounds match the theme. State names are exactly `normal`, `warning`, `error`, and `success`. Styling is declarative; it cannot define commands or arbitrary theme mutations.
+`style` and entries in `states` accept `foreground`, `background`, `accent`, `font`, `font_size`, `padding`, `border_color`, `border_width` (0-8), and `icon` (an SF Symbol name of 1-128 characters). Numeric and color bounds match the theme. All modules accept `normal`, `warning`, `error`, and `success`. Native semantic states are listed below. Styling is declarative; it cannot define commands or arbitrary theme mutations.
 
 Standard modules accept `icon` (an SF Symbol name, 1-128 characters), `show_icon` (boolean, default `true`) and `format`. Clock `format` retains its DateFormatter meaning. Other standard modules use a text template of at most 256 characters: `{text}` inserts the original text and `{percent}` inserts the rounded normalized value times 100, or `?` when unavailable. Use `{{` and `}}` for literal braces. Empty `format` hides text. Unknown placeholders and unmatched braces are rejected. Substituted producer text is never interpreted as another template.
 
 Battery, volume, CPU, memory and custom modules also accept `format_icons`, an array of 1-20 SF Symbol names. A normalized value in 0...1 selects an equal-width band from low to high; 1 selects the last icon. Out-of-range finite custom values are clamped for presentation only. Nonfinite/missing values use `icon` or the native symbol instead. Priority is `show_icon = false`, then a value-selected icon, then `icon`, then the native symbol. SF Symbol availability depends on macOS; use symbols present on your oldest supported OS. Arbitrary font glyphs can be placed directly in `format` instead.
 
 Icon options do not apply to workspaces, separators or UI extensions. Their layout and presentation are controlled separately. Existing module appearance is preserved when the new options are omitted. Formatting does not change native click actions, tooltips, state, provider data or accessible readings. Custom `{percent}` and icon bands assume the producer's `value` is normalized, not a raw 0-100 percentage. See [the formatting example](../../Examples/formats/config.toml).
+
+### Styles by state
+
+Styles merge field by field: module `style`, then `states.normal`, then the effective generic state, then the native semantic state. Missing fields retain the preceding value. An unavailable provider or failed configured action selects `error`; stale data selects `warning` instead of retaining a previous success style. Error suppresses native semantic overrides. The effective style controls foreground, background, font, padding, border and icon. `show_icon = false` still hides every icon; a resolved style icon otherwise wins over value-band and module icons.
+
+| Module | Additional states | Meaning |
+| --- | --- | --- |
+| `battery` | `charging`, `full`, `critical` | Charging/AC, fully charged, or discharging at 5% or less. Discharging at 15% or less also uses generic `warning`; `critical` overrides its specified fields. |
+| `wifi` | `connected`, `disconnected`, `off` | Connected identity, disconnected radio, or disabled radio. Unavailable data uses `error`. |
+| `volume` | `muted` | Default output reports mute. |
+| `workspaces` | `active`, `visible`, `occupied`, `empty` | First matching state in that order, per workspace. Unknown occupancy is neither occupied nor empty. |
+
+Native state names are rejected on unrelated module kinds. Custom producer payloads still accept only `normal`, `warning`, `error` and `success`; the plugin protocol has not changed. Workspace urgency is not exposed by the current adapters and `states.urgent` is not accepted. Memory occupancy alone never creates a pressure warning.
+
+Workspace state backgrounds tint inactive capsules or replace the active indicator fill; an unspecified active foreground is selected for contrast with that fill. Explicit foreground colors remain your responsibility. Border options also apply to native glass. Existing Reduce Motion behavior remains in force; these styles introduce no extra animation.
+
+See [the state styling example](../../Examples/states/config.toml). With it running, publish a state using `rillctl emit --source status --name module.update --data '{"text":"Build passed","state":"success"}'`.
 
 ### Alternate formats and pointer actions
 
