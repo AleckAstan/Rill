@@ -338,7 +338,8 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
         switch update {
         case .success(let snapshot):
             let result = await coordinator.apply(configuration: snapshot.configuration, source: snapshot.source)
-            guard revision == reloadRevision, !terminationInProgress else { return false }
+            guard !terminationInProgress else { return false }
+            guard revision == reloadRevision else { return result.applied }
             configurationStatus = result.applied
                 ? "Configuration generation \(result.generation) is active."
                 : result.diagnostics.map(\.description).joined(separator: "\n")

@@ -64,6 +64,31 @@ kind = "volume"
 
 Volume reads the default output device through CoreAudio and listens for default-device, volume, and mute changes. Its SF Symbol follows the current level or mute state, while the exact percentage remains available in the tooltip and accessibility label. Clicking opens a native popover with a volume slider, mute control, output-device selection and a secondary **Sound Settings…** action. Devices that do not expose a master scalar report an unavailable state instead of showing a fabricated level.
 
+## CPU and memory
+
+```toml
+[[modules]]
+id = "cpu"
+kind = "cpu"
+states.warning = { foreground = "#FAB387" }
+
+[[modules]]
+id = "memory"
+kind = "memory"
+```
+
+These optional modules display `CPU 24%` and `RAM 42%`. They share one native sampler across displays, update every three seconds, and stop sampling when removed. No subprocess, external dependency or permission is needed. CPU measures the change in busy time across all cores; the initial sample displays `CPU ?` until the first interval completes. After a sampling gap of ten seconds or longer, CPU takes a fresh baseline. Read failures are visibly unavailable rather than reporting zero.
+
+CPU selects `states.warning` at 90% utilization. RAM reports active, wired and compressed physical pages as a percentage of installed memory. It excludes inactive/free pages and is deliberately **not** macOS memory pressure or Activity Monitor's Memory Used; high occupancy alone does not trigger a warning. Click either module for a native text popover explaining its measurement. Tooltips and accessibility values expose the readings.
+
+An explicit `on_click` replaces the details popover, for example to open Activity Monitor:
+
+```toml
+on_click = { executable = "/usr/bin/open", args = ["-b", "com.apple.ActivityMonitor"] }
+```
+
+For a vertical surface, allow enough width for the text (for example `thickness = 96`). See [ready-to-customize themes](../../Examples/themes/README.md).
+
 ## Separator
 
 ```toml
@@ -121,3 +146,29 @@ The global `theme.preset` selects `flat`, `segmented`, or `glass`. The segmented
 Custom updates also select `states.normal`, `states.warning`, `states.error`, or `states.success`. Stream data becomes stale after the configured `stale_after_ms` while retaining the last visible value.
 
 The standalone example at [`Examples/default/config.toml`](../../Examples/default/config.toml) uses the frontmost application, clock, Wi-Fi, volume, battery, and a status-group separator across all connected displays.
+
+## Personalize labels and icons
+
+```toml
+[[modules]]
+id = "battery"
+kind = "battery"
+format = "{percent}%"
+format_icons = ["battery.0percent", "battery.25percent", "battery.50percent", "battery.75percent", "battery.100percent"]
+
+[[modules]]
+id = "volume"
+kind = "volume"
+format = "VOL {percent}%"
+show_icon = false
+
+[[modules]]
+id = "cpu"
+kind = "cpu"
+format = "{percent}%"
+icon = "cpu"
+```
+
+Omit `format` for the original text, use `format = ""` for icon-only presentation, or `show_icon = false` for text only. `{text}` preserves the native or custom label, while `{percent}` uses a normalized reading. Missing battery/CPU data displays `?`, not a fabricated zero; muted volume displays 0. Native labels and readings remain available to accessibility even when the visual text is hidden. Details popovers and native controls retain their existing click behavior.
+
+See the [configuration contract](configuration.md) for escaping, bounds and icon selection. Alternate formats and right/middle/scroll actions are planned separately and are not configuration keys yet.

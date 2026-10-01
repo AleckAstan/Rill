@@ -485,12 +485,12 @@ private struct ModuleView: View {
                             perform: { performNativeAction(module.id, $0) }
                         )
                     }
-            } else if module.kind == .custom, let popover = presentation.popover {
+            } else if [.custom, .cpu, .memory].contains(module.kind), let popover = presentation.popover {
                 Button { nativePopoverPresented.toggle() } label: { decoratedContent }
                     .buttonStyle(.plain)
                     .focusable()
                     .focusEffectDisabled()
-                    .accessibilityHint("Shows plugin details")
+                    .accessibilityHint("Shows module details")
                     .popover(isPresented: $nativePopoverPresented) {
                         CustomModulePopover(title: presentation.text, content: popover)
                     }
@@ -563,7 +563,7 @@ private struct ModuleView: View {
                     .help(workspaceHelp(workspace))
                     .accessibilityLabel("Workspace \(workspace.name)")
                     .accessibilityValue(workspace.focused ? "Focused" : workspace.visible ? "Visible" : "Available")
-                    .accessibilityHint("Focuses this yabai workspace")
+                    .accessibilityHint("Focuses this workspace")
                     .accessibilityIdentifier("rill.module.\(module.id.rawValue).workspace.\(workspace.id.rawID)")
                 }
             } else {
@@ -698,7 +698,7 @@ private struct ModuleView: View {
 
     private var decoratedContent: some View {
         Group {
-            if !isHorizontal && [.text, .clock].contains(module.kind) {
+            if !isHorizontal && [.text, .clock].contains(module.kind) && presentation.symbolName == nil {
                 Text(presentation.text)
                     .fixedSize()
                     .rotationEffect(.degrees(90))
@@ -730,10 +730,15 @@ private struct ModuleView: View {
             .truncationMode(.tail)
             .font(font)
             .foregroundStyle(foreground)
+            .accessibilityElement(children: .ignore)
             .accessibilityIdentifier("rill.module.\(module.id.rawValue)")
     }
 
     private var presentation: ModuleData {
+        ModulePresentationFormatter.apply(module, to: basePresentation)
+    }
+
+    private var basePresentation: ModuleData {
         switch module.kind {
         case .text:
             return .init(text: module.text ?? "")
@@ -749,6 +754,10 @@ private struct ModuleView: View {
             )
         case .frontmostApp:
             return store.frontmostApplication
+        case .cpu:
+            return store.systemMetrics.cpuPresentation
+        case .memory:
+            return store.systemMetrics.memoryPresentation
         case .battery:
             return store.battery.presentation
         case .wifi:
@@ -792,18 +801,24 @@ private struct ModuleView: View {
     private var helpText: String {
         if let failure = store.actionFailures[module.id] { return failure }
         if module.onClick != nil { return "Runs the configured action" }
-        if presentation.popover != nil { return "Shows plugin details" }
+        if [.cpu, .memory].contains(module.kind), let tooltip = presentation.tooltip { return tooltip }
+        if presentation.popover != nil { return "Shows module details" }
         if [.wifi, .volume, .battery].contains(module.kind) { return "Shows system controls" }
         if module.kind == .frontmostApp { return "Shows the frontmost application's menu" }
         return presentation.tooltip ?? module.id.rawValue
     }
 
     private var accessibilityLabel: String {
-        if !presentation.text.isEmpty { return presentation.text }
-        return presentation.tooltip ?? module.id.rawValue
+        if module.kind == .cpu { return "CPU utilization" }
+        if module.kind == .memory { return "Memory usage" }
+        if !basePresentation.text.isEmpty { return basePresentation.text }
+        return basePresentation.tooltip ?? module.id.rawValue
     }
 
     private var accessibilityValue: String {
+        if [.cpu, .memory].contains(module.kind), presentation.health == .healthy {
+            return basePresentation.text
+        }
         switch presentation.health {
         case .healthy: return "Available"
         case .stale: return "Warning"

@@ -1,0 +1,51 @@
+schema_version = 1
+
+[theme]
+preset = "segmented"
+font_size = 13
+
+[[surfaces]]
+id = "main"
+display = "all"
+edge = "top"
+top_placement = "belowSystemUI"
+thickness = 36
+start = ["frontmost"]
+center = ["clock"]
+end = ["cpu", "memory", "volume", "battery"]
+
+[[modules]]
+id = "frontmost"
+kind = "frontmostApp"
+format = "{text}"
+icon = "app"
+
+[[modules]]
+id = "clock"
+kind = "clock"
+format = "EEE HH:mm"
+icon = "clock"
+
+[[modules]]
+id = "cpu"
+kind = "cpu"
+format = "{percent}%"
+icon = "cpu"
+
+[[modules]]
+id = "memory"
+kind = "memory"
+format = ""
+icon = "memorychip"
+
+[[modules]]
+id = "volume"
+kind = "volume"
+format = "VOL {percent}%"
+show_icon = false
+
+[[modules]]
+id = "battery"
+kind = "battery"
+format = "{percent}%"
+format_icons = ["battery.0percent", "battery.25percent", "battery.50percent", "battery.75percent", "battery.100percent"]

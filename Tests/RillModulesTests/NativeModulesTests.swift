@@ -27,6 +27,50 @@ final class NativeModuleValueTests: XCTestCase {
         XCTAssertFalse(menu.items[0].submenu?.items[2].isEnabled ?? true)
     }
 
+    func testModuleFormatsComposeTextAndPercentWithoutInterpretingPayload() {
+        let module = ModuleSpec(id: ModuleID("custom"), kind: .custom, format: "{{{text}}}: {percent}%", icon: "cpu")
+        let original = ModuleData(text: "{percent}", tooltip: "Details", health: .stale, state: .warning, value: 0.425, popover: "More")
+        let formatted = ModulePresentationFormatter.apply(module, to: original)
+        XCTAssertEqual(formatted.text, "{{percent}}: 43%")
+        XCTAssertEqual(formatted.symbolName, "cpu")
+        XCTAssertEqual(formatted.tooltip, original.tooltip)
+        XCTAssertEqual(formatted.popover, original.popover)
+        XCTAssertEqual(formatted.health, .stale)
+        XCTAssertEqual(formatted.state, .warning)
+        XCTAssertEqual(formatted.value, original.value)
+    }
+
+    func testModuleFormatUnknownAndNonfiniteValuesStayUnknown() {
+        let module = ModuleSpec(id: ModuleID("cpu"), kind: .cpu, format: "{percent}%")
+        for value: Double? in [nil, .nan, .infinity] {
+            let original = ModuleData(text: "CPU ?", health: .unavailable, value: value)
+            XCTAssertEqual(ModulePresentationFormatter.apply(module, to: original).text, "?%")
+        }
+    }
+
+    func testModuleIconBandsClampAndRespectHiddenIcons() {
+        var module = ModuleSpec(id: ModuleID("volume"), kind: .volume, icon: "fallback", formatIcons: ["low", "medium", "high"])
+        for (value, icon) in [(-1.0, "low"), (0.0, "low"), (0.5, "medium"), (1.0, "high"), (2.0, "high")] {
+            XCTAssertEqual(ModulePresentationFormatter.apply(module, to: .init(text: "", value: value)).symbolName, icon)
+        }
+        XCTAssertEqual(ModulePresentationFormatter.apply(module, to: .init(text: "")).symbolName, "fallback")
+        module.showIcon = false
+        XCTAssertNil(ModulePresentationFormatter.apply(module, to: .init(text: "", symbolName: "native", value: 1)).symbolName)
+    }
+
+    func testNativeFormatsUseRealPercentagesAndKeepDefaults() {
+        let battery = ModuleSpec(id: ModuleID("battery"), kind: .battery, format: "{percent}%")
+        XCTAssertEqual(ModulePresentationFormatter.apply(battery, to: BatterySnapshot.charging(percent: 42).presentation).text, "42%")
+        XCTAssertEqual(ModulePresentationFormatter.apply(battery, to: BatterySnapshot.noBattery.presentation).text, "?%")
+        let volume = ModuleSpec(id: ModuleID("volume"), kind: .volume, format: "{percent}%", showIcon: false)
+        XCTAssertEqual(ModulePresentationFormatter.apply(volume, to: VolumeSnapshot.muted.presentation).text, "0%")
+        XCTAssertEqual(ModulePresentationFormatter.apply(volume, to: VolumeSnapshot.level(75).presentation).text, "75%")
+        let original = BatterySnapshot.discharging(percent: 10).presentation
+        XCTAssertEqual(ModulePresentationFormatter.apply(.init(id: ModuleID("default"), kind: .battery), to: original), original)
+        let clock = ModuleSpec(id: ModuleID("clock"), kind: .clock, format: "HH:mm")
+        XCTAssertEqual(ModulePresentationFormatter.apply(clock, to: .init(text: "12:34")).text, "12:34")
+    }
+
     func testClockFormattingUsesProvidedTimeZoneAndLocale() {
         let date = Date(timeIntervalSince1970: 0)
         let utc = ClockFormatter.string(
@@ -45,6 +89,52 @@ final class NativeModuleValueTests: XCTestCase {
         XCTAssertEqual(plusTwo, "02:00:00")
         XCTAssertEqual(ClockPrecision.infer(from: "HH:mm").interval, 60)
         XCTAssertEqual(ClockPrecision.infer(from: "HH:mm:ss").interval, 1)
+    }
+
+    func testClockPrecisionRespectsQuotedLiteralsAndFractionalSeconds() {
+        for format in ["HH:mm 'seconds'", "HH:mm 'it''s time'", "'ss' HH:mm"] {
+            XCTAssertEqual(ClockPrecision.infer(from: format).interval, 60, format)
+        }
+        for format in ["HH:mm:ss", "HH:mm ''ss", "SSS", "A", "'seconds' ss"] {
+            XCTAssertEqual(ClockPrecision.infer(from: format).interval, 1, format)
+        }
+    }
+
+    func testCPUUsesIntervalDeltasIncludingCounterWraparound() throws {
+        let baseline = CPUTicks(user: 100, system: 100, idle: 700, nice: 100)
+        let current = CPUTicks(user: 120, system: 110, idle: 750, nice: 120)
+        XCTAssertEqual(try XCTUnwrap(current.utilization(since: baseline)), 0.5, accuracy: 0.001)
+        XCTAssertNil(baseline.utilization(since: baseline))
+        let wrapped = CPUTicks(user: 4, system: 0, idle: 10, nice: 0)
+        let beforeWrap = CPUTicks(user: UInt32.max - 5, system: 0, idle: 0, nice: 0)
+        XCTAssertEqual(try XCTUnwrap(wrapped.utilization(since: beforeWrap)), 0.5, accuracy: 0.001)
+    }
+
+    func testMetricsDistinguishUnavailableDataAndMemoryUsageFromPressure() {
+        let snapshot = SystemMetricsSnapshot(cpuUtilization: 0.95, memoryUsedBytes: 900, memoryTotalBytes: 1000)
+        XCTAssertEqual(snapshot.cpuPresentation.text, "CPU 95%")
+        XCTAssertEqual(snapshot.cpuPresentation.state, .warning)
+        XCTAssertEqual(snapshot.memoryPresentation.text, "RAM 90%")
+        XCTAssertEqual(snapshot.memoryPresentation.state, .normal)
+        XCTAssertEqual(SystemMetricsSnapshot.unavailable.cpuPresentation.health, .unavailable)
+        XCTAssertEqual(SystemMetricsSnapshot.unavailable.memoryPresentation.health, .unavailable)
+        let invalid = SystemMetricsSnapshot(cpuUtilization: .nan, memoryUsedBytes: 2, memoryTotalBytes: 1)
+        XCTAssertEqual(invalid.cpuPresentation.health, .unavailable)
+        XCTAssertEqual(invalid.memoryPresentation.health, .unavailable)
+    }
+
+    func testSystemMetricsReadNativeCountersWithoutReportingBootAverage() async throws {
+        let sampler = SystemMetricsSampler()
+        let initial = await sampler.sample(includeCPU: true, includeMemory: true)
+        XCTAssertNil(initial.cpuUtilization)
+        XCTAssertGreaterThan(try XCTUnwrap(initial.memoryUsedBytes), 0)
+        try await Task.sleep(for: .milliseconds(100))
+        let next = await sampler.sample(includeCPU: true, includeMemory: true)
+        XCTAssertTrue((0...1).contains(try XCTUnwrap(next.cpuUtilization)))
+        XCTAssertLessThanOrEqual(try XCTUnwrap(next.memoryUsedBytes), next.memoryTotalBytes)
+        let disabled = await sampler.sample(includeCPU: false, includeMemory: false)
+        XCTAssertNil(disabled.cpuUtilization)
+        XCTAssertNil(disabled.memoryUsedBytes)
     }
 
     func testBatteryFixturesCoverChargingLowFullMissingAndInvalid() {
@@ -165,6 +255,49 @@ final class ExtensionHostTests: XCTestCase {
 
 @MainActor
 final class NativeModuleLifecycleTests: XCTestCase {
+    func testMetricsRemainActiveAcrossReplacementAndStopAfterLastReference() async throws {
+        let runtime = NativeModuleRuntime()
+        let module = ModuleSpec(id: ModuleID("memory"), kind: .memory)
+        let old = runtime.resource(for: module)
+        let replacement = runtime.resource(for: module)
+        await old.commit()
+        await replacement.commit()
+        await old.stop()
+        XCTAssertEqual(runtime.systemMetricReferenceCount, 1)
+        for _ in 0..<100 where runtime.store.systemMetrics.memoryUsedBytes == nil {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertNotNil(runtime.store.systemMetrics.memoryUsedBytes)
+        await replacement.stop()
+        XCTAssertEqual(runtime.systemMetricReferenceCount, 0)
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(runtime.store.systemMetrics, .unavailable)
+    }
+
+    func testOldActionFailureCannotOverwriteLatestClick() async throws {
+        let runtime = NativeModuleRuntime()
+        let id = ModuleID("action")
+        runtime.performAction(moduleID: id, action: .init(
+            executable: "/bin/sh", args: ["-c", "sleep 0.2; exit 1"], timeoutMS: 2000
+        ))
+        runtime.performAction(moduleID: id, action: .init(executable: "/usr/bin/true", timeoutMS: 2000))
+        try await Task.sleep(for: .milliseconds(600))
+        XCTAssertNil(runtime.store.actionFailures[id])
+        await runtime.activateConfiguration(nil)
+    }
+
+    func testOldActionFailureCannotCrossConfigurationGeneration() async throws {
+        let runtime = NativeModuleRuntime()
+        let id = ModuleID("action")
+        runtime.performAction(moduleID: id, action: .init(
+            executable: "/bin/sh", args: ["-c", "sleep 0.2; exit 1"], timeoutMS: 2000
+        ))
+        await runtime.activateConfiguration(.init(modules: [.init(id: id, kind: .text, text: "New")]))
+        try await Task.sleep(for: .milliseconds(600))
+        XCTAssertNil(runtime.store.actionFailures[id])
+        await runtime.activateConfiguration(nil)
+    }
+
     func testModuleInsertionAndRemovalReturnsLifecycleCountsToBaseline() async {
         let runtime = NativeModuleRuntime()
         let clock = runtime.resource(for: .init(id: ModuleID("clock"), kind: .clock, format: "HH:mm:ss"))

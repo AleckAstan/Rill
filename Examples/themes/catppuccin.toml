@@ -1,0 +1,58 @@
+schema_version = 1
+
+[theme]
+preset = "segmented"
+font = "SF Mono"
+font_size = 12
+foreground = "#CDD6F4"
+background = "#1E1E2E"
+accent = "#CBA6F7"
+module_background = "#313244"
+focused_workspace_background = "#45475A"
+border_color = "#585B7040"
+corner_radius = 12
+module_corner_radius = 8
+padding = 8
+spacing = 6
+
+[[surfaces]]
+id = "main"
+display = "all"
+edge = "top"
+top_placement = "belowSystemUI"
+thickness = 36
+inset = 8
+start = ["frontmost"]
+center = ["clock"]
+end = ["cpu", "memory", "volume", "battery"]
+
+[[modules]]
+id = "frontmost"
+kind = "frontmostApp"
+style = { foreground = "#CBA6F7" }
+
+[[modules]]
+id = "clock"
+kind = "clock"
+format = "EEE d MMM  HH:mm"
+style = { foreground = "#F9E2AF" }
+
+[[modules]]
+id = "cpu"
+kind = "cpu"
+style = { foreground = "#89B4FA" }
+states.warning = { foreground = "#FAB387" }
+on_click = { executable = "/usr/bin/open", args = ["-b", "com.apple.ActivityMonitor"] }
+
+[[modules]]
+id = "memory"
+kind = "memory"
+style = { foreground = "#A6E3A1" }
+
+[[modules]]
+id = "volume"
+kind = "volume"
+
+[[modules]]
+id = "battery"
+kind = "battery"
