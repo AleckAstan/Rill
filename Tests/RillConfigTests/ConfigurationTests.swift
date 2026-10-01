@@ -3,6 +3,24 @@ import XCTest
 final class ConfigurationParserTests: XCTestCase {
     private let parser = ConfigurationParser()
 
+    func testSemanticStylesValidateAndRoundTrip() throws {
+        let text = """
+        schema_version = 1
+        [[modules]]
+        id = "battery"
+        kind = "battery"
+        states.charging = { foreground = "#00FF00", background = "#001100", border_color = "#00FF00", border_width = 2, icon = "bolt.fill", font_size = 14, padding = 10 }
+        states.critical = { foreground = "#FF0000" }
+        """
+        let configuration = try parser.parse(text: text).configuration
+        XCTAssertEqual(configuration.modules.first?.states["charging"]?.borderWidth, 2)
+        XCTAssertEqual(try JSONDecoder().decode(AppConfiguration.self, from: JSONEncoder().encode(configuration)), configuration)
+        assertInvalid(text.replacingOccurrences(of: "kind = \"battery\"", with: "kind = \"cpu\""), contains: "states.charging")
+        assertInvalid(text.replacingOccurrences(of: "border_width = 2", with: "border_width = 9"), contains: "states.charging.border_width")
+        assertInvalid(text.replacingOccurrences(of: "#00FF00", with: "invalid"), contains: "states.charging")
+        assertInvalid(text.replacingOccurrences(of: "bolt.fill", with: ""), contains: "states.charging.icon")
+    }
+
     func testPointerActionPathsResolveAndArgumentsRemainLiteral() throws {
         let text = """
         schema_version = 1

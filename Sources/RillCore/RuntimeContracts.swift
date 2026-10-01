@@ -81,6 +81,12 @@ public struct WorkspaceState: Codable, Hashable, Sendable {
     public let occupied: Bool?
     public let applications: [WorkspaceApplication]?
 
+    public var semanticState: ModuleSemanticState? {
+        if focused { return .active }
+        if visible { return .visible }
+        return occupied.map { $0 ? .occupied : .empty }
+    }
+
     public init(
         id: WorkspaceID,
         name: String,
@@ -213,9 +219,25 @@ public struct ModuleStyle: Codable, Hashable, Sendable {
     public var font: String?
     public var fontSize: Double?
     public var padding: Double?
+    public var borderColor: String?
+    public var borderWidth: Double?
+    public var icon: String?
+
+    public func overlaying(_ override: ModuleStyle?) -> ModuleStyle {
+        guard let override else { return self }
+        return .init(
+            foreground: override.foreground ?? foreground, background: override.background ?? background,
+            accent: override.accent ?? accent, font: override.font ?? font,
+            fontSize: override.fontSize ?? fontSize, padding: override.padding ?? padding,
+            borderColor: override.borderColor ?? borderColor, borderWidth: override.borderWidth ?? borderWidth,
+            icon: override.icon ?? icon
+        )
+    }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case foreground, background, accent, font, padding
+        case foreground, background, accent, font, padding, icon
+        case borderColor = "border_color"
+        case borderWidth = "border_width"
         case fontSize = "font_size"
     }
 
@@ -225,7 +247,10 @@ public struct ModuleStyle: Codable, Hashable, Sendable {
         accent: String? = nil,
         font: String? = nil,
         fontSize: Double? = nil,
-        padding: Double? = nil
+        padding: Double? = nil,
+        borderColor: String? = nil,
+        borderWidth: Double? = nil,
+        icon: String? = nil
     ) {
         self.foreground = foreground
         self.background = background
@@ -233,6 +258,9 @@ public struct ModuleStyle: Codable, Hashable, Sendable {
         self.font = font
         self.fontSize = fontSize
         self.padding = padding
+        self.borderColor = borderColor
+        self.borderWidth = borderWidth
+        self.icon = icon
     }
 
     public init(from decoder: Decoder) throws {
@@ -243,6 +271,9 @@ public struct ModuleStyle: Codable, Hashable, Sendable {
         font = try container.decodeIfPresent(String.self, forKey: .font)
         fontSize = try container.decodeIfPresent(Double.self, forKey: .fontSize)
         padding = try container.decodeIfPresent(Double.self, forKey: .padding)
+        borderColor = try container.decodeIfPresent(String.self, forKey: .borderColor)
+        borderWidth = try container.decodeIfPresent(Double.self, forKey: .borderWidth)
+        icon = try container.decodeIfPresent(String.self, forKey: .icon)
     }
 }
 
@@ -356,6 +387,20 @@ public enum ModuleTextFormat {
     }
 }
 
+public enum ModuleSemanticState: String, Sendable {
+    case charging, full, critical, connected, disconnected, off, muted, active, visible, occupied, empty
+
+    public static func supported(by kind: ModuleKind) -> [ModuleSemanticState] {
+        switch kind {
+        case .battery: return [.charging, .full, .critical]
+        case .wifi: return [.connected, .disconnected, .off]
+        case .volume: return [.muted]
+        case .workspaces: return [.active, .visible, .occupied, .empty]
+        default: return []
+        }
+    }
+}
+
 public struct ModuleSpec: Codable, Sendable, Equatable {
     public var id: ModuleID
     public var kind: ModuleKind
@@ -377,6 +422,13 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
     public var states: [String: ModuleStyle]
     public var extensionID: String?
     public var contribution: String?
+
+    public func resolvedStyle(state: ModuleState = .normal, semantic: ModuleSemanticState? = nil) -> ModuleStyle {
+        var result = (style ?? .init()).overlaying(states[ModuleState.normal.rawValue])
+        if state != .normal { result = result.overlaying(states[state.rawValue]) }
+        if let semantic, state != .error { result = result.overlaying(states[semantic.rawValue]) }
+        return result
+    }
 
     enum CodingKeys: String, CodingKey, CaseIterable {
         case id, kind, provider, text, format, placeholder, style, states, contribution, icon
@@ -1458,8 +1510,9 @@ public extension AppConfiguration {
                     append("\(path).\(key).timeout_ms", "Expected 100...300000")
                 }
             }
-            for key in module.states.keys where ModuleState(rawValue: key) == nil {
-                append("\(path).states.\(key)", "Allowed states: normal, warning, error, success")
+            let allowedStates = ModuleState.allCases.map(\.rawValue) + ModuleSemanticState.supported(by: module.kind).map(\.rawValue)
+            for key in module.states.keys where !allowedStates.contains(key) {
+                append("\(path).states.\(key)", "Allowed states: \(allowedStates.joined(separator: ", "))")
             }
             let styles = [(path + ".style", module.style)] +
                 module.states.map { (path + ".states." + $0.key, Optional($0.value)) }
@@ -1470,6 +1523,11 @@ public extension AppConfiguration {
                 if let value = style.accent { validateColor(value, path: "\(stylePath).accent") }
                 if let value = style.fontSize { validateFinite(value, path: "\(stylePath).font_size", range: 8...72) }
                 if let value = style.padding { validateFinite(value, path: "\(stylePath).padding", range: 0...64) }
+                if let value = style.borderColor { validateColor(value, path: "\(stylePath).border_color") }
+                if let value = style.borderWidth { validateFinite(value, path: "\(stylePath).border_width", range: 0...8) }
+                if let value = style.icon, value.isEmpty || value.count > 128 {
+                    append("\(stylePath).icon", "Expected an SF Symbol name of 1...128 characters")
+                }
             }
         }
 

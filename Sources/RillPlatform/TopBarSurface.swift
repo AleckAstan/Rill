@@ -595,7 +595,7 @@ private struct ModuleView: View {
                 separatorContent
             } else {
                 standardContent
-                    .modifier(ModuleChrome(theme: theme, style: module.style, isHorizontal: isHorizontal, isEndGroup: isEndGroup))
+                    .modifier(ModuleChrome(theme: theme, style: resolvedStyle, isHorizontal: isHorizontal, isEndGroup: isEndGroup))
             }
         }
     }
@@ -683,19 +683,19 @@ private struct ModuleView: View {
                         workspaceContents(workspace, providerID: providerID)
                         .frame(minHeight: theme.resolvedWorkspaceMinimumHeight)
                         .foregroundStyle(
-                            workspaceForeground(focused: workspace.focused)
+                            workspaceForeground(workspace)
                         )
                         .opacity(
                             workspace.occupied == false && !workspace.focused
                                 ? theme.resolvedEmptyWorkspaceOpacity
                                 : 1
                         )
-                        .padding(.horizontal, isHorizontal ? theme.resolvedWorkspacePadding : 0)
-                        .padding(.vertical, isHorizontal ? theme.resolvedWorkspaceVerticalPadding : theme.resolvedWorkspacePadding)
+                        .padding(.horizontal, isHorizontal ? (workspaceStyle(workspace).padding ?? theme.resolvedWorkspacePadding) : 0)
+                        .padding(.vertical, isHorizontal ? theme.resolvedWorkspaceVerticalPadding : (workspaceStyle(workspace).padding ?? theme.resolvedWorkspacePadding))
                         .frame(maxWidth: isHorizontal ? nil : .infinity)
                         .background {
                             if workspace.focused {
-                                WorkspaceFocusIndicator(theme: theme)
+                                WorkspaceFocusIndicator(theme: workspaceTheme(workspace))
                                     .matchedGeometryEffect(
                                         id: "workspace-focus.\(module.id.rawValue)",
                                         in: workspaceFocusNamespace
@@ -704,8 +704,9 @@ private struct ModuleView: View {
                         }
                         .modifier(
                             WorkspaceChrome(
-                                theme: theme,
-                                background: theme.resolvedWorkspaceBackground
+                                theme: workspaceTheme(workspace),
+                                background: workspace.focused ? theme.resolvedWorkspaceBackground :
+                                    (workspaceStyle(workspace).background ?? theme.resolvedWorkspaceBackground)
                             )
                         )
                         .modifier(
@@ -772,11 +773,15 @@ private struct ModuleView: View {
     }
 
     private func workspaceNumber(_ workspace: WorkspaceState) -> some View {
-        Text(workspace.name)
-            .font(font)
-            .fontWeight(workspace.focused ? .semibold : .regular)
-            .lineLimit(1)
-            .truncationMode(.tail)
+        let style = workspaceStyle(workspace)
+        return HStack(spacing: theme.resolvedWorkspaceContentSpacing) {
+            if let icon = style.icon { Image(systemName: icon).accessibilityHidden(true) }
+            Text(workspace.name)
+        }
+        .font(.custom(style.font ?? theme.font, size: style.fontSize ?? theme.fontSize))
+        .fontWeight(workspace.focused ? .semibold : .regular)
+        .lineLimit(1)
+        .truncationMode(.tail)
     }
 
     private func workspaceIcon(_ application: WorkspaceApplication) -> some View {
@@ -843,15 +848,29 @@ private struct ModuleView: View {
         return "Workspace \(workspace.name), \(status): \(applications)"
     }
 
-    private func workspaceForeground(focused: Bool) -> Color {
-        if focused {
-            if theme.preset == .glass && theme.resolvedFocusedWorkspaceBackground.isTransparentColor {
-                return theme.resolvedAdaptiveText ? .primary : Color(hex: theme.foreground)
+    private func workspaceStyle(_ workspace: WorkspaceState) -> ModuleStyle {
+        module.resolvedStyle(state: store.actionFailures[module.id] == nil ? basePresentation.effectiveState : .error,
+                             semantic: workspace.semanticState)
+    }
+
+    private func workspaceTheme(_ workspace: WorkspaceState) -> ThemeSpec {
+        let style = workspaceStyle(workspace)
+        var result = theme
+        if workspace.focused, let background = style.background { result.focusedWorkspaceBackground = background }
+        if let border = style.borderColor { result.borderColor = border }
+        if let width = style.borderWidth { result.borderWidth = width }
+        return result
+    }
+
+    private func workspaceForeground(_ workspace: WorkspaceState) -> Color {
+        let style = workspaceStyle(workspace)
+        if let foreground = style.foreground { return Color(hex: foreground) }
+        if workspace.focused {
+            let resolved = workspaceTheme(workspace)
+            if resolved.preset == .glass && resolved.resolvedFocusedWorkspaceBackground.isTransparentColor {
+                return resolved.resolvedAdaptiveText ? .primary : Color(hex: resolved.foreground)
             }
-            return Color(hex: theme.resolvedFocusedWorkspaceForeground)
-        }
-        if let foreground = module.style?.foreground {
-            return Color(hex: foreground)
+            return Color(hex: resolved.resolvedFocusedWorkspaceForeground)
         }
         return theme.resolvedAdaptiveText ? .primary : Color(hex: theme.foreground)
     }
@@ -872,7 +891,7 @@ private struct ModuleView: View {
                         Image(systemName: symbolName)
                             .symbolRenderingMode(.hierarchical)
                             .font(theme.preset == .glass
-                                  ? .system(size: module.style?.fontSize ?? max(theme.fontSize + 5, 18))
+                                  ? .system(size: resolvedStyle.fontSize ?? max(theme.fontSize + 5, 18))
                                   : font)
                             .frame(maxWidth: isHorizontal ? nil : 22, maxHeight: isHorizontal ? nil : 22)
                     }
@@ -895,7 +914,9 @@ private struct ModuleView: View {
     }
 
     private var presentation: ModuleData {
-        ModulePresentationFormatter.apply(displayedModule, to: basePresentation)
+        var source = basePresentation
+        if store.actionFailures[module.id] != nil { source.state = .error }
+        return ModulePresentationFormatter.apply(displayedModule, to: source)
     }
 
     private var basePresentation: ModuleData {
@@ -937,24 +958,20 @@ private struct ModuleView: View {
         }
     }
 
+    private var resolvedStyle: ModuleStyle {
+        module.resolvedStyle(
+            state: store.actionFailures[module.id] == nil ? basePresentation.effectiveState : .error,
+            semantic: basePresentation.semanticState
+        )
+    }
+
     private var foreground: Color {
+        if let color = resolvedStyle.foreground { return Color(hex: color) }
         if store.actionFailures[module.id] != nil { return .red }
-        if let stateColor = module.states[presentation.state.rawValue]?.foreground {
-            return Color(hex: stateColor)
-        }
-        switch presentation.health {
-        case .healthy:
-            if let foreground = module.style?.foreground {
-                return Color(hex: foreground)
-            }
-            return theme.resolvedAdaptiveText ? .primary : Color(hex: theme.foreground)
-        case .stale:
-            return Color(hex: module.states[ModuleState.warning.rawValue]?.foreground ?? theme.accent)
-        case .unavailable:
-            if let foreground = module.states[ModuleState.error.rawValue]?.foreground ?? module.style?.foreground {
-                return Color(hex: foreground).opacity(0.55)
-            }
-            return (theme.resolvedAdaptiveText ? Color.primary : Color(hex: theme.foreground)).opacity(0.55)
+        switch presentation.effectiveState {
+        case .warning: return Color(hex: resolvedStyle.accent ?? theme.accent)
+        case .error: return (theme.resolvedAdaptiveText ? Color.primary : Color(hex: theme.foreground)).opacity(0.55)
+        case .normal, .success: return theme.resolvedAdaptiveText ? .primary : Color(hex: theme.foreground)
         }
     }
 
@@ -988,8 +1005,8 @@ private struct ModuleView: View {
     }
 
     private var font: Font {
-        let name = module.style?.font ?? theme.font
-        let size = module.style?.fontSize ?? theme.fontSize
+        let name = resolvedStyle.font ?? theme.font
+        let size = resolvedStyle.fontSize ?? theme.fontSize
         return .custom(name, size: size)
     }
 
@@ -1291,6 +1308,9 @@ private struct WorkspaceChrome: ViewModifier {
                 content
                     .background(Color(hex: background), in: shape)
                     .glassEffect(.regular.interactive(), in: shape)
+                    .overlay {
+                        shape.stroke(Color(hex: theme.resolvedBorderColor), lineWidth: theme.resolvedBorderWidth)
+                    }
             } else {
                 fallback(content: content)
             }
@@ -1399,8 +1419,24 @@ private struct ModuleChrome: ViewModifier {
     let isHorizontal: Bool
     let isEndGroup: Bool
 
-    @ViewBuilder
+    private var borderWidth: Double {
+        if let width = style?.borderWidth { return width }
+        if style?.borderColor != nil { return theme.resolvedBorderWidth }
+        if #available(macOS 26.0, *), theme.preset == .glass { return 0 }
+        return theme.resolvedBorderWidth
+    }
+
     func body(content: Content) -> some View {
+        chrome(content: content)
+            .overlay {
+                RoundedRectangle(cornerRadius: theme.resolvedModuleCornerRadius)
+                    .stroke(Color(hex: style?.borderColor ?? theme.resolvedBorderColor),
+                            lineWidth: borderWidth)
+            }
+    }
+
+    @ViewBuilder
+    private func chrome(content: Content) -> some View {
         let padded = content
             .padding(.horizontal, isHorizontal ? (style?.padding ?? theme.resolvedModulePadding) : min(4, style?.padding ?? theme.resolvedModulePadding))
             .padding(.vertical, theme.resolvedModuleVerticalPadding)
@@ -1426,13 +1462,6 @@ private struct ModuleChrome: ViewModifier {
         content
             .background(Color(hex: style?.background ?? theme.moduleBackground ?? (theme.preset == .glass && !isEndGroup ? "#FFFFFF14" : theme.resolvedModuleBackground)))
             .clipShape(RoundedRectangle(cornerRadius: theme.resolvedModuleCornerRadius))
-            .overlay {
-                RoundedRectangle(cornerRadius: theme.resolvedModuleCornerRadius)
-                    .stroke(
-                        Color(hex: theme.resolvedBorderColor),
-                        lineWidth: theme.resolvedBorderWidth
-                    )
-            }
     }
 }
 
