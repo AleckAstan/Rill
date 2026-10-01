@@ -158,6 +158,18 @@ Battery, volume, CPU, memory and custom modules also accept `format_icons`, an a
 
 Icon options do not apply to workspaces, separators or UI extensions. Their layout and presentation are controlled separately. Existing module appearance is preserved when the new options are omitted. Formatting does not change native click actions, tooltips, state, provider data or accessible readings. Custom `{percent}` and icon bands assume the producer's `value` is normalized, not a raw 0-100 percentage. See [the formatting example](../../Examples/formats/config.toml).
 
+### Alternate formats and pointer actions
+
+Standard modules accept `format_alt` (at most 256 characters, same syntax as `format`; DateFormatter syntax for clocks). Click or keyboard/assistive press toggles between the two formats. The selection is local to each displayed module and resets when its configuration changes. `on_click` takes precedence over toggling; toggling takes precedence over built-in popovers/app menus. Omit `format_alt` to keep the native left-click interaction. Clocks schedule second updates if either format needs them.
+
+`on_right_click`, `on_middle_click`, `on_scroll_up` and `on_scroll_down` use the same action table, relative-path resolution, timeout, literal arguments and supervised execution as `on_click`. They apply only to standard modules, not workspace groups, separators or UI extensions. Gestures only apply inside the module's visible bounds in its own window. Unconfigured gestures pass through. Named accessibility actions expose the configured gestures.
+
+Scroll uses the physical wheel/finger direction, compensating for macOS natural-scrolling inversion. Precise scrolling accumulates 12 points before triggering; ordinary wheels trigger at one unit. Momentum and predominantly horizontal scrolling do not trigger actions. At most one scroll action is dispatched every 200 ms per displayed module. Excess input is dropped, never queued. Partial input resets after 300 ms of inactivity or a direction change. The existing global eight-action concurrency bound still applies.
+
+Volume alone accepts `scroll_volume_step = 5` (1-20 percentage points) to adjust native output volume without subprocesses. Explicit `on_scroll_up`/`on_scroll_down` override the native adjustment for that direction. A successful adjustment unmutes the output; unavailable output cannot be adjusted. The native volume popover remains on left click unless overridden by `on_click` or `format_alt`.
+
+See [the interaction example](../../Examples/interactions/config.toml). Its launcher actions intentionally use `/usr/bin/true`; substitute your own literal executable/argument tables.
+
 Runtime behavior and examples for each kind are documented in the [built-in module reference](modules.md).
 
 ## Reload behavior

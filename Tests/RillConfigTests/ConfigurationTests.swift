@@ -3,6 +3,45 @@ import XCTest
 final class ConfigurationParserTests: XCTestCase {
     private let parser = ConfigurationParser()
 
+    func testPointerActionPathsResolveAndArgumentsRemainLiteral() throws {
+        let text = """
+        schema_version = 1
+        [[modules]]
+        id = "volume"
+        kind = "volume"
+        format_alt = "Volume {percent}%"
+        scroll_volume_step = 5
+        on_right_click = { executable = "./right", args = ["$(touch sentinel)"] }
+        on_middle_click = { executable = "../middle" }
+        on_scroll_up = { executable = "./up" }
+        on_scroll_down = { executable = "./down" }
+        """
+        let result = try parser.parse(text: text, source: .file(URL(fileURLWithPath: "/tmp/rill/config.toml")))
+        let module = try XCTUnwrap(result.configuration.modules.first)
+        XCTAssertEqual(module.onRightClick?.executable, "/tmp/rill/right")
+        XCTAssertEqual(module.onRightClick?.args, ["$(touch sentinel)"])
+        XCTAssertEqual(module.onMiddleClick?.executable, "/tmp/middle")
+        XCTAssertEqual(module.onScrollUp?.executable, "/tmp/rill/up")
+        XCTAssertEqual(module.onScrollDown?.executable, "/tmp/rill/down")
+        XCTAssertEqual(module.scrollVolumeStep, 5)
+        XCTAssertEqual(module.formatAlt, "Volume {percent}%")
+        XCTAssertEqual(try JSONDecoder().decode(AppConfiguration.self, from: JSONEncoder().encode(result.configuration)), result.configuration)
+    }
+
+    func testInvalidPointerActionsAndAlternateFormatsAreRejected() {
+        let base = "schema_version = 1\n[[modules]]\nid = \"volume\"\nkind = \"volume\"\n"
+        for key in ["on_right_click", "on_middle_click", "on_scroll_up", "on_scroll_down"] {
+            assertInvalid(base + "\(key) = { executable = \"relative\" }", contains: "modules[0].\(key).executable")
+            assertInvalid(base + "\(key) = { executable = \"/bin/echo\", timeout_ms = 0 }", contains: "modules[0].\(key).timeout_ms")
+        }
+        for step in [0, 21] {
+            assertInvalid(base + "scroll_volume_step = \(step)", contains: "modules[0].scroll_volume_step")
+        }
+        assertInvalid(base + "format_alt = \"{bad}\"", contains: "modules[0].format_alt")
+        assertInvalid(base.replacingOccurrences(of: "volume", with: "separator") + "format_alt = \"alt\"", contains: "modules[0].format_alt")
+        assertInvalid(base.replacingOccurrences(of: "volume", with: "battery") + "scroll_volume_step = 5", contains: "modules[0].scroll_volume_step")
+    }
+
     func testModuleFormatConfigurationRoundTrips() throws {
         let text = """
         schema_version = 1

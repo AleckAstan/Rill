@@ -171,4 +171,4 @@ icon = "cpu"
 
 Omit `format` for the original text, use `format = ""` for icon-only presentation, or `show_icon = false` for text only. `{text}` preserves the native or custom label, while `{percent}` uses a normalized reading. Missing battery/CPU data displays `?`, not a fabricated zero; muted volume displays 0. Native labels and readings remain available to accessibility even when the visual text is hidden. Details popovers and native controls retain their existing click behavior.
 
-See the [configuration contract](configuration.md) for escaping, bounds and icon selection. Alternate formats and right/middle/scroll actions are planned separately and are not configuration keys yet.
+See the [configuration contract](configuration.md) for escaping, bounds and icon selection. Use `format_alt` for click-to-toggle labels, `on_right_click` / `on_middle_click` for secondary actions, and `on_scroll_up` / `on_scroll_down` for bounded scroll commands. On volume, `scroll_volume_step = 5` enables native adjustment. See the configuration reference for precedence and rate limits.

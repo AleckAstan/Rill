@@ -1,0 +1,42 @@
+schema_version = 1
+
+[theme]
+preset = "segmented"
+
+[[surfaces]]
+id = "main"
+display = "all"
+edge = "top"
+top_placement = "belowSystemUI"
+thickness = 36
+start = ["launcher"]
+center = ["clock"]
+end = ["volume", "cpu"]
+
+[[modules]]
+id = "launcher"
+kind = "text"
+text = "Actions"
+on_right_click = { executable = "/usr/bin/true" }
+on_middle_click = { executable = "/usr/bin/true" }
+on_scroll_up = { executable = "/usr/bin/true" }
+on_scroll_down = { executable = "/usr/bin/true" }
+
+[[modules]]
+id = "clock"
+kind = "clock"
+format = "HH:mm"
+format_alt = "EEEE d MMMM yyyy HH:mm:ss"
+
+[[modules]]
+id = "volume"
+kind = "volume"
+format = "{percent}%"
+scroll_volume_step = 5
+
+[[modules]]
+id = "cpu"
+kind = "cpu"
+format = "{percent}%"
+format_alt = "CPU {percent}%"
+icon = "cpu"

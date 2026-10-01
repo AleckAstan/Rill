@@ -11,6 +11,8 @@
 
 ### Desktop customization
 
+- Optional right/middle-click and bounded scroll commands, native volume scrolling and accessible alternate-format toggles.
+
 - Configurable module text/percentage templates, SF Symbol overrides, value-based icon bands and text-only/icon-only presentation.
 
 - Optional native CPU and memory modules with shared sampling, accessible readings and detail popovers.

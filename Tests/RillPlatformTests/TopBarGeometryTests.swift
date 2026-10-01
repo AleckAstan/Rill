@@ -1,6 +1,56 @@
+import AppKit
 import XCTest
 
 final class TopBarGeometryTests: XCTestCase {
+    func testScrollGateAccumulatesTrackpadInputAndDropsMomentum() {
+        var gate = ModuleScrollGate()
+        XCTAssertNil(gate.consume(delta: 4, precise: true, momentum: false, time: 1))
+        XCTAssertNil(gate.consume(delta: 4, precise: true, momentum: false, time: 1.01))
+        XCTAssertEqual(gate.consume(delta: 4, precise: true, momentum: false, time: 1.02), .scrollUp)
+        XCTAssertNil(gate.consume(delta: 200, precise: true, momentum: true, time: 2))
+        XCTAssertNil(gate.consume(delta: .nan, precise: true, momentum: false, time: 2))
+        XCTAssertEqual(gate.consume(delta: -12, precise: true, momentum: false, time: 2.1), .scrollDown)
+    }
+
+    func testScrollGateBoundsFloodAndResetsPartialGestures() {
+        var gate = ModuleScrollGate()
+        var dispatches = 0
+        for index in 0..<1000 {
+            if gate.consume(delta: 1, precise: false, momentum: false, time: Double(index) / 1000) != nil {
+                dispatches += 1
+            }
+        }
+        XCTAssertLessThanOrEqual(dispatches, 5)
+        XCTAssertGreaterThan(dispatches, 0)
+        XCTAssertNil(gate.consume(delta: 8, precise: true, momentum: false, time: 2))
+        XCTAssertNil(gate.consume(delta: -8, precise: true, momentum: false, time: 2.1))
+        XCTAssertNil(gate.consume(delta: -4, precise: true, momentum: false, time: 3))
+        XCTAssertEqual(gate.consume(delta: -8, precise: true, momentum: false, time: 3.1), .scrollDown)
+    }
+
+    @MainActor
+    func testPointerInputRoutesOnlyConfiguredGesturesInsideItsWindow() throws {
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 200, height: 50), styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        let view = ModulePointerInputView(frame: NSRect(x: 0, y: 0, width: 100, height: 50))
+        window.contentView?.addSubview(view)
+        defer { view.stop(); window.close() }
+        view.module = .init(id: ModuleID("test"), kind: .text, text: "Test", onRightClick: .init(executable: "/usr/bin/true"))
+        var received: [ModulePointerGesture] = []
+        view.perform = { received.append($0) }
+        func event(_ type: NSEvent.EventType, x: Double) throws -> NSEvent {
+            try XCTUnwrap(NSEvent.mouseEvent(with: type, location: NSPoint(x: x, y: 25), modifierFlags: [], timestamp: 1, windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 0))
+        }
+        XCTAssertTrue(view.handle(try event(.rightMouseDown, x: 25)))
+        XCTAssertEqual(received, [.rightClick])
+        XCTAssertFalse(view.handle(try event(.rightMouseDown, x: 150)))
+        XCTAssertFalse(view.handle(try event(.leftMouseDown, x: 25)))
+        view.module?.onRightClick = nil
+        XCTAssertFalse(view.handle(try event(.rightMouseDown, x: 25)))
+        view.removeFromSuperview()
+        XCTAssertFalse(view.handle(try event(.rightMouseDown, x: 25)))
+    }
+
     func testMenuBarFrameUsesTopInsetAndFallback() {
         let screen = CGRect(x: 476, y: -1169, width: 1800, height: 1169)
         XCTAssertEqual(

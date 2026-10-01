@@ -406,6 +406,128 @@ struct BarSurfaceView: View {
     }
 }
 
+enum ModulePointerGesture {
+    case rightClick, middleClick, scrollUp, scrollDown
+}
+
+struct ModuleScrollGate {
+    private var accumulated: Double = 0
+    private var lastInput: TimeInterval = -.infinity
+    private var lastDispatch: TimeInterval = -.infinity
+
+    mutating func consume(delta: Double, precise: Bool, momentum: Bool, time: TimeInterval) -> ModulePointerGesture? {
+        guard !momentum, delta.isFinite, time.isFinite, delta != 0 else { return nil }
+        if time - lastInput > 0.3 || accumulated * delta < 0 { accumulated = 0 }
+        lastInput = time
+        accumulated += delta
+        let threshold = precise ? 12.0 : 1.0
+        guard abs(accumulated) >= threshold else { return nil }
+        let direction: ModulePointerGesture = accumulated > 0 ? .scrollUp : .scrollDown
+        accumulated = 0
+        guard time - lastDispatch >= 0.2 else { return nil }
+        lastDispatch = time
+        return direction
+    }
+}
+
+private struct ModulePointerInput: NSViewRepresentable {
+    let module: ModuleSpec
+    let perform: (ModulePointerGesture) -> Void
+
+    func makeNSView(context: Context) -> ModulePointerInputView { ModulePointerInputView() }
+
+    func updateNSView(_ view: ModulePointerInputView, context: Context) {
+        if view.module != module { view.gate = ModuleScrollGate() }
+        view.module = module
+        view.perform = perform
+        view.updateMonitor()
+    }
+
+    static func dismantleNSView(_ view: ModulePointerInputView, coordinator: ()) { view.stop() }
+}
+
+@MainActor
+final class ModulePointerInputView: NSView {
+    var module: ModuleSpec?
+    var perform: ((ModulePointerGesture) -> Void)?
+    var gate = ModuleScrollGate()
+    private var monitor: Any?
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        updateMonitor()
+    }
+
+    func updateMonitor() {
+        guard window != nil, let module,
+              module.onRightClick != nil || module.onMiddleClick != nil ||
+                module.onScrollUp != nil || module.onScrollDown != nil || module.scrollVolumeStep != nil else {
+            stop()
+            return
+        }
+        guard monitor == nil else { return }
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.rightMouseDown, .otherMouseDown, .scrollWheel]) { [weak self] event in
+            let handled = MainActor.assumeIsolated { self?.handle(event) == true }
+            return handled ? nil : event
+        }
+    }
+
+    func stop() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+        gate = ModuleScrollGate()
+    }
+
+    func handle(_ event: NSEvent) -> Bool {
+        guard let window, event.window === window, !isHiddenOrHasHiddenAncestor,
+              bounds.contains(convert(event.locationInWindow, from: nil)),
+              visibleRect.contains(convert(event.locationInWindow, from: nil)), let module else { return false }
+        switch event.type {
+        case .rightMouseDown:
+            guard module.onRightClick != nil else { return false }
+            perform?(.rightClick)
+        case .otherMouseDown:
+            guard event.buttonNumber == 2, module.onMiddleClick != nil else { return false }
+            perform?(.middleClick)
+        case .scrollWheel:
+            let delta = event.scrollingDeltaY * (event.isDirectionInvertedFromDevice ? -1 : 1)
+            guard abs(event.scrollingDeltaY) >= abs(event.scrollingDeltaX), delta != 0 else { return false }
+            let configured = delta > 0 ? module.onScrollUp != nil : module.onScrollDown != nil
+            guard configured || module.scrollVolumeStep != nil else { return false }
+            if let gesture = gate.consume(delta: delta, precise: event.hasPreciseScrollingDeltas,
+                                          momentum: event.momentumPhase != [], time: event.timestamp) {
+                perform?(gesture)
+            }
+        default: return false
+        }
+        return true
+    }
+}
+
+private struct ModuleGestureAccessibility: ViewModifier {
+    let module: ModuleSpec
+    let perform: (ModulePointerGesture) -> Void
+
+    func body(content: Content) -> some View {
+        content.accessibilityActions {
+            if module.onRightClick != nil {
+                Button("Right-click action") { perform(.rightClick) }
+            }
+            if module.onMiddleClick != nil {
+                Button("Middle-click action") { perform(.middleClick) }
+            }
+            if module.onScrollUp != nil || module.scrollVolumeStep != nil {
+                Button("Scroll up action") { perform(.scrollUp) }
+            }
+            if module.onScrollDown != nil || module.scrollVolumeStep != nil {
+                Button("Scroll down action") { perform(.scrollDown) }
+            }
+        }
+    }
+}
+
 private struct ModuleView: View {
     let module: ModuleSpec
     let displayID: DisplayID
@@ -421,6 +543,35 @@ private struct ModuleView: View {
     let showFrontmostApplicationMenu: (ModuleID) -> Void
     let focusWorkspace: (ModuleID, ProviderID, WorkspaceID) -> Void
     @State private var nativePopoverPresented = false
+    @State private var alternateFormatActive = false
+
+    private var displayedModule: ModuleSpec {
+        var result = module
+        if alternateFormatActive, let alternate = module.formatAlt { result.format = alternate }
+        return result
+    }
+
+    private func performGesture(_ gesture: ModulePointerGesture) {
+        let action: ActionSpec?
+        switch gesture {
+        case .rightClick: action = module.onRightClick
+        case .middleClick: action = module.onMiddleClick
+        case .scrollUp: action = module.onScrollUp
+        case .scrollDown: action = module.onScrollDown
+        }
+        if let action {
+            performAction(module.id, action)
+        } else if let step = module.scrollVolumeStep {
+            let level: Int
+            switch store.volume {
+            case .level(let percent): level = percent
+            case .muted: level = 0
+            case .unavailable: return
+            }
+            let delta = gesture == .scrollUp ? step : -step
+            performNativeAction(module.id, .setVolume(Double(min(100, max(0, level + delta))) / 100))
+        }
+    }
 
     var body: some View {
         Group {
@@ -467,6 +618,12 @@ private struct ModuleView: View {
                     .focusable()
                     .focusEffectDisabled()
                     .accessibilityHint("Runs the configured action")
+            } else if module.formatAlt != nil {
+                Button { alternateFormatActive.toggle() } label: { decoratedContent }
+                    .buttonStyle(.plain)
+                    .focusable()
+                    .focusEffectDisabled()
+                    .accessibilityHint("Switches the module format")
             } else if [.wifi, .volume, .battery].contains(module.kind) {
                 Button {
                     nativePopoverPresented.toggle()
@@ -502,11 +659,14 @@ private struct ModuleView: View {
                     .accessibilityHint("Shows the frontmost application's menu")
             } else { decoratedContent }
         }
+        .background(ModulePointerInput(module: module, perform: performGesture))
+        .modifier(ModuleGestureAccessibility(module: module, perform: performGesture))
+        .onChange(of: module) { _, _ in alternateFormatActive = false }
         .help(helpText)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityValue(accessibilityValue)
         .accessibilityAddTraits(
-            module.onClick != nil || module.kind == .frontmostApp ||
+            module.onClick != nil || module.formatAlt != nil || module.kind == .frontmostApp ||
                 [.wifi, .volume, .battery].contains(module.kind) || presentation.popover != nil
                 ? .isButton
                 : .isStaticText
@@ -735,7 +895,7 @@ private struct ModuleView: View {
     }
 
     private var presentation: ModuleData {
-        ModulePresentationFormatter.apply(module, to: basePresentation)
+        ModulePresentationFormatter.apply(displayedModule, to: basePresentation)
     }
 
     private var basePresentation: ModuleData {
@@ -746,7 +906,7 @@ private struct ModuleView: View {
             return .init(
                 text: ClockFormatter.string(
                     from: store.now,
-                    format: module.format ?? "HH:mm",
+                    format: displayedModule.format ?? "HH:mm",
                     timeZone: .autoupdatingCurrent,
                     locale: .autoupdatingCurrent
                 ),
@@ -801,6 +961,7 @@ private struct ModuleView: View {
     private var helpText: String {
         if let failure = store.actionFailures[module.id] { return failure }
         if module.onClick != nil { return "Runs the configured action" }
+        if module.formatAlt != nil { return "Switches the module format" }
         if [.cpu, .memory].contains(module.kind), let tooltip = presentation.tooltip { return tooltip }
         if presentation.popover != nil { return "Shows module details" }
         if [.wifi, .volume, .battery].contains(module.kind) { return "Shows system controls" }
