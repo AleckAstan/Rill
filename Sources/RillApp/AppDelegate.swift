@@ -540,10 +540,11 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
                 passed = passed &&
                     !(record["label"] ?? "").isEmpty &&
                     (module.kind == .extensionModule || !(record["value"] ?? "").isEmpty)
-                if module.onClick != nil {
+                if module.onClick != nil || module.formatAlt != nil {
+                    let expectedHint = module.onClick != nil ? "Runs the configured action" : "Switches the module format"
                     passed = passed &&
                         record["role"] == NSAccessibility.Role.button.rawValue &&
-                        record["help"] == "Runs the configured action" &&
+                        record["help"] == expectedHint &&
                         record["supportsPress"] == "true"
                     if let view = panels.first?.contentView {
                         accessibilityActivationSucceeded = performAccessibilityPress(
@@ -551,6 +552,15 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
                             in: view
                         )
                         passed = passed && accessibilityActivationSucceeded
+                        if module.onClick == nil, module.kind == .clock, let alternate = module.formatAlt {
+                            try? await Task.sleep(for: .milliseconds(100))
+                            view.layoutSubtreeIfNeeded()
+                            let after = collectAccessibilityRecords(in: view).first { $0["identifier"] == identifier }
+                            let expected = ClockFormatter.string(from: moduleRuntime.store.now, format: alternate,
+                                                                 timeZone: .autoupdatingCurrent, locale: .autoupdatingCurrent)
+                            passed = passed && after?["label"] == expected
+                            accessibilityRecords.append(after ?? [:])
+                        }
                     }
                 }
             }

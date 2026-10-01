@@ -225,8 +225,13 @@ public struct ConfigurationParser: Sendable {
             }
         }
         for index in result.modules.indices {
-            if let executable = result.modules[index].onClick?.executable {
-                result.modules[index].onClick?.executable = resolve(executable, relativeTo: baseURL)
+            let actionPaths: [WritableKeyPath<ModuleSpec, ActionSpec?>] = [
+                \.onClick, \.onRightClick, \.onMiddleClick, \.onScrollUp, \.onScrollDown
+            ]
+            for keyPath in actionPaths {
+                if let executable = result.modules[index][keyPath: keyPath]?.executable {
+                    result.modules[index][keyPath: keyPath]?.executable = resolve(executable, relativeTo: baseURL)
+                }
             }
         }
         for index in result.plugins.indices {

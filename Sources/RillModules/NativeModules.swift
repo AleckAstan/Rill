@@ -896,7 +896,10 @@ public final class NativeModuleRuntime: NSObject {
         switch module.kind {
         case .clock:
             let current = clockReferences[module.id] ?? (0, module.format ?? "HH:mm")
-            clockReferences[module.id] = (current.count + 1, module.format ?? "HH:mm")
+            let primary = module.format ?? "HH:mm"
+            let needsSeconds = ClockPrecision.infer(from: primary) == .second ||
+                module.formatAlt.map { ClockPrecision.infer(from: $0) == .second } == true
+            clockReferences[module.id] = (current.count + 1, needsSeconds ? "ss" : "HH:mm")
             startClockIfNeeded()
         case .cpu, .memory:
             if module.kind == .cpu { cpuReferences[module.id, default: 0] += 1 }

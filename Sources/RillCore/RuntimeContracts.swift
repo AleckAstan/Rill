@@ -367,6 +367,12 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
     public var formatIcons: [String]?
     public var showIcon: Bool
     public var onClick: ActionSpec?
+    public var formatAlt: String?
+    public var onRightClick: ActionSpec?
+    public var onMiddleClick: ActionSpec?
+    public var onScrollUp: ActionSpec?
+    public var onScrollDown: ActionSpec?
+    public var scrollVolumeStep: Int?
     public var style: ModuleStyle?
     public var states: [String: ModuleStyle]
     public var extensionID: String?
@@ -378,6 +384,12 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
         case showIcon = "show_icon"
         case extensionID = "extension"
         case onClick = "on_click"
+        case formatAlt = "format_alt"
+        case onRightClick = "on_right_click"
+        case onMiddleClick = "on_middle_click"
+        case onScrollUp = "on_scroll_up"
+        case onScrollDown = "on_scroll_down"
+        case scrollVolumeStep = "scroll_volume_step"
     }
 
     public init(
@@ -391,6 +403,12 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
         formatIcons: [String]? = nil,
         showIcon: Bool = true,
         onClick: ActionSpec? = nil,
+        formatAlt: String? = nil,
+        onRightClick: ActionSpec? = nil,
+        onMiddleClick: ActionSpec? = nil,
+        onScrollUp: ActionSpec? = nil,
+        onScrollDown: ActionSpec? = nil,
+        scrollVolumeStep: Int? = nil,
         style: ModuleStyle? = nil,
         states: [String: ModuleStyle] = [:],
         extensionID: String? = nil,
@@ -406,6 +424,12 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
         self.formatIcons = formatIcons
         self.showIcon = showIcon
         self.onClick = onClick
+        self.formatAlt = formatAlt
+        self.onRightClick = onRightClick
+        self.onMiddleClick = onMiddleClick
+        self.onScrollUp = onScrollUp
+        self.onScrollDown = onScrollDown
+        self.scrollVolumeStep = scrollVolumeStep
         self.style = style
         self.states = states
         self.extensionID = extensionID
@@ -424,6 +448,12 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
         formatIcons = try container.decodeIfPresent([String].self, forKey: .formatIcons)
         showIcon = try container.decodeIfPresent(Bool.self, forKey: .showIcon) ?? true
         onClick = try container.decodeIfPresent(ActionSpec.self, forKey: .onClick)
+        formatAlt = try container.decodeIfPresent(String.self, forKey: .formatAlt)
+        onRightClick = try container.decodeIfPresent(ActionSpec.self, forKey: .onRightClick)
+        onMiddleClick = try container.decodeIfPresent(ActionSpec.self, forKey: .onMiddleClick)
+        onScrollUp = try container.decodeIfPresent(ActionSpec.self, forKey: .onScrollUp)
+        onScrollDown = try container.decodeIfPresent(ActionSpec.self, forKey: .onScrollDown)
+        scrollVolumeStep = try container.decodeIfPresent(Int.self, forKey: .scrollVolumeStep)
         style = try container.decodeIfPresent(ModuleStyle.self, forKey: .style)
         states = try container.decodeIfPresent([String: ModuleStyle].self, forKey: .states) ?? [:]
         extensionID = try container.decodeIfPresent(String.self, forKey: .extensionID)
@@ -1402,10 +1432,30 @@ public extension AppConfiguration {
                     append("\(path).format_icons", "Value-based icons require battery, volume, cpu, memory or custom")
                 }
             }
-            if let action = module.onClick {
-                validateExecutable(action.executable, path: "\(path).on_click.executable")
+            if let alternate = module.formatAlt {
+                if !hasStandardPresentation {
+                    append("\(path).format_alt", "Alternate formats require a standard module")
+                }
+                if alternate.count > 256 || (module.kind != .clock && ModuleTextFormat.render(alternate, text: "", percent: "?") == nil) {
+                    append("\(path).format_alt", "Invalid alternate format; expected at most 256 characters")
+                }
+            }
+            if let step = module.scrollVolumeStep {
+                if module.kind != .volume || !(1...20).contains(step) {
+                    append("\(path).scroll_volume_step", "Expected 1...20 on a volume module")
+                }
+            }
+            let actions = [("on_click", module.onClick), ("on_right_click", module.onRightClick),
+                           ("on_middle_click", module.onMiddleClick), ("on_scroll_up", module.onScrollUp),
+                           ("on_scroll_down", module.onScrollDown)]
+            for (key, action) in actions {
+                guard let action else { continue }
+                if key != "on_click", !hasStandardPresentation {
+                    append("\(path).\(key)", "Pointer actions require a standard module")
+                }
+                validateExecutable(action.executable, path: "\(path).\(key).executable")
                 if !(100...300_000).contains(action.timeoutMS) {
-                    append("\(path).on_click.timeout_ms", "Expected 100...300000")
+                    append("\(path).\(key).timeout_ms", "Expected 100...300000")
                 }
             }
             for key in module.states.keys where ModuleState(rawValue: key) == nil {
