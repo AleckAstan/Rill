@@ -19,10 +19,61 @@ public enum RillExtensionCapability: String, Codable, CaseIterable, Sendable {
 public enum RillExtensionContributionKind: String, Codable, Sendable {
     case module
     case notchWidget
+    case edgeWidget
 }
 
 public enum RillExtensionNodeKind: String, Codable, CaseIterable, Sendable {
-    case text, symbol, image, hStack, vStack, spacer, divider, progress, button, list, popover, nowPlaying
+    case text, symbol, image, hStack, vStack, spacer, divider, progress, button, list, popover, nowPlaying, metric
+}
+
+public enum RillMetricAccent: String, Codable, Sendable {
+    case orange, mint, yellow, blue
+}
+
+public struct RillMetricRow: Codable, Equatable, Sendable {
+    public var title: String
+    public var value: Double?
+    public var detail: String
+
+    public init(title: String, value: Double? = nil, detail: String = "") {
+        self.title = title; self.value = value; self.detail = detail
+    }
+
+    public init(from decoder: Decoder) throws {
+        let fields = try decoder.rillStrictContainer(keyedBy: CodingKeys.self)
+        title = try fields.decode(String.self, forKey: .title)
+        value = try fields.decodeIfPresent(Double.self, forKey: .value)
+        detail = try fields.decode(String.self, forKey: .detail)
+    }
+
+    enum CodingKeys: String, CodingKey, CaseIterable { case title, value, detail }
+}
+
+public struct RillMetricContent: Codable, Equatable, Sendable {
+    public var title: String
+    public var icon: String
+    public var value: Double?
+    public var text: String
+    public var accent: RillMetricAccent
+    public var rows: [RillMetricRow]
+
+    public init(title: String, icon: String, value: Double? = nil, text: String,
+                accent: RillMetricAccent, rows: [RillMetricRow]) {
+        self.title = title; self.icon = icon; self.value = value
+        self.text = text; self.accent = accent; self.rows = rows
+    }
+
+    public init(from decoder: Decoder) throws {
+        let fields = try decoder.rillStrictContainer(keyedBy: CodingKeys.self)
+        title = try fields.decode(String.self, forKey: .title)
+        icon = try fields.decode(String.self, forKey: .icon)
+        value = try fields.decodeIfPresent(Double.self, forKey: .value)
+        text = try fields.decode(String.self, forKey: .text)
+        accent = try fields.decode(RillMetricAccent.self, forKey: .accent)
+        rows = try fields.decode([RillMetricRow].self, forKey: .rows)
+    }
+
+    enum CodingKeys: String, CodingKey, CaseIterable { case title, icon, value, text, accent, rows }
 }
 
 /// Semantic media content rendered by Rill with native layout and animation.
@@ -104,10 +155,11 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
     public var label: String?
     public var actionID: String?
     public var media: RillNowPlayingContent?
+    public var metric: RillMetricContent?
     public var children: [RillExtensionNode]
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case kind, text, name, resource, value, label, media
+        case kind, text, name, resource, value, label, media, metric
         case actionID = "action_id"
         case children
     }
@@ -121,6 +173,7 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
         label: String? = nil,
         actionID: String? = nil,
         media: RillNowPlayingContent? = nil,
+        metric: RillMetricContent? = nil,
         children: [RillExtensionNode] = []
     ) {
         self.kind = kind
@@ -131,6 +184,7 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
         self.label = label
         self.actionID = actionID
         self.media = media
+        self.metric = metric
         self.children = children
     }
 
@@ -144,6 +198,7 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
         label = try container.decodeIfPresent(String.self, forKey: .label)
         actionID = try container.decodeIfPresent(String.self, forKey: .actionID)
         media = try container.decodeIfPresent(RillNowPlayingContent.self, forKey: .media)
+        metric = try container.decodeIfPresent(RillMetricContent.self, forKey: .metric)
         children = try container.decodeIfPresent([RillExtensionNode].self, forKey: .children) ?? []
     }
 
@@ -365,6 +420,23 @@ public extension RillExtensionPresentation {
         }
         if let value = node.value, !value.isFinite || !(0...1).contains(value) {
             throw RillExtensionProtocolError.invalidTree("Progress value must be finite and between 0 and 1")
+        }
+        if node.kind == .metric {
+            guard let metric = node.metric, node.children.isEmpty, !metric.title.isEmpty,
+                  !metric.text.isEmpty, metric.rows.count <= 8 else {
+                throw RillExtensionProtocolError.invalidTree("Metric requires title, text, at most 8 rows and no children")
+            }
+            let strings = [metric.title, metric.text] + metric.rows.flatMap { [$0.title, $0.detail] }
+            guard strings.allSatisfy({ $0.count <= RillExtensionAPI.maximumTextCharacters }) else {
+                throw RillExtensionProtocolError.invalidTree("Metric text exceeds the character limit")
+            }
+            let values = [metric.value].compactMap { $0 } + metric.rows.compactMap(\.value)
+            guard values.allSatisfy({ $0.isFinite && (0...1).contains($0) }) else {
+                throw RillExtensionProtocolError.invalidTree("Metric values must be finite and between 0 and 1")
+            }
+            try validateImageResource(metric.icon, packageDirectory: packageDirectory)
+        } else if node.metric != nil {
+            throw RillExtensionProtocolError.invalidTree("Only a metric node may carry metric content")
         }
         if node.kind == .button && (node.actionID?.isEmpty != false) {
             throw RillExtensionProtocolError.invalidTree("Button requires a non-empty opaque action_id")

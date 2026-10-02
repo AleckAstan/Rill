@@ -5,7 +5,7 @@ import ImageIO
 
 /// Bounded decoded artwork cache. Repeated media positions do not decode the same image again.
 @MainActor
-private enum ExtensionImageCache {
+enum ExtensionImageCache {
     static let cache: NSCache<NSString, NSImage> = {
         let cache = NSCache<NSString, NSImage>()
         cache.countLimit = 64
@@ -496,6 +496,11 @@ private struct ExtensionNodeView: View {
         case .nowPlaying:
             return AnyView(NowPlayingView(media: node.media!, expanded: expanded,
                 packageDirectory: packageDirectory, action: action))
+        case .metric:
+            if let metric = node.metric {
+                return AnyView(MetricGaugeView(metric: metric, packageDirectory: packageDirectory))
+            }
+            return AnyView(Text("Metric unavailable"))
         }
     }
 

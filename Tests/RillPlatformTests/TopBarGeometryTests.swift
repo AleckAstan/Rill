@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import XCTest
 
 final class TopBarGeometryTests: XCTestCase {
@@ -265,5 +266,262 @@ final class TopBarGeometryTests: XCTestCase {
             file: file,
             line: line
         )
+    }
+}
+
+final class EdgeWidgetGeometryTests: XCTestCase {
+    func testMetricContentFitsItsCountWhilePreservingEdgeAndCenter() {
+        for edge in SurfaceEdge.allCases {
+            let frame = edge.isHorizontal
+                ? CGRect(x: -700, y: -100, width: 400, height: 104)
+                : CGRect(x: -700, y: -100, width: 64, height: 400)
+            XCTAssertEqual(EdgeWidgetGeometry.contentFrame(frame: frame, edge: edge, metricCount: 0), frame)
+            XCTAssertEqual(EdgeWidgetGeometry.contentFrame(frame: frame, edge: edge, metricCount: 8), frame)
+            for count in 1...3 {
+                let fitted = EdgeWidgetGeometry.contentFrame(frame: frame, edge: edge, metricCount: count)
+                XCTAssertTrue(frame.contains(fitted))
+                XCTAssertEqual(fitted.midX, frame.midX)
+                XCTAssertEqual(fitted.midY, frame.midY)
+                XCTAssertEqual(edge.isHorizontal ? fitted.width : fitted.height, CGFloat(48 + count * 88))
+                XCTAssertEqual(edge.isHorizontal ? fitted.height : fitted.width, edge.isHorizontal ? 104 : 64)
+                for index in 0..<count {
+                    let along = CGFloat(24 + index * 88 + 44)
+                    let point = edge.isHorizontal ? CGPoint(x: along, y: 52) : CGPoint(x: 32, y: along)
+                    XCTAssertEqual(EdgeWidgetGeometry.metricIndex(localPoint: point, size: fitted.size, edge: edge, count: count), index)
+                }
+            }
+        }
+    }
+
+    @MainActor
+    func testProviderRemovalShrinksRenderedPanelAndClearsOldDetail() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let icon = try XCTUnwrap(NSImage(systemSymbolName: "circle.fill", accessibilityDescription: nil)?.tiffRepresentation)
+        try icon.write(to: directory.appendingPathComponent("icon.tiff"))
+        let runtime = ExtensionRuntimeStore()
+        runtime.register(extensionID: "usage", generation: 1, packageDirectory: directory) { _, _ in }
+        let nodes = (0..<3).map { index in
+            RillExtensionNode(kind: .metric, metric: .init(title: "Provider \(index)", icon: "icon.tiff",
+                value: 0.5, text: "50%", accent: .mint, rows: []))
+        }
+        try runtime.publish(extensionID: "usage", generation: 1, contributionID: "usage",
+            presentation: .init(compact: .vStack(nodes)))
+        let interaction = EdgeWidgetInteraction()
+        let frame = CGRect(x: 0, y: 0, width: 64, height: 400)
+        let window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        let view = NSHostingView(rootView: EdgeWidgetRootView(
+            spec: EdgeWidgetSpec(id: "usage", extensionID: "usage", contribution: "usage", edge: .right, thickness: 64),
+            widget: frame, canvas: frame, interaction: interaction, runtime: runtime, refreshPointer: {}))
+        window.contentView = view
+        window.orderFrontRegardless()
+        defer { interaction.cancelPendingTransitions(); window.close() }
+        try await Task.sleep(for: .milliseconds(150))
+        let threeProviders = try renderedBlackLength(view)
+        interaction.select(2)
+        for count in [2, 1] {
+            try runtime.publish(extensionID: "usage", generation: 1, contributionID: "usage",
+                presentation: .init(compact: .vStack(Array(nodes.prefix(count)))))
+            try await Task.sleep(for: .milliseconds(150))
+            let length = try renderedBlackLength(view)
+            XCTAssertLessThan(length, threeProviders)
+            XCTAssertEqual(Double(threeProviders - length), Double((3 - count) * 88), accuracy: 2)
+            XCTAssertTrue(interaction.expanded)
+            XCTAssertNil(interaction.selected)
+            XCTAssertNil(interaction.detailFrame)
+        }
+    }
+
+    @MainActor
+    func testOpeningRendersIntermediateFramesBeforeSettling() async throws {
+        try XCTSkipIf(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+        let interaction = EdgeWidgetInteraction(autoCollapse: true)
+        let frame = CGRect(x: 0, y: 0, width: 80, height: 400)
+        let window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        let view = NSHostingView(rootView: EdgeWidgetRootView(
+            spec: EdgeWidgetSpec(id: "motion", extensionID: "test", contribution: "usage", edge: .right, autoCollapse: true),
+            widget: frame, canvas: frame, interaction: interaction, runtime: ExtensionRuntimeStore(), refreshPointer: {}))
+        window.contentView = view
+        window.orderFrontRegardless()
+        defer { interaction.cancelPendingTransitions(); window.close() }
+        try await Task.sleep(for: .milliseconds(150))
+        let collapsedLength = try renderedBlackLength(view)
+        interaction.expand()
+        try await Task.sleep(for: .milliseconds(100))
+        let earlyLength = try renderedBlackLength(view)
+        interaction.select(0)
+        try await Task.sleep(for: .milliseconds(150))
+        let middleLength = try renderedBlackLength(view)
+        try await Task.sleep(for: .milliseconds(700))
+        let openLength = try renderedBlackLength(view)
+        XCTAssertGreaterThan(earlyLength, collapsedLength)
+        XCTAssertLessThan(Double(earlyLength), Double(openLength) * 0.75)
+        XCTAssertGreaterThan(middleLength, earlyLength)
+        XCTAssertGreaterThan(openLength, middleLength)
+        interaction.collapse()
+        try await Task.sleep(for: .milliseconds(600))
+        XCTAssertEqual(try renderedBlackLength(view), collapsedLength)
+        interaction.expand()
+        try await Task.sleep(for: .milliseconds(100))
+        let reopenedLength = try renderedBlackLength(view)
+        XCTAssertGreaterThan(reopenedLength, collapsedLength)
+        XCTAssertLessThan(Double(reopenedLength), Double(openLength) * 0.75)
+    }
+
+    @MainActor
+    private func renderedBlackLength(_ view: NSView) throws -> Int {
+        view.layoutSubtreeIfNeeded()
+        let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+        view.cacheDisplay(in: view.bounds, to: bitmap)
+        let x = bitmap.pixelsWide - 2
+        return try (0..<bitmap.pixelsHigh).filter { y in
+            let color = try XCTUnwrap(bitmap.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB))
+            return color.alphaComponent > 0.9 && max(color.redComponent, color.greenComponent, color.blueComponent) < 0.05
+        }.count
+    }
+
+    func testIndependentEndsShiftCenterWithoutDetachingFromAnyEdge() {
+        let screen = CGRect(x: -1800, y: -900, width: 1800, height: 900)
+        for edge in SurfaceEdge.allCases {
+            let spec = EdgeWidgetSpec(id: "usage", extensionID: "test", contribution: "usage", edge: edge)
+            let expanded = EdgeWidgetGeometry.frame(screen: screen, safeFrame: screen, spec: spec)
+            let compact = EdgeWidgetGeometry.collapsedFrame(frame: expanded, edge: edge)
+            let asymmetric = EdgeWidgetGeometry.animatedFrame(frame: expanded, edge: edge, leading: 0.8, trailing: 0.3, depth: 0.6)
+            if edge.isHorizontal {
+                XCTAssertLessThan(asymmetric.midX, compact.midX)
+            } else {
+                XCTAssertLessThan(asymmetric.midY, compact.midY)
+            }
+            for (leading, trailing, depth) in [(-0.2, -0.1, -0.3), (0.8, 0.3, 0.6), (1.04, 1.02, 1.03)] {
+                let sample = EdgeWidgetGeometry.animatedFrame(frame: expanded, edge: edge,
+                    leading: leading, trailing: trailing, depth: depth)
+                XCTAssertTrue(sample.contains(compact))
+                switch edge {
+                case .top: XCTAssertEqual(sample.maxY, expanded.maxY, accuracy: 0.0001)
+                case .bottom: XCTAssertEqual(sample.minY, expanded.minY, accuracy: 0.0001)
+                case .left: XCTAssertEqual(sample.minX, expanded.minX, accuracy: 0.0001)
+                case .right: XCTAssertEqual(sample.maxX, expanded.maxX, accuracy: 0.0001)
+                }
+            }
+            XCTAssertEqual(EdgeWidgetGeometry.animatedFrame(frame: expanded, edge: edge,
+                leading: 0, trailing: 0, depth: 0), compact)
+            XCTAssertEqual(EdgeWidgetGeometry.animatedFrame(frame: expanded, edge: edge,
+                leading: 1, trailing: 1, depth: 1), expanded)
+        }
+    }
+
+    func testCollapsedHandleStaysSmallAndAttachedOnEveryEdge() {
+        let screen = CGRect(x: -1800, y: -900, width: 1800, height: 900)
+        for edge in SurfaceEdge.allCases {
+            let spec = EdgeWidgetSpec(id: "usage", extensionID: "test", contribution: "usage", edge: edge)
+            let expanded = EdgeWidgetGeometry.frame(screen: screen, safeFrame: screen, spec: spec)
+            let collapsed = EdgeWidgetGeometry.collapsedFrame(frame: expanded, edge: edge)
+            XCTAssertTrue(expanded.contains(collapsed))
+            XCTAssertEqual(collapsed.width, edge.isHorizontal ? 48 : 6)
+            XCTAssertEqual(collapsed.height, edge.isHorizontal ? 6 : 48)
+            switch edge {
+            case .top: XCTAssertEqual(collapsed.maxY, expanded.maxY)
+            case .bottom: XCTAssertEqual(collapsed.minY, expanded.minY)
+            case .left: XCTAssertEqual(collapsed.minX, expanded.minX)
+            case .right: XCTAssertEqual(collapsed.maxX, expanded.maxX)
+            }
+        }
+    }
+
+    @MainActor
+    func testHoverExpandsAndDepartureClearsDetailsAndCollapses() async throws {
+        let interaction = EdgeWidgetInteraction(autoCollapse: true)
+        XCTAssertFalse(interaction.expanded)
+        interaction.enter()
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertTrue(interaction.expanded)
+        interaction.select(1)
+        interaction.detailFrame = CGRect(x: 1, y: 2, width: 3, height: 4)
+        interaction.closeLater()
+        XCTAssertTrue(interaction.expanded)
+        try await Task.sleep(for: .milliseconds(320))
+        XCTAssertFalse(interaction.expanded)
+        XCTAssertNil(interaction.selected)
+        XCTAssertNil(interaction.detailFrame)
+    }
+
+    @MainActor
+    func testBriefHoverDoesNotOpenAndReentryCancelsCollapse() async throws {
+        let interaction = EdgeWidgetInteraction(autoCollapse: true)
+        interaction.enter()
+        interaction.closeLater()
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertFalse(interaction.expanded)
+        interaction.expand()
+        interaction.closeLater()
+        interaction.enter()
+        try await Task.sleep(for: .milliseconds(320))
+        XCTAssertTrue(interaction.expanded)
+        interaction.cancelPendingTransitions()
+    }
+
+    @MainActor
+    func testPersistentWidgetOnlyClosesItsDetailCard() async throws {
+        let interaction = EdgeWidgetInteraction()
+        XCTAssertTrue(interaction.expanded)
+        interaction.select(0)
+        interaction.closeLater()
+        try await Task.sleep(for: .milliseconds(320))
+        XCTAssertTrue(interaction.expanded)
+        XCTAssertNil(interaction.selected)
+    }
+
+    func testPointerSelectsTheSameMetricOnVerticalAndHorizontalEdges() {
+        for edge in SurfaceEdge.allCases {
+            let size = edge.isHorizontal ? CGSize(width: 400, height: 104) : CGSize(width: 80, height: 400)
+            for index in 0..<3 {
+                let along = CGFloat(32 + index * 112 + 56)
+                let point = edge.isHorizontal ? CGPoint(x: along, y: 40) : CGPoint(x: 40, y: along)
+                XCTAssertEqual(EdgeWidgetGeometry.metricIndex(localPoint: point, size: size, edge: edge, count: 3), index)
+            }
+            XCTAssertNil(EdgeWidgetGeometry.metricIndex(localPoint: .zero, size: size, edge: edge, count: 0))
+        }
+    }
+
+    func testAllEdgesStayAttachedAndClampOffsetToAvailableSpace() {
+        let screen = CGRect(x: -1800, y: -900, width: 1800, height: 900)
+        let safe = CGRect(x: -1800, y: -850, width: 1800, height: 822)
+        for edge in SurfaceEdge.allCases {
+            let spec = EdgeWidgetSpec(id: "usage", extensionID: "test", contribution: "usage", edge: edge, offset: 10000)
+            let frame = EdgeWidgetGeometry.frame(screen: screen, safeFrame: safe, spec: spec)
+            XCTAssertTrue(screen.contains(frame))
+            switch edge {
+            case .top: XCTAssertEqual(frame.maxY, screen.maxY)
+            case .bottom: XCTAssertEqual(frame.minY, screen.minY)
+            case .left: XCTAssertEqual(frame.minX, screen.minX)
+            case .right: XCTAssertEqual(frame.maxX, screen.maxX)
+            }
+            let canvas = EdgeWidgetGeometry.canvas(screen: screen, frame: frame, edge: edge)
+            XCTAssertTrue(screen.contains(canvas))
+            XCTAssertTrue(canvas.contains(frame))
+        }
+    }
+
+    func testContourKeepsTransparentCornersOnEveryEdge() {
+        for edge in SurfaceEdge.allCases {
+            let size = edge.isHorizontal ? CGSize(width: 400, height: 80) : CGSize(width: 80, height: 400)
+            let rect = CGRect(origin: .zero, size: size)
+            let path = EdgeWidgetShape(edge: edge).path(in: rect)
+            XCTAssertTrue(path.contains(CGPoint(x: rect.midX, y: rect.midY)))
+            let corner: CGPoint
+            switch edge {
+            case .top, .left: corner = CGPoint(x: rect.maxX - 1, y: rect.maxY - 1)
+            case .right: corner = CGPoint(x: 1, y: 1)
+            case .bottom: corner = CGPoint(x: 1, y: 1)
+            }
+            XCTAssertFalse(path.contains(corner))
+        }
     }
 }

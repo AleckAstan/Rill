@@ -194,3 +194,15 @@ Runtime behavior and examples for each kind are documented in the [built-in modu
 Rill watches the containing directory semantics, debounces changes for approximately 150 ms, and reparses the complete file. Atomic replacement and delete/recreate saves are supported. A valid candidate is prepared and committed as one generation; replaced resources are then retired. Invalid syntax, validation errors, or failed preparation preserve the previous active generation and surface diagnostics through the status menu.
 
 The distributable no-manager starter is [`Examples/default/config.toml`](../../Examples/default/config.toml). Optional manager examples for [AeroSpace](../../Examples/aerospace/config.toml) and [OmniWM](../../Examples/omniwm/config.toml) use the same accepted keys.
+
+### Edge widgets (schema 2)
+
+`[[edge_widgets]]` binds an `edgeWidget` contribution to an independent
+compact edge panel. Fields are `id`, `extension`, `contribution`, `display`,
+`edge`, `thickness`, `length` and `offset`. The last three are optional:
+thickness defaults to 80 vertically or 104 horizontally, length to 400,
+and offset to zero. See [extension authoring](extensions.md) for limits,
+coexistence rules and the semantic metric content contract.
+For metric content, `length` is a maximum: the visible panel fits the metric
+count automatically. The RillAIUsage samples use a 64-point thickness and
+312-point maximum length.

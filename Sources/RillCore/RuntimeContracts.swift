@@ -655,6 +655,47 @@ public struct ExtensionSpec: Codable, Sendable, Equatable {
 public enum NotchCollisionPolicy: String, Codable, Sendable { case highestPriority = "highest_priority" }
 public enum NotchBackgroundStyle: String, Codable, Sendable { case systemGlass = "system_glass", black }
 
+public struct EdgeWidgetSpec: Codable, Sendable, Equatable {
+    public var id: String
+    public var extensionID: String
+    public var contribution: String
+    public var display: DisplaySelector
+    public var edge: SurfaceEdge
+    public var thickness: Double
+    public var length: Double
+    public var offset: Double
+    public var autoCollapse: Bool
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case id, contribution, display, edge, thickness, length, offset
+        case extensionID = "extension"
+        case autoCollapse = "auto_collapse"
+    }
+
+    public init(id: String, extensionID: String, contribution: String,
+                display: DisplaySelector = .primary, edge: SurfaceEdge = .right,
+                thickness: Double? = nil, length: Double = 400, offset: Double = 0,
+                autoCollapse: Bool = false) {
+        self.id = id; self.extensionID = extensionID; self.contribution = contribution
+        self.display = display; self.edge = edge; self.thickness = thickness ?? (edge.isHorizontal ? 104 : 80)
+        self.length = length; self.offset = offset
+        self.autoCollapse = autoCollapse
+    }
+
+    public init(from decoder: Decoder) throws {
+        let fields = try decoder.strictContainer(keyedBy: CodingKeys.self)
+        id = try fields.decode(String.self, forKey: .id)
+        extensionID = try fields.decode(String.self, forKey: .extensionID)
+        contribution = try fields.decode(String.self, forKey: .contribution)
+        display = try fields.decodeIfPresent(DisplaySelector.self, forKey: .display) ?? .primary
+        edge = try fields.decodeIfPresent(SurfaceEdge.self, forKey: .edge) ?? .right
+        thickness = try fields.decodeIfPresent(Double.self, forKey: .thickness) ?? (edge.isHorizontal ? 104 : 80)
+        length = try fields.decodeIfPresent(Double.self, forKey: .length) ?? 400
+        offset = try fields.decodeIfPresent(Double.self, forKey: .offset) ?? 0
+        autoCollapse = try fields.decodeIfPresent(Bool.self, forKey: .autoCollapse) ?? false
+    }
+}
+
 public struct NotchWidgetSpec: Codable, Sendable, Equatable {
     public var id: String
     public var extensionID: String
@@ -1085,11 +1126,13 @@ public struct AppConfiguration: Codable, Sendable, Equatable {
     public var plugins: [PluginSpec]
     public var extensions: [ExtensionSpec]
     public var notchWidgets: [NotchWidgetSpec]
+    public var edgeWidgets: [EdgeWidgetSpec]
 
     enum CodingKeys: String, CodingKey, CaseIterable {
         case schemaVersion = "schema_version"
         case theme, surfaces, modules, providers, plugins, extensions
         case notchWidgets = "notch_widgets"
+        case edgeWidgets = "edge_widgets"
     }
 
     public init(
@@ -1100,7 +1143,8 @@ public struct AppConfiguration: Codable, Sendable, Equatable {
         providers: [ProviderSpec] = [],
         plugins: [PluginSpec] = [],
         extensions: [ExtensionSpec] = [],
-        notchWidgets: [NotchWidgetSpec] = []
+        notchWidgets: [NotchWidgetSpec] = [],
+        edgeWidgets: [EdgeWidgetSpec] = []
     ) {
         self.schemaVersion = schemaVersion
         self.theme = theme
@@ -1110,6 +1154,7 @@ public struct AppConfiguration: Codable, Sendable, Equatable {
         self.plugins = plugins
         self.extensions = extensions
         self.notchWidgets = notchWidgets
+        self.edgeWidgets = edgeWidgets
     }
 
     public init(from decoder: Decoder) throws {
@@ -1122,6 +1167,7 @@ public struct AppConfiguration: Codable, Sendable, Equatable {
         plugins = try container.decodeIfPresent([PluginSpec].self, forKey: .plugins) ?? []
         extensions = try container.decodeIfPresent([ExtensionSpec].self, forKey: .extensions) ?? []
         notchWidgets = try container.decodeIfPresent([NotchWidgetSpec].self, forKey: .notchWidgets) ?? []
+        edgeWidgets = try container.decodeIfPresent([EdgeWidgetSpec].self, forKey: .edgeWidgets) ?? []
     }
 }
 
@@ -1214,7 +1260,7 @@ public extension AppConfiguration {
         if schemaVersion != 1 && schemaVersion != 2 {
             append("schema_version", "Unsupported schema version \(schemaVersion); expected 1 or 2")
         }
-        if schemaVersion == 1 && (!extensions.isEmpty || !notchWidgets.isEmpty || modules.contains(where: { $0.kind == .extensionModule })) {
+        if schemaVersion == 1 && (!extensions.isEmpty || !notchWidgets.isEmpty || !edgeWidgets.isEmpty || modules.contains(where: { $0.kind == .extensionModule })) {
             append("schema_version", "UI extensions require schema_version = 2; provider plugins remain version 1 compatible")
         }
 
@@ -1288,6 +1334,33 @@ public extension AppConfiguration {
         for left in notchWidgets.indices {
             for right in notchWidgets.indices where right > left && notchWidgets[left].display.mayResolveSameDisplay(as: notchWidgets[right].display) && notchWidgets[left].priority == notchWidgets[right].priority {
                 append("notch_widgets[\(right)].priority", "Colliding notch widgets require distinct priorities")
+            }
+        }
+
+        var edgeWidgetIDs = Set<String>()
+        if edgeWidgets.count > 64 { append("edge_widgets", "At most 64 edge widgets are supported") }
+        for (index, widget) in edgeWidgets.enumerated() {
+            let path = "edge_widgets[\(index)]"
+            if widget.id.isEmpty || widget.id.count > 64 || widget.id.range(of: #"^[A-Za-z0-9][A-Za-z0-9._-]*$"#, options: .regularExpression) == nil {
+                append("\(path).id", "ID must use 1...64 safe ASCII characters")
+            }
+            if !edgeWidgetIDs.insert(widget.id).inserted { append("\(path).id", "Duplicate ID '\(widget.id)'") }
+            if let item = extensions.first(where: { $0.id == widget.extensionID }) {
+                if !item.contributions.contains(where: { $0.id == widget.contribution && $0.kind == .edgeWidget }) {
+                    append("\(path).contribution", "Unknown edgeWidget contribution '\(widget.contribution)'")
+                }
+            } else { append("\(path).extension", "Unknown extension '\(widget.extensionID)'") }
+            validateFinite(widget.thickness, path: "\(path).thickness", range: (widget.edge.isHorizontal ? 104 : 64)...256)
+            validateFinite(widget.length, path: "\(path).length", range: 160...1200)
+            validateFinite(widget.offset, path: "\(path).offset", range: -10000...10000)
+            if surfaces.contains(where: { $0.edge == widget.edge && $0.display.mayResolveSameDisplay(as: widget.display) }) {
+                append("\(path).edge", "An edge widget and a bar cannot share the same display edge")
+            }
+            if widget.edge == .top && notchWidgets.contains(where: { $0.display.mayResolveSameDisplay(as: widget.display) }) {
+                append("\(path).edge", "A top edge widget cannot share a display with a notch widget")
+            }
+            if edgeWidgets.prefix(index).contains(where: { $0.edge == widget.edge && $0.display.mayResolveSameDisplay(as: widget.display) }) {
+                append("\(path).edge", "Group contributions in one widget per display edge")
             }
         }
 
