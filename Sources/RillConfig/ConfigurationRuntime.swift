@@ -523,6 +523,7 @@ public enum ManagedResourceDescriptor: Hashable, Sendable {
     case module(ModuleID)
     case uiExtension(String)
     case notchWidget(String)
+    case edgeWidget(String)
 }
 
 public protocol ManagedConfigurationResource: Sendable {
@@ -576,7 +577,8 @@ public actor ConfigurationCoordinator {
             configuration.extensions.map { ManagedResourceDescriptor.uiExtension($0.id) } +
             configuration.modules.map { ManagedResourceDescriptor.module($0.id) } +
             configuration.surfaces.map { ManagedResourceDescriptor.surface($0.id) } +
-            configuration.notchWidgets.map { ManagedResourceDescriptor.notchWidget($0.id) }
+            configuration.notchWidgets.map { ManagedResourceDescriptor.notchWidget($0.id) } +
+            configuration.edgeWidgets.map { ManagedResourceDescriptor.edgeWidget($0.id) }
         var staged: [any ManagedConfigurationResource] = []
 
         do {

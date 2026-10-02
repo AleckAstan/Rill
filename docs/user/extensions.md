@@ -69,3 +69,50 @@ escalates after its grace period. To roll back, remove its module/notch
 references and `[[extensions]]`, then return to `schema_version = 1` if no v2
 features remain. Do not use hostile test executables in a personal extension
 directory; use a temporary configuration/package.
+
+## Independent edge widgets
+
+An API-v2 manifest can declare `kind = "edgeWidget"`. Bind it through
+`[[edge_widgets]]` with `id`, `extension`, `contribution`, `display`, `edge`,
+optional `thickness`, `length` and `offset`. The host renders a short black
+panel attached to the selected edge using its existing notch contour.
+Thickness defaults to 80 points for vertical edges and 104 for horizontal
+edges; length defaults to 400 points and offset to zero. Supported thickness
+is 64...256 vertically or 104...256 horizontally, length 160...1200 and offset
+-10000...10000. Length and offset clamp to the display's visible axis.
+Metric panels fit their length to the visible content, with 24-point end
+padding and 88-point slots, capped by the configured `length`. One, two and
+three metrics occupy 136, 224 and 312 points respectively. Non-metric
+contributions retain their configured length. Rendering and pointer routing
+share this fitted geometry when the contribution changes.
+
+Each display/edge accepts one edge widget. A bar and an edge widget cannot
+share an edge; a top widget cannot share a display with a notch widget.
+Top bars, centered notch widgets and side/bottom widgets coexist. Providers
+and extension processes remain shared across selected displays, while hover
+and selected detail cards belong to each display.
+
+The semantic `metric` node carries `metric` with `title`, package-relative
+`icon`, optional normalized `value`, visible `text`, `accent` (`orange`,
+`mint`, `yellow`, `blue`) and at most eight `rows`. Each row has `title`,
+optional normalized `value` and `detail`. All values must be finite in 0...1.
+Omit a value for an unavailable percentage or a count with no denominator.
+The host owns the ring, typography, progress bars and black detail card.
+An edge contribution may publish a `vStack` or `hStack` of metric nodes;
+placement follows the selected edge. Hover or press selects a metric, and
+leaving the panel/card closes the detail after 260 ms. Reduce Motion disables
+ring and card transitions. Other node trees retain the declarative renderer.
+
+The sibling `../RillAIUsage` package implements Claude, Codex and Perplexity
+readings through this API. It includes a standalone configuration, a
+bar/notch/side coexistence configuration and an explicit reference demo.
+
+`auto_collapse = true` opts an edge widget into a 6-by-48-point resting handle.
+A 100 ms hover or native accessible press expands the existing panel; leaving
+both panel and detail for 260 ms collapses it and clears the selected card.
+Escape collapses immediately. A small pointer wake region surrounds the
+handle, with click pass-through outside the visible contour. Frame and content
+animation stay inside the fixed canvas, and Reduce Motion removes transitions.
+Opening uses independent spring responses for the two ends and inward depth,
+settling over 0.68 to 0.78 seconds with progressive content reveal.
+The default is false, preserving existing permanently expanded edge widgets.

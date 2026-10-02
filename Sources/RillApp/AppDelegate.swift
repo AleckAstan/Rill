@@ -104,6 +104,8 @@ final class RillStatusController: NSObject, NSApplicationDelegate {
             return try await ExtensionHostResource(spec: spec, generation: generation, runtime: self.extensionRuntime)
         case .notchWidget(let id):
             return try await NotchWidgetResource(id: id, configuration: configuration, runtime: self.extensionRuntime)
+        case .edgeWidget(let id):
+            return try await EdgeWidgetResource(id: id, configuration: configuration, runtime: self.extensionRuntime)
         }
     }
     private var configurationStatus = "Configuration has not loaded."

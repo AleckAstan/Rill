@@ -795,3 +795,36 @@ final class ProductionConfigurationTests: XCTestCase {
         XCTAssertNil(runtime.store.mockModules[module.id])
     }
 }
+
+final class EdgeWidgetConfigurationTests: XCTestCase {
+    func testAutoCollapseIsOptIn() throws {
+        let enabled = #"{"id":"side","extension":"test","contribution":"side","auto_collapse":true}"#
+        let omitted = #"{"id":"side","extension":"test","contribution":"side"}"#
+        XCTAssertTrue(try JSONDecoder().decode(EdgeWidgetSpec.self, from: Data(enabled.utf8)).autoCollapse)
+        XCTAssertFalse(try JSONDecoder().decode(EdgeWidgetSpec.self, from: Data(omitted.utf8)).autoCollapse)
+    }
+
+    private func configuration() -> AppConfiguration {
+        AppConfiguration(schemaVersion: 2, surfaces: [.init(id: SurfaceID("top"), edge: .top)],
+            extensions: [.init(id: "test", path: "/test", executable: "/test/bin", contributions: [
+                .init(id: "side", kind: .edgeWidget), .init(id: "notch", kind: .notchWidget)
+            ])], notchWidgets: [.init(id: "notch", extensionID: "test", contribution: "notch")],
+            edgeWidgets: [.init(id: "side", extensionID: "test", contribution: "side")])
+    }
+
+    func testTopBarNotchAndSideWidgetCoexist() {
+        XCTAssertTrue(configuration().validate().isEmpty)
+    }
+
+    func testConflictsAndWrongContributionReject() {
+        var config = configuration()
+        config.edgeWidgets[0].edge = .top
+        XCTAssertTrue(config.validate().contains { $0.path == "edge_widgets[0].edge" })
+        config = configuration()
+        config.edgeWidgets[0].contribution = "notch"
+        XCTAssertTrue(config.validate().contains { $0.path == "edge_widgets[0].contribution" })
+        config = configuration()
+        config.edgeWidgets[0].thickness = .infinity
+        XCTAssertTrue(config.validate().contains { $0.path == "edge_widgets[0].thickness" })
+    }
+}

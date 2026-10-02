@@ -21,3 +21,8 @@ end = ["wifi"]
 Surfaces are rejected during configuration validation when their display selectors can resolve to the same display and their edges match. This includes `all` with any selector, `primary` with `id:*` (because the primary display is not knowable until runtime), and identical `id:*` selectors. The conservative rule prevents ambiguous panel ownership and duplicate bars; use distinct edges or explicit non-overlapping IDs. A module instance belongs to one surface specification; providers remain shared across all surfaces.
 
 See [`Examples/edges/rill/config.toml`](../../Examples/edges/rill/config.toml) for a four-edge demonstration.
+
+Independent compact panels use `[[edge_widgets]]` and an API-v2
+`edgeWidget` contribution. They reuse the notch contour on the chosen edge
+and coexist with bars on other edges plus a centered notch widget. They do
+not occupy the entire edge. See [UI extension authoring](extensions.md).

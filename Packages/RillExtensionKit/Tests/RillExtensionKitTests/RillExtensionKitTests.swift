@@ -102,3 +102,26 @@ import Testing
     let presentation = RillExtensionPresentation(compact: .init(kind: .image, resource: "folder", label: "Invalid"))
     #expect(throws: RillExtensionProtocolError.self) { try presentation.validate(packageDirectory: directory) }
 }
+
+@Test func metricsRejectUnboundedValuesAndUnexpectedPayloads() throws {
+    var metric = RillMetricContent(title: "Usage", icon: "icon.png", value: 0.73, text: "73%", accent: .orange,
+                                  rows: [.init(title: "Session", value: 0.73, detail: "Resets soon")])
+    try RillExtensionPresentation(compact: .init(kind: .metric, metric: metric)).validate()
+    metric.value = .nan
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .init(kind: .metric, metric: metric)).validate()
+    }
+    metric.value = nil
+    metric.rows[0].value = 1.5
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .init(kind: .metric, metric: metric)).validate()
+    }
+    metric.rows = []
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .init(kind: .text, text: "Wrong", metric: metric)).validate()
+    }
+    metric.icon = "../secret.png"
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .init(kind: .metric, metric: metric)).validate()
+    }
+}
