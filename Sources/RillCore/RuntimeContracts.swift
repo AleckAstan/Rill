@@ -671,11 +671,10 @@ public struct ExtensionContributionSpec: Codable, Hashable, Sendable {
     }
 }
 
-/// A UI extension package. Only id/path/grant are user-authored; the loader
-/// fills the resolved manifest fields without running the executable.
 public struct ExtensionSpec: Codable, Sendable, Equatable {
     public var id: String
     public var path: String
+    public var settings: [String: String]
     public var grant: [RillExtensionCapability]
     public var name: String?
     public var executable: String?
@@ -683,12 +682,13 @@ public struct ExtensionSpec: Codable, Sendable, Equatable {
     public var requestedCapabilities: [RillExtensionCapability]
     public var contributions: [ExtensionContributionSpec]
 
-    enum CodingKeys: String, CodingKey, CaseIterable { case id, path, grant }
+    enum CodingKeys: String, CodingKey, CaseIterable { case id, path, grant, settings }
 
     public init(
         id: String,
         path: String,
         grant: [RillExtensionCapability] = [],
+        settings: [String: String] = [:],
         name: String? = nil,
         executable: String? = nil,
         args: [String] = [],
@@ -696,6 +696,7 @@ public struct ExtensionSpec: Codable, Sendable, Equatable {
         contributions: [ExtensionContributionSpec] = []
     ) {
         self.id = id; self.path = path; self.grant = grant; self.name = name
+        self.settings = settings
         self.executable = executable; self.args = args
         self.requestedCapabilities = requestedCapabilities; self.contributions = contributions
     }
@@ -705,12 +706,42 @@ public struct ExtensionSpec: Codable, Sendable, Equatable {
         id = try container.decode(String.self, forKey: .id)
         path = try container.decode(String.self, forKey: .path)
         grant = try container.decodeIfPresent([RillExtensionCapability].self, forKey: .grant) ?? []
+        settings = try container.decodeIfPresent([String: String].self, forKey: .settings) ?? [:]
         name = nil; executable = nil; args = []; requestedCapabilities = []; contributions = []
     }
 }
 
 public enum NotchCollisionPolicy: String, Codable, Sendable { case highestPriority = "highest_priority" }
 public enum NotchBackgroundStyle: String, Codable, Sendable { case systemGlass = "system_glass", black }
+
+public struct EdgeWidgetShortcut: Codable, Sendable, Equatable {
+    public enum Modifier: String, Codable, Sendable { case command, control, option, shift }
+    public var key: String
+    public var modifiers: [Modifier]
+
+    enum CodingKeys: String, CodingKey, CaseIterable { case key, modifiers }
+
+    public init(key: String, modifiers: [Modifier]) {
+        self.key = key
+        self.modifiers = modifiers
+    }
+
+    public init(from decoder: Decoder) throws {
+        let fields = try decoder.strictContainer(keyedBy: CodingKeys.self)
+        key = try fields.decode(String.self, forKey: .key)
+        modifiers = try fields.decode([Modifier].self, forKey: .modifiers)
+    }
+
+    public var keyCode: UInt32? {
+        let codes: [String: UInt32] = [
+            "a": 0, "s": 1, "d": 2, "f": 3, "h": 4, "g": 5, "z": 6, "x": 7,
+            "c": 8, "v": 9, "b": 11, "q": 12, "w": 13, "e": 14, "r": 15,
+            "y": 16, "t": 17, "o": 31, "u": 32, "i": 34, "p": 35,
+            "l": 37, "j": 38, "k": 40, "n": 45, "m": 46, "space": 49
+        ]
+        return codes[key]
+    }
+}
 
 public struct EdgeWidgetSpec: Codable, Sendable, Equatable {
     public var id: String
@@ -723,9 +754,10 @@ public struct EdgeWidgetSpec: Codable, Sendable, Equatable {
     public var offset: Double
     public var autoCollapse: Bool
     public var detailShadow: Bool
+    public var shortcut: EdgeWidgetShortcut?
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case id, contribution, display, edge, thickness, length, offset
+        case id, contribution, display, edge, thickness, length, offset, shortcut
         case extensionID = "extension"
         case autoCollapse = "auto_collapse"
         case detailShadow = "detail_shadow"
@@ -734,12 +766,13 @@ public struct EdgeWidgetSpec: Codable, Sendable, Equatable {
     public init(id: String, extensionID: String, contribution: String,
                 display: DisplaySelector = .primary, edge: SurfaceEdge = .right,
                 thickness: Double? = nil, length: Double = 400, offset: Double = 0,
-                autoCollapse: Bool = false, detailShadow: Bool = true) {
+                autoCollapse: Bool = false, detailShadow: Bool = true, shortcut: EdgeWidgetShortcut? = nil) {
         self.id = id; self.extensionID = extensionID; self.contribution = contribution
         self.display = display; self.edge = edge; self.thickness = thickness ?? (edge.isHorizontal ? 104 : 80)
         self.length = length; self.offset = offset
         self.autoCollapse = autoCollapse
         self.detailShadow = detailShadow
+        self.shortcut = shortcut
     }
 
     public init(from decoder: Decoder) throws {
@@ -754,6 +787,7 @@ public struct EdgeWidgetSpec: Codable, Sendable, Equatable {
         offset = try fields.decodeIfPresent(Double.self, forKey: .offset) ?? 0
         autoCollapse = try fields.decodeIfPresent(Bool.self, forKey: .autoCollapse) ?? false
         detailShadow = try fields.decodeIfPresent(Bool.self, forKey: .detailShadow) ?? true
+        shortcut = try fields.decodeIfPresent(EdgeWidgetShortcut.self, forKey: .shortcut)
     }
 }
 
@@ -1362,6 +1396,11 @@ public extension AppConfiguration {
             for capability in requested.subtracting(granted) {
                 append("\(path).grant", "Manifest requests unauthorized capability '\(capability.rawValue)'")
             }
+            if item.settings.count > 32 || item.settings.contains(where: {
+                $0.key.isEmpty || $0.key.count > 128 || $0.value.count > 4_096
+            }) {
+                append("\(path).settings", "Use at most 32 settings with keys of 1...128 and values of at most 4096 characters")
+            }
             if item.executable == nil { append("\(path).path", "Extension manifest was not resolved") }
             var contributionIDs = Set<String>()
             for contribution in item.contributions {
@@ -1411,6 +1450,18 @@ public extension AppConfiguration {
                     append("\(path).contribution", "Unknown edgeWidget contribution '\(widget.contribution)'")
                 }
             } else { append("\(path).extension", "Unknown extension '\(widget.extensionID)'") }
+            if let shortcut = widget.shortcut {
+                if shortcut.keyCode == nil || shortcut.modifiers.isEmpty ||
+                    (!shortcut.modifiers.contains(.command) && !shortcut.modifiers.contains(.control) && !shortcut.modifiers.contains(.option)) ||
+                    Set(shortcut.modifiers).count != shortcut.modifiers.count {
+                    append("\(path).shortcut", "Use a lowercase letter or space with unique modifiers including command, control or option")
+                }
+                if edgeWidgets.prefix(index).contains(where: {
+                    $0.shortcut?.key == shortcut.key && Set($0.shortcut?.modifiers ?? []) == Set(shortcut.modifiers)
+                }) {
+                    append("\(path).shortcut", "Shortcut is already assigned to another edge widget")
+                }
+            }
             validateFinite(widget.thickness, path: "\(path).thickness", range: (widget.edge.isHorizontal ? 104 : 64)...256)
             validateFinite(widget.length, path: "\(path).length", range: 160...1200)
             validateFinite(widget.offset, path: "\(path).offset", range: -10000...10000)

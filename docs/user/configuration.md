@@ -229,3 +229,16 @@ coexistence rules and the semantic metric content contract.
 For metric content, `length` is a maximum: the visible panel fits the metric
 count automatically. The RillAIUsage samples use a 64-point thickness and
 312-point maximum length.
+
+Optional edge-widget `shortcut` opens the panel with a global chord, for example
+`shortcut = { key = "w", modifiers = ["control", "option"] }`. Keys support
+lowercase letters and `space`. Modifiers support `command`, `control`, `option`
+and `shift`; require at least one of command/control/option. With a shortcut,
+the widget starts collapsed and keyboard focus controls its lifetime. Escape,
+the shortcut again, or focus leaving the panel closes it. Hover expansion is
+disabled. Without a shortcut, existing pointer behavior is preserved.
+
+An `[[extensions]]` entry also accepts `settings`, a table of strings passed to
+that extension's initial host context. For RillWallpaperSwitcher, use
+`settings = { wallpaper_folder = "~/Pictures/Wallpapers" }`. Settings allow at
+most 32 entries with keys of 1...128 and values of at most 4096 characters.

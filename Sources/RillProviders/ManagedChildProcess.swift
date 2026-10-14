@@ -79,6 +79,15 @@ final class ManagedChildProcess: @unchecked Sendable {
     private func signalGroup(_ signal: Int32) {
         condition.withLock { if pid > 0 && status == nil { kill(-pid, signal) } }
     }
+    func waitForExit() async {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .utility).async {
+                self.waitUntilExit()
+                continuation.resume()
+            }
+        }
+    }
+
     func waitUntilExit() {
         condition.lock()
         while pid > 0 && status == nil { condition.wait() }

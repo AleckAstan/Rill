@@ -125,3 +125,69 @@ import Testing
         try RillExtensionPresentation(compact: .init(kind: .metric, metric: metric)).validate()
     }
 }
+
+@Test func wallpaperContentRejectsInvalidPositionsAndResources() throws {
+    let content = RillWallpaperContent(title: "Wallpaper", position: 1, count: 2)
+    let message = RillExtensionMessage(kind: .update, extensionID: "test", contributionID: "wallpapers",
+        presentation: .init(compact: .init(kind: .wallpaper, wallpaper: content)))
+    #expect(try RillExtensionFrameCodec.decode(RillExtensionFrameCodec.encode(message)) == message)
+    var invalid = content
+    invalid.position = 3
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .init(kind: .wallpaper, wallpaper: invalid)).validate()
+    }
+    invalid = content
+    invalid.resource = "../outside.jpg"
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .init(kind: .wallpaper, wallpaper: invalid)).validate()
+    }
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .init(kind: .text, text: "invalid", wallpaper: content)).validate()
+    }
+    invalid = content
+    invalid.applyActionID = ""
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .init(kind: .wallpaper, wallpaper: invalid)).validate()
+    }
+}
+
+@Test func extensionContextCarriesUserSettings() throws {
+    let context = RillExtensionHostContext(generation: 1, grantedCapabilities: [.actions],
+        settings: ["wallpaper_folder": "~/Pictures/Wallpapers"])
+    let message = RillExtensionMessage(kind: .context, extensionID: "test", context: context)
+    #expect(try RillExtensionFrameCodec.decode(RillExtensionFrameCodec.encode(message)).context == context)
+}
+
+@Test func emptySettingsPreserveExistingContextFields() throws {
+    let context = RillExtensionHostContext(generation: 1, grantedCapabilities: [])
+    let data = try JSONEncoder().encode(context)
+    let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: NSObject])
+    #expect(object["settings"] == nil)
+    #expect(try JSONDecoder().decode(RillExtensionHostContext.self, from: data).settings.isEmpty)
+}
+
+@Test func wallpaperGalleryRejectsUnboundedAndDuplicateItems() throws {
+    let items = (1...4).map { RillWallpaperItem(title: "Image \($0)", position: $0, actionID: "select:\($0)") }
+    var content = RillWallpaperContent(title: "Gallery", position: 1, count: 8, items: items, query: "image")
+    try RillExtensionPresentation(compact: .init(kind: .wallpaper, wallpaper: content)).validate()
+    let encoded = try JSONEncoder().encode(content)
+    #expect(try JSONDecoder().decode(RillWallpaperContent.self, from: encoded) == content)
+    content.items.append(.init(title: "Fifth", position: 5, actionID: "select:5"))
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .init(kind: .wallpaper, wallpaper: content)).validate()
+    }
+    content.items = [items[0], items[0]]
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .init(kind: .wallpaper, wallpaper: content)).validate()
+    }
+    content.items = items
+    content.items[0].resource = "../escaped.jpg"
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .init(kind: .wallpaper, wallpaper: content)).validate()
+    }
+    content.items = items
+    content.query = String(repeating: "a", count: 101)
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .init(kind: .wallpaper, wallpaper: content)).validate()
+    }
+}

@@ -297,6 +297,31 @@ final class ExtensionHostTests: XCTestCase {
     }
 
     @MainActor
+    func testSeveralIdleExtensionsCanBeReplacedWithoutBlockingAsyncWork() async throws {
+        let runtime = ExtensionRuntimeStore()
+        var active: [ExtensionHostResource] = []
+        for generation: UInt64 in 1...3 {
+            var replacements: [ExtensionHostResource] = []
+            for index in 0..<6 {
+                let spec = ExtensionSpec(id: "idle-\(index)", path: FileManager.default.temporaryDirectory.path,
+                    executable: "/bin/sh", args: ["-c", "sleep 30"], contributions: [])
+                let host = try ExtensionHostResource(spec: spec, generation: generation, runtime: runtime)
+                await host.commit()
+                replacements.append(host)
+            }
+            try await Task.sleep(for: .milliseconds(50))
+            let started = ContinuousClock.now
+            for retired in active { await retired.stop() }
+            XCTAssertLessThan(started.duration(to: .now), .seconds(2))
+            active = replacements
+            let progressed = await Task.detached { "responsive" }.value
+            XCTAssertEqual(progressed, "responsive")
+        }
+        for host in active { await host.stop() }
+        XCTAssertTrue(runtime.health.isEmpty)
+    }
+
+    @MainActor
     func testHungExtensionStopsWithinGracePeriod() async throws {
         let runtime = ExtensionRuntimeStore()
         let spec = ExtensionSpec(

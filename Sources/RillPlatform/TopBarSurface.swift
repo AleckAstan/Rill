@@ -249,6 +249,7 @@ final class RillPanel: NSPanel {
     let surfaceID: SurfaceID
     let displayID: DisplayID
     var usesMenuBarArea = false
+    var acceptsKeyboard = false
 
     init(surfaceID: SurfaceID, displayID: DisplayID, frame: CGRect) {
         self.surfaceID = surfaceID
@@ -265,7 +266,7 @@ final class RillPanel: NSPanel {
         usesMenuBarArea ? frameRect : super.constrainFrameRect(frameRect, to: screen)
     }
 
-    override var canBecomeKey: Bool { false }
+    override var canBecomeKey: Bool { acceptsKeyboard }
     override var canBecomeMain: Bool { false }
 }
 

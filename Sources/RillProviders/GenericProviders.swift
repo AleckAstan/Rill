@@ -79,7 +79,7 @@ public final class GenericProcessSupervisor: @unchecked Sendable {
     public func stopAndWait(graceMilliseconds: Int) async {
         stop(graceMilliseconds: graceMilliseconds)
         let active = lock.withLock { process }
-        await Task.detached { active?.waitUntilExit() }.value
+        await active?.waitForExit()
     }
 
     public func runCommand(_ spec: ProviderSpec) throws -> Outcome {
@@ -88,8 +88,16 @@ public final class GenericProcessSupervisor: @unchecked Sendable {
         let errors = BoundedBytes(limit: min(spec.maxOutputBytes, 16_384))
         let stdout = active.standardOutput
         let stderr = active.standardError
-        stdout.fileHandleForReading.readabilityHandler = { handle in output.append(handle.availableData) }
-        stderr.fileHandleForReading.readabilityHandler = { handle in errors.append(handle.availableData) }
+        stdout.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            if data.isEmpty { handle.readabilityHandler = nil }
+            else { output.append(data) }
+        }
+        stderr.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            if data.isEmpty { handle.readabilityHandler = nil }
+            else { errors.append(data) }
+        }
         let timedOut = LockedFlag()
         let timeout = DispatchWorkItem { [weak active] in
             guard let active, active.isRunning else { return }
@@ -127,7 +135,11 @@ public final class GenericProcessSupervisor: @unchecked Sendable {
         let stdout = active.standardOutput
         let stderrPipe = active.standardError
         let errors = BoundedBytes(limit: min(spec.maxOutputBytes, 16_384))
-        stderrPipe.fileHandleForReading.readabilityHandler = { handle in errors.append(handle.availableData) }
+        stderrPipe.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            if data.isEmpty { handle.readabilityHandler = nil }
+            else { errors.append(data) }
+        }
         var buffer = Data()
         streamLoop: while true {
             let chunk = stdout.fileHandleForReading.availableData

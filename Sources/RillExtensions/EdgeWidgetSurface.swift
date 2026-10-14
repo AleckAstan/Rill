@@ -1,4 +1,5 @@
 import AppKit
+import Carbon
 import SwiftUI
 
 private extension RillExtensionNode {
@@ -90,12 +91,13 @@ struct MetricDetailView: View {
 
 struct EdgeWidgetShape: Shape {
     let edge: SurfaceEdge
+    var cornerRadius: CGFloat = 32
 
     func path(in rect: CGRect) -> Path {
         let horizontal = edge.isHorizontal
         let source = CGRect(x: 0, y: 0, width: horizontal ? rect.width : rect.height,
                             height: horizontal ? rect.height : rect.width)
-        let path = NotchSurfaceShape(shoulder: min(32, source.height * 0.4), radius: min(32, source.height * 0.4)).path(in: source)
+        let path = NotchSurfaceShape(shoulder: min(cornerRadius, source.height * 0.4), radius: min(cornerRadius, source.height * 0.4)).path(in: source)
         var transform: CGAffineTransform
         switch edge {
         case .top: transform = .identity
@@ -199,6 +201,8 @@ enum EdgeWidgetGeometry {
 final class EdgeWidgetInteraction: ObservableObject {
     @Published private(set) var expanded: Bool
     @Published var selected: Int?
+    var onExpand: (() -> Void)?
+    var onCollapse: (() -> Void)?
     var detailFrame: CGRect?
     var pendingClose: Task<Void, Never>?
     private var pendingOpen: Task<Void, Never>?
@@ -222,6 +226,7 @@ final class EdgeWidgetInteraction: ObservableObject {
         cancelPendingTransitions()
         guard !expanded else { return }
         expanded = true
+        onExpand?()
     }
 
     func collapse() {
@@ -231,6 +236,7 @@ final class EdgeWidgetInteraction: ObservableObject {
             selected = nil
             detailFrame = nil
         }
+        onCollapse?()
     }
 
     func cancelPendingTransitions() {
@@ -265,6 +271,8 @@ final class EdgeWidgetResource: NSObject, ManagedConfigurationResource, @uncheck
     private var globalMonitor: Any?
     private var localMonitor: Any?
     private var committed = false
+    private var shortcutRegistration: EdgeWidgetHotKey?
+    private var keyboardMonitor: Any?
 
     init(id: String, configuration: AppConfiguration, runtime: ExtensionRuntimeStore) throws {
         guard let spec = configuration.edgeWidgets.first(where: { $0.id == id }) else {
@@ -286,12 +294,28 @@ final class EdgeWidgetResource: NSObject, ManagedConfigurationResource, @uncheck
             MainActor.assumeIsolated { self?.trackPointer() }
             return event
         }
+        if let shortcut = spec.shortcut {
+            do {
+                shortcutRegistration = try EdgeWidgetHotKey(shortcut: shortcut) { [weak self] in self?.toggle() }
+            } catch {
+                NSLog("Rill edge widget %@: %@", spec.id, error.localizedDescription)
+            }
+            keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                let handled = MainActor.assumeIsolated { self?.handleKey(event) == true }
+                return handled ? nil : event
+            }
+            NotificationCenter.default.addObserver(self, selector: #selector(resignedKey(_:)),
+                name: NSWindow.didResignKeyNotification, object: nil)
+        }
         panels.forEach { $0.0.orderFrontRegardless() }
         trackPointer()
     }
 
     func stop() async {
         NotificationCenter.default.removeObserver(self)
+        shortcutRegistration?.stop(); shortcutRegistration = nil
+        if let keyboardMonitor { NSEvent.removeMonitor(keyboardMonitor) }
+        keyboardMonitor = nil
         if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }
         globalMonitor = nil; localMonitor = nil
@@ -316,13 +340,14 @@ final class EdgeWidgetResource: NSObject, ManagedConfigurationResource, @uncheck
             let content = EdgeWidgetGeometry.contentFrame(frame: widget, edge: spec.edge, metricCount: count)
             let frame = interaction.expanded ? content : EdgeWidgetGeometry.collapsedFrame(frame: content, edge: spec.edge)
             let local = CGPoint(x: point.x - frame.minX, y: frame.maxY - point.y)
-            let visibleInside = EdgeWidgetShape(edge: spec.edge).path(in: CGRect(origin: .zero, size: frame.size)).contains(local)
+            let visibleInside = EdgeWidgetShape(edge: spec.edge,
+                cornerRadius: runtime.presentations[key]?.compact.kind == .wallpaper ? 14 : 32).path(in: CGRect(origin: .zero, size: frame.size)).contains(local)
             let inside = interaction.expanded
                 ? visibleInside
                 : frame.insetBy(dx: -10, dy: -10).contains(point)
             let inDetail = interaction.detailFrame?.contains(point) ?? false
             panel.ignoresMouseEvents = !visibleInside && !inDetail
-            guard updateHover else { continue }
+            guard updateHover, spec.shortcut == nil else { continue }
             if inside || inDetail {
                 interaction.enter()
                 if inside, interaction.expanded,
@@ -333,17 +358,68 @@ final class EdgeWidgetResource: NSObject, ManagedConfigurationResource, @uncheck
         }
     }
 
+    private func toggle() {
+        if let current = panels.first(where: { $0.1.expanded }) {
+            current.1.collapse()
+            return
+        }
+        let target = panels.first(where: { $0.0.screen?.frame.contains(NSEvent.mouseLocation) == true }) ?? panels.first
+        target?.1.expand()
+    }
+
+    @objc private func resignedKey(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow,
+              let current = panels.first(where: { $0.0 === window }), current.1.expanded else { return }
+        current.1.collapse()
+    }
+
+    private func handleKey(_ event: NSEvent) -> Bool {
+        guard let current = panels.first(where: { $0.0 === event.window && $0.1.expanded }) else { return false }
+        if event.keyCode == 53 { current.1.collapse(); return true }
+        guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty else { return false }
+        let key = ExtensionContributionKey(extensionID: spec.extensionID, contributionID: spec.contribution)
+        guard let wallpaper = runtime.presentations[key]?.compact.wallpaper else { return false }
+        if let editor = event.window?.firstResponder as? NSTextView, editor.isFieldEditor,
+           ![36, 76].contains(event.keyCode) { return false }
+        if [36, 76].contains(event.keyCode), event.isARepeat { return true }
+        if [36, 76].contains(event.keyCode), let editor = event.window?.firstResponder as? NSTextView,
+           editor.isFieldEditor, editor.string != wallpaper.query {
+            runtime.perform(extensionID: spec.extensionID, contributionID: spec.contribution,
+                actionID: "search:" + String(editor.string.prefix(100)))
+        }
+        guard let actionID = wallpaper.keyboardActionID(keyCode: event.keyCode,
+            characters: event.charactersIgnoringModifiers) else { return false }
+        runtime.perform(extensionID: spec.extensionID, contributionID: spec.contribution, actionID: actionID)
+        return true
+    }
+
     private func makePanels() {
         panels = ScreenInventory.screens(for: spec.display).map { screen, displayID in
             let widget = EdgeWidgetGeometry.frame(screen: screen.frame, safeFrame: screen.visibleFrame, spec: spec)
             let canvas = EdgeWidgetGeometry.canvas(screen: screen.frame, frame: widget, edge: spec.edge)
-            let interaction = EdgeWidgetInteraction(autoCollapse: spec.autoCollapse)
+            let interaction = EdgeWidgetInteraction(autoCollapse: spec.autoCollapse || spec.shortcut != nil)
             let panel = RillPanel(surfaceID: SurfaceID("edge.\(spec.id)"), displayID: displayID, frame: canvas)
             panel.title = "Rill Edge Widget \(spec.id) \(displayID.rawValue)"
             panel.level = .floating
             panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenNone]
             panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = false
             panel.acceptsMouseMovedEvents = true
+            panel.acceptsKeyboard = spec.shortcut != nil
+            panel.usesMenuBarArea = spec.shortcut != nil
+            if spec.shortcut != nil {
+                interaction.onExpand = { [weak self, weak panel] in
+                    panel?.makeKeyAndOrderFront(nil)
+                    panel?.makeFirstResponder(panel?.contentView)
+                    guard let self else { return }
+                    let key = ExtensionContributionKey(extensionID: self.spec.extensionID, contributionID: self.spec.contribution)
+                    if self.runtime.presentations[key]?.compact.wallpaper != nil {
+                        self.runtime.perform(extensionID: self.spec.extensionID, contributionID: self.spec.contribution, actionID: "refresh")
+                    }
+                }
+                interaction.onCollapse = { [weak panel] in
+                    if panel?.isKeyWindow == true { panel?.resignKey() }
+                }
+            }
             panel.contentView = EdgeWidgetHostingView(rootView: EdgeWidgetRootView(spec: spec, widget: widget, canvas: canvas,
                 interaction: interaction, runtime: runtime, refreshPointer: { [weak self] in
                     self?.trackPointer(updateHover: false)
@@ -374,9 +450,10 @@ struct EdgeWidgetRootView: View {
     let refreshPointer: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var metrics: [RillMetricContent] {
-        runtime.presentations[.init(extensionID: spec.extensionID, contributionID: spec.contribution)]?.compact.edgeMetrics ?? []
+    private var content: RillExtensionNode? {
+        runtime.presentations[.init(extensionID: spec.extensionID, contributionID: spec.contribution)]?.compact
     }
+    private var metrics: [RillMetricContent] { content?.edgeMetrics ?? [] }
 
     private var packageDirectory: URL { runtime.packageDirectory(for: spec.extensionID) }
     private var contentWidget: CGRect {
@@ -399,7 +476,7 @@ struct EdgeWidgetRootView: View {
 
     var body: some View {
         let target: CGFloat = expanded ? 1 : 0
-        let initial: CGFloat = previewExpanded || !spec.autoCollapse ? 1 : 0
+        let initial: CGFloat = previewExpanded || (!spec.autoCollapse && spec.shortcut == nil) ? 1 : 0
         KeyframeAnimator(initialValue: EdgeWidgetMotionValues(leading: initial, trailing: initial, depth: initial), trigger: expanded) { motion in
             let frame = EdgeWidgetGeometry.animatedFrame(frame: contentWidget, edge: spec.edge,
                 leading: reduceMotion ? target : motion.leading,
@@ -442,7 +519,7 @@ struct EdgeWidgetRootView: View {
     }
 
     private func surface(visibleWidget: CGRect, contentOpacity: CGFloat) -> some View {
-        let outline = EdgeWidgetShape(edge: spec.edge)
+        let outline = EdgeWidgetShape(edge: spec.edge, cornerRadius: content?.kind == .wallpaper ? 14 : 32)
             .size(width: visibleWidget.width, height: visibleWidget.height)
             .offset(x: visibleWidget.minX, y: visibleWidget.minY)
         return ZStack(alignment: .topLeading) {
@@ -459,7 +536,7 @@ struct EdgeWidgetRootView: View {
                 }
                 .buttonStyle(.plain).focusable().focusEffectDisabled()
                 .accessibilityLabel("Show widget")
-                .onHover { if $0 { interaction.enter() } }
+                .onHover { if $0 && spec.shortcut == nil { interaction.enter() } }
                 .position(x: visibleWidget.midX, y: visibleWidget.midY)
             }
             if expanded, let index = selectedIndex, metrics.indices.contains(index) {
@@ -483,7 +560,7 @@ struct EdgeWidgetRootView: View {
             if metrics.isEmpty {
                 ExtensionContributionView(extensionID: spec.extensionID, contributionID: spec.contribution,
                     expanded: false, runtime: runtime)
-                    .frame(width: contentWidget.width - 16, height: contentWidget.height - EdgeWidgetGeometry.metricPadding * 2)
+                    .frame(width: contentWidget.width - 16, height: contentWidget.height - (content?.kind == .wallpaper ? 16 : EdgeWidgetGeometry.metricPadding * 2))
                     .position(x: localWidget.midX, y: localWidget.midY)
             } else {
                 ForEach(Array(metrics.enumerated()), id: \.offset) { index, metric in
@@ -581,5 +658,189 @@ private struct DetailPointer: Shape {
         }
         transform.tx += rect.minX; transform.ty += rect.minY
         return path.applying(transform)
+    }
+}
+
+@MainActor
+final class EdgeWidgetHotKey {
+    private static var nextID: UInt32 = 0
+    private static var registrations: [String: EdgeWidgetHotKey] = [:]
+    private let chord: String
+    private let leaseID = UUID()
+    private var activeLeaseID: UUID?
+    private var underlyingRegistration: EdgeWidgetHotKey?
+    private var hotKey: EventHotKeyRef?
+    private var handler: EventHandlerRef?
+    private let id: UInt32
+    private var action: () -> Void
+
+    init(shortcut: EdgeWidgetShortcut, action: @escaping () -> Void) throws {
+        Self.nextID += 1
+        id = Self.nextID
+        self.action = action
+        chord = shortcut.key + ":" + shortcut.modifiers.map(\.rawValue).sorted().joined(separator: "+")
+        activeLeaseID = leaseID
+        if let existing = Self.registrations[chord] {
+            underlyingRegistration = existing
+            existing.activeLeaseID = leaseID
+            existing.action = action
+            return
+        }
+        guard let keyCode = shortcut.keyCode else { throw HotKeyError(status: OSStatus(paramErr)) }
+        var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+        let installation = InstallEventHandler(GetApplicationEventTarget(), { _, event, userData in
+            guard let event, let userData else { return OSStatus(eventNotHandledErr) }
+            var pressed = EventHotKeyID()
+            let status = GetEventParameter(event, EventParamName(kEventParamDirectObject),
+                EventParamType(typeEventHotKeyID), nil, MemoryLayout<EventHotKeyID>.size, nil, &pressed)
+            guard status == noErr else { return status }
+            return MainActor.assumeIsolated {
+                let registration = Unmanaged<EdgeWidgetHotKey>.fromOpaque(userData).takeUnretainedValue()
+                guard pressed.signature == 0x52494C4C, pressed.id == registration.id else {
+                    return OSStatus(eventNotHandledErr)
+                }
+                registration.action()
+                return noErr
+            }
+        }, 1, &eventType, Unmanaged.passUnretained(self).toOpaque(), &handler)
+        guard installation == noErr else { throw HotKeyError(status: installation) }
+        let modifiers = shortcut.modifiers.reduce(UInt32(0)) { result, modifier in
+            let flag: Int = switch modifier {
+            case .command: cmdKey
+            case .control: controlKey
+            case .option: optionKey
+            case .shift: shiftKey
+            }
+            return result | UInt32(flag)
+        }
+        let registration = RegisterEventHotKey(keyCode, modifiers,
+            EventHotKeyID(signature: 0x52494C4C, id: id), GetApplicationEventTarget(), 0, &hotKey)
+        guard registration == noErr else { stop(); throw HotKeyError(status: registration) }
+        Self.registrations[chord] = self
+    }
+
+    func stop() {
+        let registration = underlyingRegistration ?? self
+        guard registration.activeLeaseID == leaseID else { return }
+        if Self.registrations[chord] === registration { Self.registrations[chord] = nil }
+        registration.activeLeaseID = nil
+        registration.removeHandler()
+    }
+
+    private func removeHandler() {
+        if let hotKey { UnregisterEventHotKey(hotKey) }
+        if let handler { RemoveEventHandler(handler) }
+        hotKey = nil
+        handler = nil
+    }
+
+    private struct HotKeyError: LocalizedError {
+        let status: OSStatus
+        var errorDescription: String? { "Could not register edge widget shortcut (status \(status)). Choose an unused shortcut." }
+    }
+}
+
+struct WallpaperPreviewView: View {
+    let content: RillWallpaperContent
+    let packageDirectory: URL
+    let action: (String) -> Void
+    @State private var query = ""
+    @FocusState private var searchFocused: Bool
+
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                ForEach(content.items, id: \.actionID) { item in
+                    Button { searchFocused = false; action(item.actionID) } label: {
+                        WallpaperThumbnailView(item: item, selected: item.position == content.position,
+                            packageDirectory: packageDirectory)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(item.title)
+                    .accessibilityValue(item.position == content.position ? "Selected" : "")
+                }
+                if content.items.isEmpty {
+                    Text(content.query.isEmpty ? content.title : "No matching wallpapers")
+                        .foregroundStyle(.white.opacity(0.45))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            HStack(spacing: 7) {
+                Image(systemName: "magnifyingglass").font(.system(size: 11))
+                TextField("Search wallpapers...", text: $query)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 11))
+                    .focused($searchFocused)
+                    .onChange(of: query) { _, value in
+                        if value.count > 100 { query = String(value.prefix(100)) }
+                    }
+                Text("\(content.position)/\(content.count)")
+                    .font(.system(size: 10)).monospacedDigit()
+            }
+            .foregroundStyle(.white.opacity(0.45))
+            .padding(.horizontal, 9)
+            .frame(height: 28)
+            .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 5))
+            if !content.status.isEmpty {
+                Text(content.status).font(.system(size: 10)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
+            }
+        }
+        .padding(.horizontal, 32)
+        .onAppear { query = content.query; searchFocused = false }
+        .onChange(of: content.query) { _, value in if !searchFocused && query != value { query = value } }
+        .task(id: query) {
+            guard query != content.query else { return }
+            do { try await Task.sleep(for: .milliseconds(150)) } catch { return }
+            guard !Task.isCancelled else { return }
+            action("search:" + String(query.prefix(100)))
+        }
+    }
+}
+
+private struct WallpaperThumbnailView: View {
+    let item: RillWallpaperItem
+    let selected: Bool
+    let packageDirectory: URL
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .bottom) {
+                if let resource = item.resource,
+                   let image = ExtensionImageCache.image(at: packageDirectory.appendingPathComponent(resource)) {
+                    Image(nsImage: image).resizable().scaledToFill()
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                } else {
+                    Color.white.opacity(0.08)
+                    Image(systemName: "photo").foregroundStyle(.white.opacity(0.3))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom)
+                Text(item.title).font(.system(size: 10)).foregroundStyle(.white.opacity(0.8))
+                    .lineLimit(1).truncationMode(.middle).padding(.horizontal, 7).padding(.bottom, 7)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 9))
+            .overlay {
+                RoundedRectangle(cornerRadius: 9)
+                    .strokeBorder(selected ? Color(red: 0.65, green: 0.53, blue: 0.9) : .white.opacity(0.08),
+                        lineWidth: selected ? 2 : 1)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+extension RillWallpaperContent {
+    func keyboardActionID(keyCode: UInt16, characters: String?) -> String? {
+        switch keyCode {
+        case 123, 126: return previousActionID
+        case 124, 125: return nextActionID
+        case 36, 76: return applyActionID
+        default:
+            switch characters?.lowercased() {
+            case "h", "k": return previousActionID
+            case "j", "l": return nextActionID
+            default: return nil
+            }
+        }
     }
 }
