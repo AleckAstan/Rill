@@ -1157,8 +1157,11 @@ public final class NativeModuleRuntime: NSObject {
         batteryTimer = timer
     }
 
-    @objc private func powerChanged() {
-        updateBattery()
+    @objc nonisolated private func powerChanged() {
+        Task { @MainActor [weak self] in
+            guard let self, self.observingBattery else { return }
+            self.updateBattery()
+        }
     }
 
     private func updateBattery() {

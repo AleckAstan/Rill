@@ -317,6 +317,26 @@ final class ExtensionHostTests: XCTestCase {
 
 @MainActor
 final class NativeModuleLifecycleTests: XCTestCase {
+    func testBatteryRefreshHandlesPowerNotificationFromBackgroundThread() async throws {
+        let runtime = NativeModuleRuntime()
+        let battery = runtime.resource(for: .init(id: ModuleID("battery"), kind: .battery))
+        await battery.commit()
+        let refreshed = expectation(description: "Battery refreshed on the main thread")
+        let subscription = runtime.store.$battery.dropFirst().prefix(1).sink { _ in
+            XCTAssertTrue(Thread.isMainThread)
+            refreshed.fulfill()
+        }
+
+        await Task.detached {
+            XCTAssertFalse(Thread.isMainThread)
+            NotificationCenter.default.post(name: .NSProcessInfoPowerStateDidChange, object: nil)
+        }.value
+
+        await fulfillment(of: [refreshed], timeout: 2)
+        subscription.cancel()
+        await battery.stop()
+    }
+
     func testMetricsRemainActiveAcrossReplacementAndStopAfterLastReference() async throws {
         let runtime = NativeModuleRuntime()
         let module = ModuleSpec(id: ModuleID("memory"), kind: .memory)
