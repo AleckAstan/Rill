@@ -1,4 +1,5 @@
 import AppKit
+import Carbon
 import SwiftUI
 import XCTest
 
@@ -609,5 +610,50 @@ final class EdgeWidgetGeometryTests: XCTestCase {
             }
             XCTAssertFalse(path.contains(corner))
         }
+    }
+}
+
+final class WallpaperKeyboardTests: XCTestCase {
+    func testArrowVimAndEnterKeysUseDeclaredActions() {
+        let content = RillWallpaperContent(title: "Wallpaper", previousActionID: "back",
+            nextActionID: "forward", applyActionID: "confirm")
+        for key: UInt16 in [123, 126] {
+            XCTAssertEqual(content.keyboardActionID(keyCode: key, characters: nil), "back")
+        }
+        for key: UInt16 in [124, 125] {
+            XCTAssertEqual(content.keyboardActionID(keyCode: key, characters: nil), "forward")
+        }
+        for character in ["h", "k", "H"] {
+            XCTAssertEqual(content.keyboardActionID(keyCode: 0, characters: character), "back")
+        }
+        for character in ["j", "l", "L"] {
+            XCTAssertEqual(content.keyboardActionID(keyCode: 0, characters: character), "forward")
+        }
+        for key: UInt16 in [36, 76] {
+            XCTAssertEqual(content.keyboardActionID(keyCode: key, characters: nil), "confirm")
+        }
+        XCTAssertNil(content.keyboardActionID(keyCode: 0, characters: "a"))
+    }
+
+    @MainActor
+    func testReplacementRetainsHotKeyUntilLastOwnerStops() throws {
+        _ = NSApplication.shared
+        let shortcut = EdgeWidgetShortcut(key: "z", modifiers: [.command, .control, .option, .shift])
+        let original = try EdgeWidgetHotKey(shortcut: shortcut, action: {})
+        defer { original.stop() }
+        let replacement = try EdgeWidgetHotKey(shortcut: shortcut, action: {})
+        defer { replacement.stop() }
+        original.stop()
+        var competing: EventHotKeyRef?
+        let modifiers = UInt32(cmdKey | controlKey | optionKey | shiftKey)
+        let hotKeyID = EventHotKeyID(signature: 0x54455354, id: 1)
+        let occupied = RegisterEventHotKey(6, modifiers, hotKeyID, GetApplicationEventTarget(), 0, &competing)
+        if let competing { UnregisterEventHotKey(competing) }
+        XCTAssertNotEqual(occupied, noErr)
+        replacement.stop()
+        competing = nil
+        let available = RegisterEventHotKey(6, modifiers, hotKeyID, GetApplicationEventTarget(), 0, &competing)
+        if let competing { UnregisterEventHotKey(competing) }
+        XCTAssertEqual(available, noErr)
     }
 }

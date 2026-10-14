@@ -101,6 +101,7 @@ final class ExtensionRuntimeStore: ObservableObject {
 
 @MainActor
 final class ExtensionHostResource: ManagedConfigurationResource, @unchecked Sendable {
+    private nonisolated static let ioQueue = DispatchQueue(label: "dev.rill.extensions.io", qos: .utility, attributes: .concurrent)
     private let spec: ExtensionSpec
     private let generation: UInt64
     private let runtime: ExtensionRuntimeStore
@@ -208,12 +209,13 @@ final class ExtensionHostResource: ManagedConfigurationResource, @unchecked Send
                 displayIDs: spec.grant.contains(.hostDisplay)
                     ? ScreenInventory.descriptors().map(\.id.rawValue)
                     : nil,
-                reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+                reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion,
+                settings: spec.settings
             )
             try write(.init(kind: .context, extensionID: spec.id, context: context))
             let output = stdoutPipe.fileHandleForReading
             let errors = stderrPipe.fileHandleForReading
-            let errorTask = Task.detached { Self.drain(errors, retainingAtMost: 16_384) }
+            let errorTask = Task { await Self.drain(errors, retainingAtMost: 16_384) }
             stderrTask = errorTask
             readTask = Task.detached { [weak self] in
                 await self?.readLoop(output: output, errors: errorTask, process: child)
@@ -230,7 +232,8 @@ final class ExtensionHostResource: ManagedConfigurationResource, @unchecked Send
     private nonisolated func readLoop(output: FileHandle, errors: Task<Data, Never>, process: ManagedChildProcess) async {
         defer { try? output.close() }
         do {
-            while !Task.isCancelled, let message = try Self.readMessage(from: output) {
+            while !Task.isCancelled, let message = try await Self.readMessage(from: output) {
+                try Task.checkCancellation()
                 await receive(message, from: process)
             }
         } catch {
@@ -336,7 +339,16 @@ final class ExtensionHostResource: ManagedConfigurationResource, @unchecked Send
         }
     }
 
-    private nonisolated static func readMessage(from handle: FileHandle) throws -> RillExtensionMessage? {
+    private nonisolated static func readMessage(from handle: FileHandle) async throws -> RillExtensionMessage? {
+        try await withCheckedThrowingContinuation { continuation in
+            ioQueue.async {
+                do { continuation.resume(returning: try readMessageSynchronously(from: handle)) }
+                catch { continuation.resume(throwing: error) }
+            }
+        }
+    }
+
+    private nonisolated static func readMessageSynchronously(from handle: FileHandle) throws -> RillExtensionMessage? {
         guard let header = try readExactly(4, from: handle) else { return nil }
         let length = header.reduce(UInt32(0)) { ($0 << 8) | UInt32($1) }
         guard length <= RillExtensionAPI.maximumFrameBytes else {
@@ -356,13 +368,12 @@ final class ExtensionHostResource: ManagedConfigurationResource, @unchecked Send
             }
             child.forceTerminate()
         }
-        await Task.detached { child.waitUntilExit() }.value
+        await child.waitForExit()
     }
 
     private nonisolated static func readExactly(_ count: Int, from handle: FileHandle) throws -> Data? {
         var result = Data()
         while result.count < count {
-            try Task.checkCancellation()
             var descriptor = pollfd(fd: handle.fileDescriptor, events: Int16(POLLIN), revents: 0)
             let ready = poll(&descriptor, 1, 100)
             if ready == 0 || (ready < 0 && errno == EINTR) { continue }
@@ -377,10 +388,16 @@ final class ExtensionHostResource: ManagedConfigurationResource, @unchecked Send
         return result
     }
 
-    private nonisolated static func drain(_ handle: FileHandle, retainingAtMost limit: Int) -> Data {
+    private nonisolated static func drain(_ handle: FileHandle, retainingAtMost limit: Int) async -> Data {
+        await withCheckedContinuation { continuation in
+            ioQueue.async { continuation.resume(returning: drainSynchronously(handle, retainingAtMost: limit)) }
+        }
+    }
+
+    private nonisolated static func drainSynchronously(_ handle: FileHandle, retainingAtMost limit: Int) -> Data {
         defer { try? handle.close() }
         var retained = Data()
-        while !Task.isCancelled {
+        while true {
             var descriptor = pollfd(fd: handle.fileDescriptor, events: Int16(POLLIN), revents: 0)
             let ready = poll(&descriptor, 1, 100)
             if ready == 0 || (ready < 0 && errno == EINTR) { continue }
@@ -443,7 +460,7 @@ private struct ExtensionNodeView: View {
 
     @ViewBuilder var body: some View {
         switch node.kind {
-        case .hStack, .vStack, .list, .spacer, .divider, .nowPlaying:
+        case .hStack, .vStack, .list, .spacer, .divider, .nowPlaying, .wallpaper:
             rendered
         default:
             rendered.accessibilityLabel(node.label ?? defaultLabel)
@@ -496,6 +513,11 @@ private struct ExtensionNodeView: View {
         case .nowPlaying:
             return AnyView(NowPlayingView(media: node.media!, expanded: expanded,
                 packageDirectory: packageDirectory, action: action))
+        case .wallpaper:
+            if let wallpaper = node.wallpaper {
+                return AnyView(WallpaperPreviewView(content: wallpaper, packageDirectory: packageDirectory, action: action))
+            }
+            return AnyView(Text("Wallpaper unavailable"))
         case .metric:
             if let metric = node.metric {
                 return AnyView(MetricGaugeView(metric: metric, packageDirectory: packageDirectory))

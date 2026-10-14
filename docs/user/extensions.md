@@ -119,3 +119,40 @@ The default is false, preserving existing permanently expanded edge widgets.
 
 Edge widgets also accept `detail_shadow = false` to disable shadows on metric
 detail cards. Omit this setting or use `true` for the original shadowed cards.
+
+## Wallpaper panels and keyboard shortcuts
+
+Extensions can receive user-defined strings through `settings` in their
+`[[extensions]]` config entry. Rill passes these as `context.settings` without
+interpreting them. At most 32 settings are allowed, with keys of 1...128
+characters and values of at most 4096 characters. Empty settings are omitted
+from the wire context so previously built extensions keep working.
+
+An edge widget can define
+`shortcut = { key = "w", modifiers = ["control", "option"] }`. Keys are
+lowercase `a` through `z` or `space`; modifiers are `command`, `control`,
+`option` and `shift`, with at least one of command/control/option required.
+Duplicate chords are rejected. Rill registers the chord globally through
+Carbon and retains it across config replacement. A registration conflict with
+another app is logged. With a shortcut, the widget starts collapsed, takes
+keyboard focus when opened, and closes on Escape, the chord again, or loss of
+focus. Hover does not open or close it.
+
+The semantic `wallpaper` node carries `wallpaper` with `title`, optional
+package-relative `resource`, one-based `position` (`0` when empty), `count`,
+`status`, `previousActionID`, `nextActionID` and `applyActionID`. Images follow
+the same regular-file, package containment and 1 MiB limit as other image
+resources. The optional `items` array contains up to four unique gallery entries with
+`title`, optional package-relative `resource`, one-based `position` and opaque
+`actionID`. The optional `query` string is bounded to 100 characters. Rill
+renders selectable thumbnails with a filename search field, maps left/up/h/k to previous,
+right/down/j/l to next, and Enter to apply. Opening the panel sends `refresh`
+to wallpaper contributions. The extension must handle that action and the
+three action IDs plus `search:QUERY` for filename filtering; it owns image discovery
+and wallpaper application. Gallery entries supply their own selection actions.
+While editing search, text input and cursor keys keep their normal meaning.
+
+The separate `../RillWallpaperSwitcher` package demonstrates this contract.
+Its `config.toml` sets `settings = { wallpaper_folder = "~/Pictures/Wallpapers" }`
+and opens a bottom panel with Control+Option+W. Its README covers installation,
+folder scanning, current-desktop display behavior and validation.

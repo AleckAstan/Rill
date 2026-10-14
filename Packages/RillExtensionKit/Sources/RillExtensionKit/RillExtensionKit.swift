@@ -23,7 +23,7 @@ public enum RillExtensionContributionKind: String, Codable, Sendable {
 }
 
 public enum RillExtensionNodeKind: String, Codable, CaseIterable, Sendable {
-    case text, symbol, image, hStack, vStack, spacer, divider, progress, button, list, popover, nowPlaying, metric
+    case text, symbol, image, hStack, vStack, spacer, divider, progress, button, list, popover, nowPlaying, metric, wallpaper
 }
 
 public enum RillMetricAccent: String, Codable, Sendable {
@@ -144,8 +144,77 @@ public struct RillNowPlayingContent: Codable, Equatable, Sendable {
     }
 }
 
-/// The complete v2 rendering vocabulary. Values are semantic requests; Rill
-/// owns fonts, colors, focus, animation, layout, accessibility and input.
+public struct RillWallpaperItem: Codable, Equatable, Sendable {
+    public var title: String
+    public var resource: String?
+    public var position: Int
+    public var actionID: String
+
+    enum CodingKeys: String, CodingKey, CaseIterable { case title, resource, position, actionID }
+
+    public init(title: String, resource: String? = nil, position: Int, actionID: String) {
+        self.title = title
+        self.resource = resource
+        self.position = position
+        self.actionID = actionID
+    }
+
+    public init(from decoder: Decoder) throws {
+        let fields = try decoder.rillStrictContainer(keyedBy: CodingKeys.self)
+        title = try fields.decode(String.self, forKey: .title)
+        resource = try fields.decodeIfPresent(String.self, forKey: .resource)
+        position = try fields.decode(Int.self, forKey: .position)
+        actionID = try fields.decode(String.self, forKey: .actionID)
+    }
+}
+
+public struct RillWallpaperContent: Codable, Equatable, Sendable {
+    public var items: [RillWallpaperItem]
+    public var query: String
+    public var title: String
+    public var resource: String?
+    public var position: Int
+    public var count: Int
+    public var status: String
+    public var previousActionID: String
+    public var nextActionID: String
+    public var applyActionID: String
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case items, query, title, resource, position, count, status, previousActionID, nextActionID, applyActionID
+    }
+
+    public init(title: String, resource: String? = nil, position: Int = 0, count: Int = 0,
+                status: String = "", previousActionID: String = "previous",
+                nextActionID: String = "next", applyActionID: String = "apply",
+                items: [RillWallpaperItem] = [], query: String = "") {
+        self.items = items
+        self.query = query
+        self.title = title
+        self.resource = resource
+        self.position = position
+        self.count = count
+        self.status = status
+        self.previousActionID = previousActionID
+        self.nextActionID = nextActionID
+        self.applyActionID = applyActionID
+    }
+
+    public init(from decoder: Decoder) throws {
+        let fields = try decoder.rillStrictContainer(keyedBy: CodingKeys.self)
+        items = try fields.decodeIfPresent([RillWallpaperItem].self, forKey: .items) ?? []
+        query = try fields.decodeIfPresent(String.self, forKey: .query) ?? ""
+        title = try fields.decode(String.self, forKey: .title)
+        resource = try fields.decodeIfPresent(String.self, forKey: .resource)
+        position = try fields.decode(Int.self, forKey: .position)
+        count = try fields.decode(Int.self, forKey: .count)
+        status = try fields.decode(String.self, forKey: .status)
+        previousActionID = try fields.decode(String.self, forKey: .previousActionID)
+        nextActionID = try fields.decode(String.self, forKey: .nextActionID)
+        applyActionID = try fields.decode(String.self, forKey: .applyActionID)
+    }
+}
+
 public struct RillExtensionNode: Codable, Equatable, Sendable {
     public var kind: RillExtensionNodeKind
     public var text: String?
@@ -156,10 +225,11 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
     public var actionID: String?
     public var media: RillNowPlayingContent?
     public var metric: RillMetricContent?
+    public var wallpaper: RillWallpaperContent?
     public var children: [RillExtensionNode]
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case kind, text, name, resource, value, label, media, metric
+        case kind, text, name, resource, value, label, media, metric, wallpaper
         case actionID = "action_id"
         case children
     }
@@ -174,6 +244,7 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
         actionID: String? = nil,
         media: RillNowPlayingContent? = nil,
         metric: RillMetricContent? = nil,
+        wallpaper: RillWallpaperContent? = nil,
         children: [RillExtensionNode] = []
     ) {
         self.kind = kind
@@ -185,6 +256,7 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
         self.actionID = actionID
         self.media = media
         self.metric = metric
+        self.wallpaper = wallpaper
         self.children = children
     }
 
@@ -199,6 +271,7 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
         actionID = try container.decodeIfPresent(String.self, forKey: .actionID)
         media = try container.decodeIfPresent(RillNowPlayingContent.self, forKey: .media)
         metric = try container.decodeIfPresent(RillMetricContent.self, forKey: .metric)
+        wallpaper = try container.decodeIfPresent(RillWallpaperContent.self, forKey: .wallpaper)
         children = try container.decodeIfPresent([RillExtensionNode].self, forKey: .children) ?? []
     }
 
@@ -243,10 +316,11 @@ public struct RillExtensionHostContext: Codable, Equatable, Sendable {
     public var grantedCapabilities: [RillExtensionCapability]
     public var appearance: String?
     public var displayIDs: [String]?
+    public var settings: [String: String]
     public var reduceMotion: Bool
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case generation, appearance
+        case generation, appearance, settings
         case displayIDs = "display_ids"
         case grantedCapabilities = "granted_capabilities"
         case reduceMotion = "reduce_motion"
@@ -257,13 +331,25 @@ public struct RillExtensionHostContext: Codable, Equatable, Sendable {
         grantedCapabilities: [RillExtensionCapability],
         appearance: String? = nil,
         displayIDs: [String]? = nil,
-        reduceMotion: Bool = false
+        reduceMotion: Bool = false,
+        settings: [String: String] = [:]
     ) {
         self.generation = generation
         self.grantedCapabilities = grantedCapabilities
         self.appearance = appearance
         self.displayIDs = displayIDs
         self.reduceMotion = reduceMotion
+        self.settings = settings
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var fields = encoder.container(keyedBy: CodingKeys.self)
+        try fields.encode(generation, forKey: .generation)
+        try fields.encode(grantedCapabilities, forKey: .grantedCapabilities)
+        try fields.encodeIfPresent(appearance, forKey: .appearance)
+        try fields.encodeIfPresent(displayIDs, forKey: .displayIDs)
+        try fields.encode(reduceMotion, forKey: .reduceMotion)
+        if !settings.isEmpty { try fields.encode(settings, forKey: .settings) }
     }
 
     public init(from decoder: Decoder) throws {
@@ -273,6 +359,7 @@ public struct RillExtensionHostContext: Codable, Equatable, Sendable {
         appearance = try container.decodeIfPresent(String.self, forKey: .appearance)
         displayIDs = try container.decodeIfPresent([String].self, forKey: .displayIDs)
         reduceMotion = try container.decodeIfPresent(Bool.self, forKey: .reduceMotion) ?? false
+        settings = try container.decodeIfPresent([String: String].self, forKey: .settings) ?? [:]
     }
 }
 
@@ -420,6 +507,38 @@ public extension RillExtensionPresentation {
         }
         if let value = node.value, !value.isFinite || !(0...1).contains(value) {
             throw RillExtensionProtocolError.invalidTree("Progress value must be finite and between 0 and 1")
+        }
+        if node.kind == .wallpaper {
+            guard let wallpaper = node.wallpaper, node.children.isEmpty,
+                  !wallpaper.title.isEmpty, wallpaper.title.count <= RillExtensionAPI.maximumTextCharacters,
+                  wallpaper.status.count <= RillExtensionAPI.maximumTextCharacters,
+                  (0...100_000).contains(wallpaper.count),
+                  wallpaper.count == 0 ? wallpaper.position == 0 : (1...wallpaper.count).contains(wallpaper.position) else {
+                throw RillExtensionProtocolError.invalidTree("Invalid wallpaper content or position")
+            }
+            guard wallpaper.items.count <= 4, wallpaper.query.count <= 100,
+                  Set(wallpaper.items.map(\.position)).count == wallpaper.items.count,
+                  Set(wallpaper.items.map(\.actionID)).count == wallpaper.items.count else {
+                throw RillExtensionProtocolError.invalidTree("Wallpaper gallery supports four unique items and a query of at most 100 characters")
+            }
+            for item in wallpaper.items {
+                guard !item.title.isEmpty, item.title.count <= RillExtensionAPI.maximumTextCharacters,
+                      (1...max(1, wallpaper.count)).contains(item.position), wallpaper.count > 0,
+                      !item.actionID.isEmpty, item.actionID.count <= 128 else {
+                    throw RillExtensionProtocolError.invalidTree("Invalid wallpaper gallery item")
+                }
+                if let resource = item.resource { try validateImageResource(resource, packageDirectory: packageDirectory) }
+            }
+            for id in [wallpaper.previousActionID, wallpaper.nextActionID, wallpaper.applyActionID] {
+                guard !id.isEmpty, id.count <= 128 else {
+                    throw RillExtensionProtocolError.invalidTree("Wallpaper action IDs must contain 1...128 characters")
+                }
+            }
+            if let resource = wallpaper.resource {
+                try validateImageResource(resource, packageDirectory: packageDirectory)
+            }
+        } else if node.wallpaper != nil {
+            throw RillExtensionProtocolError.invalidTree("Only a wallpaper node may carry wallpaper content")
         }
         if node.kind == .metric {
             guard let metric = node.metric, node.children.isEmpty, !metric.title.isEmpty,

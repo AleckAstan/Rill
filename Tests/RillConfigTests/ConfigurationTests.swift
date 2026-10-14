@@ -527,6 +527,7 @@ final class ConfigurationParserTests: XCTestCase {
         id = "dev.rill.test"
         path = "./extension"
         grant = ["actions"]
+        settings = { wallpaper_folder = "~/Pictures/Wallpapers" }
         [[modules]]
         id = "rich"
         kind = "extension"
@@ -546,6 +547,9 @@ final class ConfigurationParserTests: XCTestCase {
             source: .file(directory.appendingPathComponent("config.toml"))
         ).configuration
         XCTAssertEqual(configuration.schemaVersion, 2)
+        XCTAssertEqual(configuration.extensions.first?.settings["wallpaper_folder"], "~/Pictures/Wallpapers")
+        let encoded = try JSONEncoder().encode(configuration.extensions[0])
+        XCTAssertEqual(try JSONDecoder().decode(ExtensionSpec.self, from: encoded).settings, configuration.extensions[0].settings)
         XCTAssertEqual(configuration.extensions.first?.executable, executable.path)
         XCTAssertEqual(configuration.extensions.first?.contributions.count, 2)
         XCTAssertEqual(configuration.notchWidgets.first?.backgroundStyle, .black)
@@ -915,6 +919,26 @@ final class EdgeWidgetConfigurationTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(EdgeWidgetSpec.self, from: JSONEncoder().encode(spec)), spec)
         let invalid = disabled.replacingOccurrences(of: "false", with: "\"false\"")
         XCTAssertThrowsError(try JSONDecoder().decode(EdgeWidgetSpec.self, from: Data(invalid.utf8)))
+    }
+
+    func testShortcutDecodingAndValidation() throws {
+        let json = #"{"id":"side","extension":"test","contribution":"side","shortcut":{"key":"w","modifiers":["control","option"]}}"#
+        let spec = try JSONDecoder().decode(EdgeWidgetSpec.self, from: Data(json.utf8))
+        XCTAssertEqual(spec.shortcut?.keyCode, 13)
+        XCTAssertEqual(try JSONDecoder().decode(EdgeWidgetSpec.self, from: JSONEncoder().encode(spec)), spec)
+        var config = configuration()
+        config.edgeWidgets[0].shortcut = spec.shortcut
+        XCTAssertTrue(config.validate().isEmpty)
+        config.edgeWidgets[0].shortcut?.key = "invalid"
+        XCTAssertTrue(config.validate().contains { $0.path == "edge_widgets[0].shortcut" })
+        config.edgeWidgets[0].shortcut = .init(key: "w", modifiers: [.shift])
+        XCTAssertTrue(config.validate().contains { $0.path == "edge_widgets[0].shortcut" })
+        config.edgeWidgets[0].shortcut = .init(key: "w", modifiers: [.control, .control])
+        XCTAssertTrue(config.validate().contains { $0.path == "edge_widgets[0].shortcut" })
+        config.edgeWidgets[0].shortcut = spec.shortcut
+        config.edgeWidgets.append(.init(id: "other", extensionID: "test", contribution: "side", edge: .left,
+            shortcut: .init(key: "w", modifiers: [.option, .control])))
+        XCTAssertTrue(config.validate().contains { $0.path == "edge_widgets[1].shortcut" })
     }
 
     func testAutoCollapseIsOptIn() throws {
