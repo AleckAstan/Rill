@@ -761,6 +761,10 @@ private struct NotchMotionValues {
 }
 
 enum NotchWidgetGeometry {
+    static func compactHeight(safeTopInset: CGFloat) -> CGFloat {
+        safeTopInset > 0 ? safeTopInset : 36
+    }
+
     /// Evaluate every animation sample: contraction must never uncover the cutout.
     static func animatedFrame(compact: CGSize, open: CGSize, left: CGFloat, right: CGFloat, height: CGFloat) -> CGRect {
         let wing = max(0, open.width - compact.width) / 2
@@ -779,7 +783,7 @@ enum NotchWidgetGeometry {
         cutout: CGRect? = nil
     ) -> CGRect {
         let hasCutout = safeTopInset > 0 && cutout != nil
-        let compactHeight = safeTopInset > 0 ? safeTopInset : 36
+        let compactHeight = compactHeight(safeTopInset: safeTopInset)
         // Reserve two equal 44-point wings outside the physical cutout plus shoulders.
         let compactWidth = hasCutout ? cutout!.width + 104 : spec.compactWidth
         let width = min(screen.width, state == .expanded ? max(spec.expandedWidth, compactWidth) : compactWidth)

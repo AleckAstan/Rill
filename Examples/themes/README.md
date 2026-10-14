@@ -1,10 +1,11 @@
 # Make Rill yours
 
-Two complete configurations use the same native modules and require no window manager, plugin, shell script or Nerd Font.
+Three complete configurations use the same native modules and require no window manager, plugin, shell script or Nerd Font.
 
 | Configuration | Appearance | Placement |
 | --- | --- | --- |
 | [Catppuccin-inspired](catppuccin.toml) | Mocha colors, compact monospace labels, rounded modules | Floating below the system menu bar |
+| [Convex Style](convex-style.toml) | Black attached islands, 24-point corner cutouts, live status values | System menu-bar area |
 | [macOS glass](macos-glass.toml) | System typography, transparent surface, native status controls | System menu-bar area, with notch-safe content |
 
 Validate a file with the bundled CLI before trying it:
@@ -22,6 +23,14 @@ Quit the running Rill instance through its status menu, then preview the chosen 
 Quit the preview before launching your usual Rill configuration again. To keep a theme, back up your existing config and copy the chosen file's contents into the configuration opened from Rill's status menu. Valid edits reload automatically; invalid edits preserve the last working bar.
 
 The glass example uses `menuBarArea`: enable macOS menu-bar auto-hide yourself. The floating example works below the existing menu bar. On a notched display, center content joins the right group. Shorten the clock format or remove a metric from `end` if that side becomes crowded. Rill does not reserve window-manager gaps automatically.
+
+Convex Style is selected with `[[surfaces]].style = "convex"`. Switch it to
+`"standard"` for a continuous surface without changing module definitions.
+Theme presets and workspace variants stay independent: use `flat`, `segmented`
+or `glass`, and choose `workspace_variant = "dot"` on workspace modules to
+replace labels and application icons with points. The [surface settings](../../docs/user/surfaces.md#convex-style)
+expose all corner radii, including an independent upper shoulder. Edge widgets
+use `detail_shadow = false` for unshadowed detail cards.
 
 ## A Linux-style workflow with native controls
 

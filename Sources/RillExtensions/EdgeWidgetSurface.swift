@@ -85,7 +85,6 @@ struct MetricDetailView: View {
         .padding(14)
         .frame(width: 260)
         .background(.black, in: RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.3), radius: 14, y: 6)
     }
 }
 
@@ -540,6 +539,8 @@ struct EdgeWidgetRootView: View {
         let pointerX: CGFloat = spec.edge == .right ? width / 2 + 14 : spec.edge == .left ? -width / 2 - 14 : 0
         let pointerY: CGFloat = spec.edge == .top ? -height / 2 - 14 : spec.edge == .bottom ? height / 2 + 14 : 0
         return MetricDetailView(metric: metric, packageDirectory: packageDirectory)
+            .shadow(color: spec.detailShadow ? .black.opacity(0.3) : .clear,
+                    radius: spec.detailShadow ? 14 : 0, y: spec.detailShadow ? 6 : 0)
             .background {
                 DetailPointer(edge: spec.edge).fill(.black)
                     .frame(width: spec.edge.isHorizontal ? 80 : 28, height: spec.edge.isHorizontal ? 28 : 80)

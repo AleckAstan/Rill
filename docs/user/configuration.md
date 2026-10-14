@@ -113,6 +113,25 @@ For top surfaces, `top_placement` accepts:
 
 Non-top edges use the same system-safe thickness, inset and safe-area rules. `top_placement` is invalid on non-top edges.
 
+### Surface styles
+
+`style = "convex"` selects **Convex Style** on top `menuBarArea` surfaces:
+compact black islands, the notch's compact height, and 24-point corner cutouts.
+`style = "standard"` selects the usual continuous surface. Omit `style` to keep
+existing behavior. These geometry options are independent of the `flat`,
+`segmented` and `glass` theme presets.
+
+Customize Convex Style with `notch_islands = { corner_radius = 24,
+upper_corner_radius = 24, lower_corner_radius = 24, bottom_corner_radius = 24 }`.
+An explicit table replaces preset radii using its own defaults. Set lower or
+bottom radii to 0 to remove those cutouts; retain the table while switching
+`style` to `standard` to disable all islands and corners. See the full
+[settings and defaults](surfaces.md#convex-style).
+
+Workspace modules independently accept `workspace_variant = "dot"` or
+`"standard"` (the default when omitted). Module `format = "{percent}%"` exposes
+live percentages; `format = ""` selects icons only. No source changes are needed.
+
 ## Plugins
 
 Each local plugin package is declared before a provider references it:
@@ -188,6 +207,10 @@ Volume alone accepts `scroll_volume_step = 5` (1-20 percentage points) to adjust
 See [the interaction example](../../Examples/interactions/config.toml). Its launcher actions intentionally use `/usr/bin/true`; substitute your own literal executable/argument tables.
 
 Runtime behavior and examples for each kind are documented in the [built-in module reference](modules.md).
+
+Edge widgets accept `detail_shadow = false` to remove the shadow from their
+metric detail cards. The default is `true`, preserving the original appearance.
+This setting is independent of the surface style.
 
 ## Reload behavior
 

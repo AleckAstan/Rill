@@ -3,6 +3,92 @@ import SwiftUI
 import XCTest
 
 final class TopBarGeometryTests: XCTestCase {
+    func testBottomCornersRoundOnlyTheScreenCorners() {
+        let rect = CGRect(x: 0, y: 0, width: 24, height: 24)
+        let leading = BarLowerCornerShape(attachment: .leading, isBottom: true).path(in: rect)
+        let trailing = BarLowerCornerShape(attachment: .trailing, isBottom: true).path(in: rect)
+        XCTAssertTrue(leading.contains(CGPoint(x: 1, y: 23)))
+        XCTAssertTrue(trailing.contains(CGPoint(x: 23, y: 23)))
+        XCTAssertFalse(leading.contains(CGPoint(x: 15, y: 9)))
+        XCTAssertFalse(trailing.contains(CGPoint(x: 9, y: 9)))
+        XCTAssertFalse(leading.contains(CGPoint(x: 25, y: 23)))
+        XCTAssertFalse(trailing.contains(CGPoint(x: -1, y: 23)))
+        for x in [CGFloat(1), 8, 15, 23] {
+            for y in [CGFloat(1), 8, 15, 23] {
+                XCTAssertEqual(leading.contains(CGPoint(x: x, y: y)),
+                               trailing.contains(CGPoint(x: 24 - x, y: y)))
+            }
+        }
+    }
+
+    func testLowerCornerCurvesAttachWithoutCoveringTheWindowGap() {
+        let rect = CGRect(x: 0, y: 0, width: 24, height: 24)
+        let leading = BarLowerCornerShape(attachment: .leading).path(in: rect)
+        let trailing = BarLowerCornerShape(attachment: .trailing).path(in: rect)
+        XCTAssertTrue(leading.contains(CGPoint(x: 1, y: 1)))
+        XCTAssertTrue(trailing.contains(CGPoint(x: 23, y: 1)))
+        XCTAssertFalse(leading.contains(CGPoint(x: 15, y: 15)))
+        XCTAssertFalse(trailing.contains(CGPoint(x: 9, y: 15)))
+        XCTAssertFalse(leading.contains(CGPoint(x: 1, y: 25)))
+        XCTAssertFalse(trailing.contains(CGPoint(x: 23, y: 25)))
+        for x in [CGFloat(1), 8, 15, 23] {
+            for y in [CGFloat(1), 8, 15, 23] {
+                XCTAssertEqual(leading.contains(CGPoint(x: x, y: y)),
+                               trailing.contains(CGPoint(x: 24 - x, y: y)))
+            }
+        }
+        XCTAssertTrue(BarLowerCornerShape(attachment: .center).path(in: rect).isEmpty)
+    }
+
+    func testUpperShoulderUsesTheSameCurveAndRadiusAsTheLowerCorner() {
+        let rect = CGRect(x: 0, y: 0, width: 240, height: 36)
+        let upper = BarIslandShape(attachment: .trailing, radius: 24, shoulderRadius: 24).path(in: rect)
+        let lower = BarLowerCornerShape(attachment: .trailing).path(in: CGRect(x: 0, y: 0, width: 24, height: 24))
+        for x in [CGFloat(1), 8, 12, 20, 23] {
+            for y in [CGFloat(1), 8, 12, 18, 23] {
+                XCTAssertEqual(upper.contains(CGPoint(x: x, y: y)),
+                               lower.contains(CGPoint(x: x, y: y)))
+            }
+        }
+        XCTAssertFalse(upper.contains(CGPoint(x: 20, y: 18)))
+        XCTAssertTrue(upper.contains(CGPoint(x: 32, y: 18)))
+        let leading = BarIslandShape(attachment: .leading, radius: 24, shoulderRadius: 24).path(in: rect)
+        for y in [CGFloat(1), 18, 35] {
+            XCTAssertTrue(leading.contains(CGPoint(x: 0.5, y: y)))
+            XCTAssertTrue(upper.contains(CGPoint(x: 239.5, y: y)))
+        }
+    }
+
+    func testSideIslandsStayAttachedToTheirScreenEdge() {
+        let rect = CGRect(x: 0, y: 0, width: 240, height: 36)
+        let leading = BarIslandShape(attachment: .leading, radius: 16).path(in: rect)
+        let trailing = BarIslandShape(attachment: .trailing, radius: 16).path(in: rect)
+        for y in [CGFloat(1), 18, 35] {
+            XCTAssertTrue(leading.contains(CGPoint(x: 0.5, y: y)))
+            XCTAssertTrue(trailing.contains(CGPoint(x: 239.5, y: y)))
+        }
+        XCTAssertFalse(leading.contains(CGPoint(x: 239, y: 18)))
+        XCTAssertFalse(trailing.contains(CGPoint(x: 1, y: 18)))
+        XCTAssertTrue(leading.contains(CGPoint(x: 120, y: 35)))
+        XCTAssertFalse(leading.contains(CGPoint(x: 120, y: 37)))
+        let centered = BarIslandShape(attachment: .center, radius: 16).path(in: rect)
+        XCTAssertFalse(centered.contains(CGPoint(x: 1, y: 18)))
+        XCTAssertFalse(centered.contains(CGPoint(x: 239, y: 18)))
+    }
+
+    func testIslandHeightMatchesTheCompactNotchOnEveryDisplay() throws {
+        let screen = CGRect(x: -1512, y: -200, width: 1512, height: 982)
+        let spec = NotchWidgetSpec(id: "test", extensionID: "test", contribution: "test")
+        for safeTop in [CGFloat(0), 32, 38] {
+            let height = NotchWidgetGeometry.compactHeight(safeTopInset: safeTop)
+            let bar = try XCTUnwrap(PanelGeometry.menuBarFrame(in: screen, topInset: height))
+            let notch = NotchWidgetGeometry.frame(screen: screen, safeTopInset: safeTop, spec: spec, state: .compact)
+            XCTAssertEqual(bar.height, notch.height)
+            XCTAssertEqual(bar.minY, notch.minY)
+            XCTAssertEqual(bar.maxY, screen.maxY)
+        }
+    }
+
     func testScrollGateAccumulatesTrackpadInputAndDropsMomentum() {
         var gate = ModuleScrollGate()
         XCTAssertNil(gate.consume(delta: 4, precise: true, momentum: false, time: 1))

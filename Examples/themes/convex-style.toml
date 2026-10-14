@@ -1,0 +1,60 @@
+schema_version = 1
+
+[theme]
+preset = "flat"
+font = "SF Pro Text"
+font_size = 12
+foreground = "#F2F2F7"
+accent = "#A78BDD"
+surface_background = "#00000000"
+focused_workspace_background = "#A78BDD"
+padding = 8
+spacing = 8
+module_padding = 4
+module_vertical_padding = 2
+border_width = 0
+
+[[surfaces]]
+id = "main"
+style = "convex"
+display = "all"
+edge = "top"
+top_placement = "menuBarArea"
+fullscreen = "hide"
+start = ["frontmost"]
+end = ["cpu", "memory", "volume", "wifi", "battery", "clock"]
+
+[[modules]]
+id = "frontmost"
+kind = "frontmostApp"
+
+[[modules]]
+id = "cpu"
+kind = "cpu"
+format = "CPU {percent}%"
+
+[[modules]]
+id = "memory"
+kind = "memory"
+format = "RAM {percent}%"
+
+[[modules]]
+id = "volume"
+kind = "volume"
+format = "{percent}%"
+scroll_volume_step = 5
+
+[[modules]]
+id = "wifi"
+kind = "wifi"
+format = "Wi-Fi"
+
+[[modules]]
+id = "battery"
+kind = "battery"
+format = "{percent}%"
+
+[[modules]]
+id = "clock"
+kind = "clock"
+format = "HH:mm"
