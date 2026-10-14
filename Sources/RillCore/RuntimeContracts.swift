@@ -129,6 +129,7 @@ public enum SurfaceEdge: String, Codable, Sendable, CaseIterable {
 
 public typealias PanelEdge = SurfaceEdge
 
+public enum SurfaceStyle: String, Codable, Sendable { case standard, convex }
 public enum SurfaceKind: String, Codable, Sendable { case bar }
 public enum ProviderKind: String, Codable, Sendable { case yabai, aerospace, omniwm, event, command, stream, plugin }
 public enum ModuleKind: String, Codable, Sendable {
@@ -138,6 +139,7 @@ public enum ModuleKind: String, Codable, Sendable {
 public enum TopPlacement: String, Codable, Sendable { case menuBarArea, belowSystemUI }
 public enum SafeAreaPolicy: String, Codable, Sendable { case system }
 public enum FullscreenPolicy: String, Codable, Sendable { case hide, show }
+public enum WorkspaceVariant: String, Codable, Sendable { case standard, dot }
 public enum ModuleState: String, Codable, Sendable, CaseIterable { case normal, warning, error, success }
 
 public enum DisplaySelector: Codable, Hashable, Sendable {
@@ -277,9 +279,43 @@ public struct ModuleStyle: Codable, Hashable, Sendable {
     }
 }
 
+public struct NotchIslandSpec: Codable, Sendable, Equatable {
+    public var cornerRadius: Double
+    public var lowerCornerRadius: Double
+    public var bottomCornerRadius: Double
+    public var upperCornerRadius: Double?
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case cornerRadius = "corner_radius"
+        case lowerCornerRadius = "lower_corner_radius"
+        case bottomCornerRadius = "bottom_corner_radius"
+        case upperCornerRadius = "upper_corner_radius"
+    }
+
+    public init(cornerRadius: Double = 16, lowerCornerRadius: Double = 0, bottomCornerRadius: Double = 0, upperCornerRadius: Double? = nil) {
+        self.cornerRadius = cornerRadius
+        self.lowerCornerRadius = lowerCornerRadius
+        self.bottomCornerRadius = bottomCornerRadius
+        self.upperCornerRadius = upperCornerRadius
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.strictContainer(keyedBy: CodingKeys.self)
+        cornerRadius = try container.decodeIfPresent(Double.self, forKey: .cornerRadius) ?? 16
+        lowerCornerRadius = try container.decodeIfPresent(Double.self, forKey: .lowerCornerRadius) ?? 0
+        bottomCornerRadius = try container.decodeIfPresent(Double.self, forKey: .bottomCornerRadius) ?? 0
+        upperCornerRadius = try container.decodeIfPresent(Double.self, forKey: .upperCornerRadius)
+    }
+
+    public var resolvedUpperCornerRadius: Double {
+        upperCornerRadius ?? (lowerCornerRadius > 0 ? lowerCornerRadius : 6)
+    }
+}
+
 public struct SurfaceSpec: Codable, Sendable, Equatable {
     public var id: SurfaceID
     public var kind: SurfaceKind
+    public var style: SurfaceStyle?
     public var display: DisplaySelector
     public var edge: SurfaceEdge
     public var topPlacement: TopPlacement?
@@ -287,19 +323,22 @@ public struct SurfaceSpec: Codable, Sendable, Equatable {
     public var thickness: Double?
     public var inset: Double?
     public var safeArea: SafeAreaPolicy?
+    public var notchIslands: NotchIslandSpec?
     public var start: [ModuleID]
     public var center: [ModuleID]
     public var end: [ModuleID]
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case id, kind, display, edge, fullscreen, thickness, inset, start, center, end
+        case id, kind, style, display, edge, fullscreen, thickness, inset, start, center, end
         case topPlacement = "top_placement"
         case safeArea = "safe_area"
+        case notchIslands = "notch_islands"
     }
 
     public init(
         id: SurfaceID,
         kind: SurfaceKind = .bar,
+        style: SurfaceStyle? = nil,
         display: DisplaySelector = .primary,
         edge: SurfaceEdge = .top,
         topPlacement: TopPlacement? = nil,
@@ -307,12 +346,14 @@ public struct SurfaceSpec: Codable, Sendable, Equatable {
         thickness: Double? = nil,
         inset: Double? = nil,
         safeArea: SafeAreaPolicy? = nil,
+        notchIslands: NotchIslandSpec? = nil,
         start: [ModuleID] = [],
         center: [ModuleID] = [],
         end: [ModuleID] = []
     ) {
         self.id = id
         self.kind = kind
+        self.style = style
         self.display = display
         self.edge = edge
         self.topPlacement = topPlacement
@@ -320,6 +361,7 @@ public struct SurfaceSpec: Codable, Sendable, Equatable {
         self.thickness = thickness
         self.inset = inset
         self.safeArea = safeArea
+        self.notchIslands = notchIslands
         self.start = start
         self.center = center
         self.end = end
@@ -329,6 +371,7 @@ public struct SurfaceSpec: Codable, Sendable, Equatable {
         let container = try decoder.strictContainer(keyedBy: CodingKeys.self)
         id = try container.decode(SurfaceID.self, forKey: .id)
         kind = try container.decodeIfPresent(SurfaceKind.self, forKey: .kind) ?? .bar
+        style = try container.decodeIfPresent(SurfaceStyle.self, forKey: .style)
         display = try container.decodeIfPresent(DisplaySelector.self, forKey: .display) ?? .primary
         edge = try container.decodeIfPresent(SurfaceEdge.self, forKey: .edge) ?? .top
         topPlacement = try container.decodeIfPresent(TopPlacement.self, forKey: .topPlacement)
@@ -336,9 +379,18 @@ public struct SurfaceSpec: Codable, Sendable, Equatable {
         thickness = try container.decodeIfPresent(Double.self, forKey: .thickness)
         inset = try container.decodeIfPresent(Double.self, forKey: .inset)
         safeArea = try container.decodeIfPresent(SafeAreaPolicy.self, forKey: .safeArea)
+        notchIslands = try container.decodeIfPresent(NotchIslandSpec.self, forKey: .notchIslands)
         start = try container.decodeIfPresent([ModuleID].self, forKey: .start) ?? []
         center = try container.decodeIfPresent([ModuleID].self, forKey: .center) ?? []
         end = try container.decodeIfPresent([ModuleID].self, forKey: .end) ?? []
+    }
+
+    public var resolvedNotchIslands: NotchIslandSpec? {
+        switch style {
+        case .standard: nil
+        case .convex: notchIslands ?? NotchIslandSpec(cornerRadius: 24, lowerCornerRadius: 24, bottomCornerRadius: 24)
+        case nil: notchIslands
+        }
     }
 
     public var resolvedTopPlacement: TopPlacement? {
@@ -411,6 +463,7 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
     public var icon: String?
     public var formatIcons: [String]?
     public var showIcon: Bool
+    public var workspaceVariant: WorkspaceVariant?
     public var onClick: ActionSpec?
     public var formatAlt: String?
     public var onRightClick: ActionSpec?
@@ -434,6 +487,7 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
         case id, kind, provider, text, format, placeholder, style, states, contribution, icon
         case formatIcons = "format_icons"
         case showIcon = "show_icon"
+        case workspaceVariant = "workspace_variant"
         case extensionID = "extension"
         case onClick = "on_click"
         case formatAlt = "format_alt"
@@ -454,6 +508,7 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
         icon: String? = nil,
         formatIcons: [String]? = nil,
         showIcon: Bool = true,
+        workspaceVariant: WorkspaceVariant? = nil,
         onClick: ActionSpec? = nil,
         formatAlt: String? = nil,
         onRightClick: ActionSpec? = nil,
@@ -475,6 +530,7 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
         self.icon = icon
         self.formatIcons = formatIcons
         self.showIcon = showIcon
+        self.workspaceVariant = workspaceVariant
         self.onClick = onClick
         self.formatAlt = formatAlt
         self.onRightClick = onRightClick
@@ -499,6 +555,7 @@ public struct ModuleSpec: Codable, Sendable, Equatable {
         icon = try container.decodeIfPresent(String.self, forKey: .icon)
         formatIcons = try container.decodeIfPresent([String].self, forKey: .formatIcons)
         showIcon = try container.decodeIfPresent(Bool.self, forKey: .showIcon) ?? true
+        workspaceVariant = try container.decodeIfPresent(WorkspaceVariant.self, forKey: .workspaceVariant)
         onClick = try container.decodeIfPresent(ActionSpec.self, forKey: .onClick)
         formatAlt = try container.decodeIfPresent(String.self, forKey: .formatAlt)
         onRightClick = try container.decodeIfPresent(ActionSpec.self, forKey: .onRightClick)
@@ -665,21 +722,24 @@ public struct EdgeWidgetSpec: Codable, Sendable, Equatable {
     public var length: Double
     public var offset: Double
     public var autoCollapse: Bool
+    public var detailShadow: Bool
 
     enum CodingKeys: String, CodingKey, CaseIterable {
         case id, contribution, display, edge, thickness, length, offset
         case extensionID = "extension"
         case autoCollapse = "auto_collapse"
+        case detailShadow = "detail_shadow"
     }
 
     public init(id: String, extensionID: String, contribution: String,
                 display: DisplaySelector = .primary, edge: SurfaceEdge = .right,
                 thickness: Double? = nil, length: Double = 400, offset: Double = 0,
-                autoCollapse: Bool = false) {
+                autoCollapse: Bool = false, detailShadow: Bool = true) {
         self.id = id; self.extensionID = extensionID; self.contribution = contribution
         self.display = display; self.edge = edge; self.thickness = thickness ?? (edge.isHorizontal ? 104 : 80)
         self.length = length; self.offset = offset
         self.autoCollapse = autoCollapse
+        self.detailShadow = detailShadow
     }
 
     public init(from decoder: Decoder) throws {
@@ -693,6 +753,7 @@ public struct EdgeWidgetSpec: Codable, Sendable, Equatable {
         length = try fields.decodeIfPresent(Double.self, forKey: .length) ?? 400
         offset = try fields.decodeIfPresent(Double.self, forKey: .offset) ?? 0
         autoCollapse = try fields.decodeIfPresent(Bool.self, forKey: .autoCollapse) ?? false
+        detailShadow = try fields.decodeIfPresent(Bool.self, forKey: .detailShadow) ?? true
     }
 }
 
@@ -1429,6 +1490,20 @@ public extension AppConfiguration {
             if surface.edge != .top, surface.topPlacement != nil {
                 append("\(path).top_placement", "Only top surfaces may specify top_placement")
             }
+            if surface.style == .convex, surface.resolvedTopPlacement != .menuBarArea {
+                append("\(path).style", "Convex Style requires a top menuBarArea surface")
+            }
+            if let islands = surface.notchIslands {
+                if surface.resolvedTopPlacement != .menuBarArea {
+                    append("\(path).notch_islands", "Notch islands require a top menuBarArea surface")
+                }
+                validateFinite(islands.cornerRadius, path: "\(path).notch_islands.corner_radius", range: 0...64)
+                validateFinite(islands.lowerCornerRadius, path: "\(path).notch_islands.lower_corner_radius", range: 0...64)
+                validateFinite(islands.bottomCornerRadius, path: "\(path).notch_islands.bottom_corner_radius", range: 0...64)
+                if let radius = islands.upperCornerRadius {
+                    validateFinite(radius, path: "\(path).notch_islands.upper_corner_radius", range: 0...64)
+                }
+            }
             if surface.resolvedTopPlacement == .menuBarArea {
                 if surface.thickness != nil { append("\(path).thickness", "menuBarArea derives thickness") }
                 if surface.inset != nil { append("\(path).inset", "menuBarArea requires zero derived outer inset") }
@@ -1536,6 +1611,9 @@ public extension AppConfiguration {
                 }
             } else if [.workspaces, .custom].contains(module.kind) {
                 append("\(path).provider", "\(module.kind.rawValue) modules require a provider")
+            }
+            if module.workspaceVariant != nil, module.kind != .workspaces {
+                append("\(path).workspace_variant", "Workspace variants require a workspaces module")
             }
             let hasStandardPresentation = ![ModuleKind.workspaces, .separator, .extensionModule].contains(module.kind)
             if let format = module.format, module.kind != .clock, hasStandardPresentation {

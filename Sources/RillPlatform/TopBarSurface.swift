@@ -269,6 +269,64 @@ final class RillPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
+enum BarIslandAttachment {
+    case leading, center, trailing
+}
+
+struct BarIslandShape: Shape {
+    let attachment: BarIslandAttachment
+    let radius: CGFloat
+    var shoulderRadius: CGFloat = 6
+
+    func path(in rect: CGRect) -> Path {
+        let shoulder = min(shoulderRadius, rect.height)
+        let extensionWidth = shoulder + radius
+        let leading = attachment == .leading ? extensionWidth : 0
+        let trailing = attachment == .trailing ? extensionWidth : 0
+        let source = CGRect(x: rect.minX - leading, y: rect.minY,
+                            width: rect.width + leading + trailing, height: rect.height)
+        let body = source.insetBy(dx: shoulder, dy: 0)
+        let bottomRadius = min(radius, rect.height - shoulder)
+        var path = NotchSurfaceShape(shoulder: 0, radius: bottomRadius).path(in: body)
+        path.addPath(BarLowerCornerShape(attachment: .trailing).path(in: CGRect(
+            x: source.minX, y: source.minY, width: shoulder, height: shoulder
+        )))
+        path.addPath(BarLowerCornerShape(attachment: .leading).path(in: CGRect(
+            x: source.maxX - shoulder, y: source.minY, width: shoulder, height: shoulder
+        )))
+        return path
+    }
+}
+
+struct BarLowerCornerShape: Shape {
+    let attachment: BarIslandAttachment
+    var isBottom: Bool = false
+
+    func path(in rect: CGRect) -> Path {
+        guard attachment != .center else { return Path() }
+        let radius = min(rect.width, rect.height)
+        let corner = CGRect(x: rect.maxX - radius, y: rect.minY, width: radius, height: radius)
+        let controlOffset = radius * 0.5522847498307936
+        var path = Path()
+        path.move(to: CGPoint(x: corner.minX, y: corner.minY))
+        path.addLine(to: CGPoint(x: corner.maxX, y: corner.minY))
+        path.addLine(to: CGPoint(x: corner.maxX, y: corner.maxY))
+        path.addCurve(
+            to: CGPoint(x: corner.minX, y: corner.minY),
+            control1: CGPoint(x: corner.maxX, y: corner.maxY - controlOffset),
+            control2: CGPoint(x: corner.minX + controlOffset, y: corner.minY)
+        )
+        path.closeSubpath()
+        if attachment == .leading {
+            path = path.applying(CGAffineTransform(a: -1, b: 0, c: 0, d: 1,
+                                                 tx: rect.minX + rect.maxX, ty: 0))
+        }
+        return isBottom ? path.applying(
+            CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: rect.minY + rect.maxY)
+        ) : path
+    }
+}
+
 @MainActor
 final class RillHostingView: NSHostingView<BarSurfaceView> {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
@@ -293,7 +351,7 @@ struct BarSurfaceView: View {
             if surface.edge.isHorizontal {
                 if let slots = BarLayoutEngine.horizontalSlots(
                     size: geometry.size,
-                    padding: theme.padding,
+                    padding: surface.resolvedNotchIslands == nil ? theme.padding : 0,
                     notchExclusion: notchExclusion
                 ) {
                     slot(surface.start, frame: slots.start, alignment: .leading)
@@ -322,7 +380,9 @@ struct BarSurfaceView: View {
             }
         }
         .foregroundStyle(Color(hex: theme.foreground))
-        .background { surfaceBackground }
+        .background {
+            if surface.resolvedNotchIslands == nil { surfaceBackground }
+        }
         .clipShape(RoundedRectangle(cornerRadius: surface.resolvedTopPlacement == .menuBarArea ? 0 : theme.cornerRadius))
         .ignoresSafeArea()
     }
@@ -356,7 +416,9 @@ struct BarSurfaceView: View {
         frame: CGRect,
         alignment: Alignment
     ) -> some View {
-        let contentInset = min(theme.padding, frame.width / 4)
+        let isIsland = surface.resolvedNotchIslands != nil && !identifiers.isEmpty
+        let shoulderRadius = surface.resolvedNotchIslands?.resolvedUpperCornerRadius ?? 0
+        let contentInset = min(theme.padding + (isIsland ? min(shoulderRadius, frame.height) : 0), frame.width / 4)
         return HStack(spacing: theme.spacing) {
             ForEach(identifiers, id: \.self) { identifier in
                 if let module = modules[identifier] {
@@ -377,6 +439,16 @@ struct BarSurfaceView: View {
             }
         }
         .padding(.horizontal, contentInset)
+        .frame(height: frame.height)
+        .background {
+            if isIsland, let islands = surface.resolvedNotchIslands {
+                BarIslandShape(
+                    attachment: alignment == .leading ? .leading : alignment == .trailing ? .trailing : .center,
+                    radius: islands.cornerRadius,
+                    shoulderRadius: shoulderRadius
+                ).fill(.black)
+            }
+        }
         .frame(width: frame.width, height: frame.height, alignment: alignment)
         .clipped()
         .position(x: frame.midX, y: frame.midY)
@@ -680,43 +752,7 @@ private struct ModuleView: View {
                     Button {
                         focusWorkspace(module.id, providerID, workspace.id)
                     } label: {
-                        workspaceContents(workspace, providerID: providerID)
-                        .frame(minHeight: theme.resolvedWorkspaceMinimumHeight)
-                        .foregroundStyle(
-                            workspaceForeground(workspace)
-                        )
-                        .opacity(
-                            workspace.occupied == false && !workspace.focused
-                                ? theme.resolvedEmptyWorkspaceOpacity
-                                : 1
-                        )
-                        .padding(.horizontal, isHorizontal ? (workspaceStyle(workspace).padding ?? theme.resolvedWorkspacePadding) : 0)
-                        .padding(.vertical, isHorizontal ? theme.resolvedWorkspaceVerticalPadding : (workspaceStyle(workspace).padding ?? theme.resolvedWorkspacePadding))
-                        .frame(maxWidth: isHorizontal ? nil : .infinity)
-                        .background {
-                            if workspace.focused {
-                                WorkspaceFocusIndicator(theme: workspaceTheme(workspace))
-                                    .matchedGeometryEffect(
-                                        id: "workspace-focus.\(module.id.rawValue)",
-                                        in: workspaceFocusNamespace
-                                    )
-                            }
-                        }
-                        .modifier(
-                            WorkspaceChrome(
-                                theme: workspaceTheme(workspace),
-                                background: workspace.focused ? theme.resolvedWorkspaceBackground :
-                                    (workspaceStyle(workspace).background ?? theme.resolvedWorkspaceBackground)
-                            )
-                        )
-                        .modifier(
-                            WorkspaceFocusMotion(
-                                focused: workspace.focused,
-                                animation: workspaceFocusAnimation,
-                                isEnabled: workspaceMotionIsEnabled,
-                                isHorizontal: isHorizontal
-                            )
-                        )
+                        workspaceButtonLabel(workspace, providerID: providerID)
                     }
                     .buttonStyle(.plain)
                     .focusable()
@@ -736,6 +772,67 @@ private struct ModuleView: View {
         }
         .animation(workspaceFocusAnimation, value: focusedWorkspaceID)
         .accessibilityIdentifier("rill.module.\(module.id.rawValue)")
+    }
+
+    @ViewBuilder
+    private func workspaceButtonLabel(_ workspace: WorkspaceState, providerID: ProviderID) -> some View {
+        if module.workspaceVariant == .dot {
+            Capsule()
+                .fill(workspaceDotColor(workspace))
+                .frame(width: isHorizontal && workspace.focused ? 18 : 6,
+                       height: !isHorizontal && workspace.focused ? 18 : 6)
+                .opacity(workspace.occupied == false && !workspace.focused ? theme.resolvedEmptyWorkspaceOpacity : 1)
+                .padding(3)
+                .frame(minWidth: isHorizontal ? 12 : 24, minHeight: isHorizontal ? 24 : 12)
+                .contentShape(Rectangle())
+        } else {
+            workspaceContents(workspace, providerID: providerID)
+            .frame(minHeight: theme.resolvedWorkspaceMinimumHeight)
+            .foregroundStyle(
+                workspaceForeground(workspace)
+            )
+            .opacity(
+                workspace.occupied == false && !workspace.focused
+                    ? theme.resolvedEmptyWorkspaceOpacity
+                    : 1
+            )
+            .padding(.horizontal, isHorizontal ? (workspaceStyle(workspace).padding ?? theme.resolvedWorkspacePadding) : 0)
+            .padding(.vertical, isHorizontal ? theme.resolvedWorkspaceVerticalPadding : (workspaceStyle(workspace).padding ?? theme.resolvedWorkspacePadding))
+            .frame(maxWidth: isHorizontal ? nil : .infinity)
+            .background {
+                if workspace.focused {
+                    WorkspaceFocusIndicator(theme: workspaceTheme(workspace))
+                        .matchedGeometryEffect(
+                            id: "workspace-focus.\(module.id.rawValue)",
+                            in: workspaceFocusNamespace
+                        )
+                }
+            }
+            .modifier(
+                WorkspaceChrome(
+                    theme: workspaceTheme(workspace),
+                    background: workspace.focused ? theme.resolvedWorkspaceBackground :
+                        (workspaceStyle(workspace).background ?? theme.resolvedWorkspaceBackground)
+                )
+            )
+            .modifier(
+                WorkspaceFocusMotion(
+                    focused: workspace.focused,
+                    animation: workspaceFocusAnimation,
+                    isEnabled: workspaceMotionIsEnabled,
+                    isHorizontal: isHorizontal
+                )
+            )
+        }
+    }
+
+    private func workspaceDotColor(_ workspace: WorkspaceState) -> Color {
+        let style = workspaceStyle(workspace)
+        if workspace.focused {
+            let background = workspaceTheme(workspace).resolvedFocusedWorkspaceBackground
+            return Color(hex: background.isTransparentColor ? theme.accent : background)
+        }
+        return Color(hex: style.foreground ?? theme.foreground)
     }
 
     @ViewBuilder
@@ -1558,8 +1655,8 @@ final class SurfaceResource: NSObject, ManagedConfigurationResource, @unchecked 
 
     private func makePanels() -> [RillPanel] {
         let modules = Dictionary(uniqueKeysWithValues: configuration.modules.map { ($0.id, $0) })
-        return ScreenInventory.screens(for: surface.display).compactMap { screen, displayID in
-            guard let frame = panelFrame(for: screen) else { return nil }
+        return ScreenInventory.screens(for: surface.display).flatMap { screen, displayID -> [RillPanel] in
+            guard let frame = panelFrame(for: screen) else { return [] }
             let panel = RillPanel(surfaceID: surface.id, displayID: displayID, frame: frame)
             let menuBarArea = surface.resolvedTopPlacement == .menuBarArea
             panel.usesMenuBarArea = menuBarArea
@@ -1608,6 +1705,52 @@ final class SurfaceResource: NSObject, ManagedConfigurationResource, @unchecked 
             if menuBarArea { hosting.safeAreaRegions = [] }
             panel.contentView = hosting
             panel.setFrame(frame, display: true)
+            return [panel] + makeCornerPanels(screen: screen, barPanel: panel)
+        }
+    }
+
+    private func makeCornerPanels(screen: NSScreen, barPanel: RillPanel) -> [RillPanel] {
+        guard let islands = surface.resolvedNotchIslands else { return [] }
+        var corners: [(frame: CGRect, attachment: BarIslandAttachment, isBottom: Bool)] = []
+        let radius = min(islands.lowerCornerRadius, screen.frame.width / 2,
+                         barPanel.frame.minY - screen.frame.minY)
+        if radius > 0 {
+            let attachments: [BarIslandAttachment] =
+                (surface.start.isEmpty ? [] : [.leading]) +
+                (surface.center.isEmpty && surface.end.isEmpty ? [] : [.trailing])
+            for attachment in attachments {
+                let x = attachment == .leading ? screen.frame.minX : screen.frame.maxX - radius
+                let frame = CGRect(x: x, y: barPanel.frame.minY - radius, width: radius, height: radius)
+                corners.append((frame, attachment, false))
+            }
+        }
+        let bottomRadius = min(islands.bottomCornerRadius, screen.frame.width / 2,
+                               barPanel.frame.minY - screen.frame.minY)
+        if bottomRadius > 0 {
+            for attachment in [BarIslandAttachment.leading, .trailing] {
+                let x = attachment == .leading ? screen.frame.minX : screen.frame.maxX - bottomRadius
+                let frame = CGRect(x: x, y: screen.frame.minY, width: bottomRadius, height: bottomRadius)
+                corners.append((frame, attachment, true))
+            }
+        }
+        return corners.map { corner in
+            let panel = RillPanel(surfaceID: surface.id, displayID: barPanel.displayID, frame: corner.frame)
+            panel.usesMenuBarArea = true
+            panel.isReleasedWhenClosed = false
+            panel.level = barPanel.level
+            panel.collectionBehavior = barPanel.collectionBehavior
+            panel.hidesOnDeactivate = false
+            panel.isOpaque = false
+            panel.backgroundColor = .clear
+            panel.hasShadow = false
+            panel.ignoresMouseEvents = true
+            panel.title = "Rill Corner \(surface.id.rawValue) \(corner.attachment) bottom \(corner.isBottom)"
+            let hosting = NSHostingView(rootView: BarLowerCornerShape(
+                attachment: corner.attachment, isBottom: corner.isBottom
+            ).fill(.black))
+            hosting.safeAreaRegions = []
+            panel.contentView = hosting
+            panel.setFrame(corner.frame, display: true)
             return panel
         }
     }
@@ -1616,7 +1759,9 @@ final class SurfaceResource: NSObject, ManagedConfigurationResource, @unchecked 
         if surface.resolvedTopPlacement == .menuBarArea {
             return PanelGeometry.menuBarFrame(
                 in: screen.frame,
-                topInset: screen.safeAreaInsets.top
+                topInset: surface.resolvedNotchIslands == nil
+                    ? screen.safeAreaInsets.top
+                    : NotchWidgetGeometry.compactHeight(safeTopInset: screen.safeAreaInsets.top)
             )
         }
         let frame = screen.frame

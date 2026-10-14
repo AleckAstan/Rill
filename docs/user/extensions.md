@@ -116,3 +116,6 @@ animation stay inside the fixed canvas, and Reduce Motion removes transitions.
 Opening uses independent spring responses for the two ends and inward depth,
 settling over 0.68 to 0.78 seconds with progressive content reveal.
 The default is false, preserving existing permanently expanded edge widgets.
+
+Edge widgets also accept `detail_shadow = false` to disable shadows on metric
+detail cards. Omit this setting or use `true` for the original shadowed cards.

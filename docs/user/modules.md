@@ -188,3 +188,25 @@ states.critical = { foreground = "#F38BA8", background = "#452432", border_color
 ```
 
 See the [state precedence and capability contract](configuration.md#styles-by-state) and [complete example](../../Examples/states/config.toml).
+
+## Workspace dot variant
+
+```toml
+[[modules]]
+id = "spaces"
+kind = "workspaces"
+provider = "omniwm"
+workspace_variant = "dot"
+```
+
+The dot variant shows one compact point per workspace, with an elongated capsule
+for the focused workspace. It omits visible workspace names and application
+icons, while preserving workspace switching, tooltips with application names,
+and VoiceOver labels. The capsule follows the surface orientation. Focus changes
+use the existing workspace animation and respect Reduce Motion.
+
+The active dot uses `states.active.background`, then the focused workspace
+background, with `theme.accent` as the fallback for a transparent background.
+Other dots use their semantic foreground color and the configured empty-workspace
+opacity. Set `workspace_variant = "standard"` or omit the option to use the usual
+workspace labels and application icons. This option only applies to `workspaces`.

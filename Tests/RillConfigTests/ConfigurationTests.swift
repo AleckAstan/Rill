@@ -3,6 +3,115 @@ import XCTest
 final class ConfigurationParserTests: XCTestCase {
     private let parser = ConfigurationParser()
 
+    func testConvexStyleAndStandardStyleResolveIndependentlyOfTheme() throws {
+        let text = """
+        schema_version = 1
+        [theme]
+        preset = "glass"
+        [[surfaces]]
+        id = "main"
+        style = "convex"
+        """
+        let configuration = try parser.parse(text: text).configuration
+        XCTAssertEqual(configuration.theme.preset, .glass)
+        XCTAssertEqual(configuration.surfaces.first?.style, .convex)
+        XCTAssertEqual(configuration.surfaces.first?.resolvedNotchIslands,
+                       NotchIslandSpec(cornerRadius: 24, lowerCornerRadius: 24, bottomCornerRadius: 24))
+        XCTAssertEqual(try JSONDecoder().decode(AppConfiguration.self, from: JSONEncoder().encode(configuration)), configuration)
+        let standard = try parser.parse(text: text.replacingOccurrences(of: "convex", with: "standard"))
+        XCTAssertNil(standard.configuration.surfaces.first?.resolvedNotchIslands)
+        let defaults = try parser.parse(text: text.replacingOccurrences(of: "style = \"convex\"", with: ""))
+        XCTAssertNil(defaults.configuration.surfaces.first?.resolvedNotchIslands)
+        assertInvalid(text.replacingOccurrences(of: "convex", with: "unknown"), contains: "style")
+        assertInvalid(text + "\ntop_placement = \"belowSystemUI\"", contains: "style")
+        let custom = text + "\nnotch_islands = { corner_radius = 12, lower_corner_radius = 16, bottom_corner_radius = 0, upper_corner_radius = 6 }"
+        let overridden = try parser.parse(text: custom).configuration.surfaces[0]
+        XCTAssertEqual(overridden.resolvedNotchIslands?.resolvedUpperCornerRadius, 6)
+        XCTAssertEqual(overridden.resolvedNotchIslands?.bottomCornerRadius, 0)
+        let disabled = try parser.parse(text: custom.replacingOccurrences(of: "convex", with: "standard"))
+        XCTAssertNil(disabled.configuration.surfaces.first?.resolvedNotchIslands)
+        let legacy = try parser.parse(text: custom.replacingOccurrences(of: "style = \"convex\"", with: ""))
+        XCTAssertEqual(legacy.configuration.surfaces.first?.resolvedNotchIslands, overridden.notchIslands)
+        assertInvalid(custom.replacingOccurrences(of: "upper_corner_radius = 6", with: "upper_corner_radius = 65"), contains: "upper_corner_radius")
+        assertInvalid(custom.replacingOccurrences(of: "upper_corner_radius = 6", with: "upper_corner_radius = -1"), contains: "upper_corner_radius")
+    }
+
+    func testWorkspaceVariantValidatesAndRoundTrips() throws {
+        let text = """
+        schema_version = 2
+        [[providers]]
+        id = "wm"
+        kind = "omniwm"
+        executable = "/usr/bin/true"
+        [[modules]]
+        id = "spaces"
+        kind = "workspaces"
+        provider = "wm"
+        workspace_variant = "dot"
+        """
+        let configuration = try parser.parse(text: text).configuration
+        XCTAssertEqual(configuration.modules.first?.workspaceVariant, .dot)
+        XCTAssertEqual(try JSONDecoder().decode(AppConfiguration.self, from: JSONEncoder().encode(configuration)), configuration)
+        assertInvalid(text.replacingOccurrences(of: "workspace_variant = \"dot\"", with: "workspace_variant = \"unknown\""), contains: "workspace_variant")
+        assertInvalid(text.replacingOccurrences(of: "kind = \"workspaces\"", with: "kind = \"clock\""), contains: "workspace_variant")
+        let standard = try parser.parse(text: text.replacingOccurrences(of: "workspace_variant = \"dot\"", with: "workspace_variant = \"standard\""))
+        XCTAssertEqual(standard.configuration.modules.first?.workspaceVariant, .standard)
+        let defaults = try parser.parse(text: text.replacingOccurrences(of: "workspace_variant = \"dot\"", with: ""))
+        XCTAssertNil(defaults.configuration.modules.first?.workspaceVariant)
+    }
+
+    func testBottomCornerRadiusValidatesAndRoundTrips() throws {
+        let text = """
+        schema_version = 2
+        [[surfaces]]
+        id = "main"
+        notch_islands = { bottom_corner_radius = 24 }
+        """
+        let configuration = try parser.parse(text: text).configuration
+        XCTAssertEqual(configuration.surfaces.first?.notchIslands?.bottomCornerRadius, 24)
+        XCTAssertEqual(try JSONDecoder().decode(AppConfiguration.self, from: JSONEncoder().encode(configuration)), configuration)
+        assertInvalid(text.replacingOccurrences(of: "bottom_corner_radius = 24", with: "bottom_corner_radius = 65"), contains: "bottom_corner_radius")
+        assertInvalid(text.replacingOccurrences(of: "bottom_corner_radius = 24", with: "bottom_corner_radius = -1"), contains: "bottom_corner_radius")
+        let defaults = try parser.parse(text: text.replacingOccurrences(of: "{ bottom_corner_radius = 24 }", with: "{}"))
+        XCTAssertEqual(defaults.configuration.surfaces.first?.notchIslands?.bottomCornerRadius, 0)
+    }
+
+    func testLowerCornerRadiusValidatesAndRoundTrips() throws {
+        let text = """
+        schema_version = 2
+        [[surfaces]]
+        id = "main"
+        notch_islands = { corner_radius = 16, lower_corner_radius = 24 }
+        """
+        let configuration = try parser.parse(text: text).configuration
+        XCTAssertEqual(configuration.surfaces.first?.notchIslands?.lowerCornerRadius, 24)
+        XCTAssertEqual(try JSONDecoder().decode(AppConfiguration.self, from: JSONEncoder().encode(configuration)), configuration)
+        assertInvalid(text.replacingOccurrences(of: "lower_corner_radius = 24", with: "lower_corner_radius = 65"), contains: "lower_corner_radius")
+        assertInvalid(text.replacingOccurrences(of: "lower_corner_radius = 24", with: "lower_corner_radius = -1"), contains: "lower_corner_radius")
+    }
+
+    func testNotchIslandsValidateAndRoundTrip() throws {
+        let text = """
+        schema_version = 2
+        [[surfaces]]
+        id = "main"
+        edge = "top"
+        top_placement = "menuBarArea"
+        notch_islands = { corner_radius = 16 }
+        """
+        let configuration = try parser.parse(text: text).configuration
+        XCTAssertEqual(configuration.surfaces.first?.notchIslands, NotchIslandSpec())
+        XCTAssertEqual(try JSONDecoder().decode(AppConfiguration.self, from: JSONEncoder().encode(configuration)), configuration)
+        assertInvalid(text.replacingOccurrences(of: "corner_radius = 16", with: "corner_radius = 65"), contains: "notch_islands.corner_radius")
+        assertInvalid(text.replacingOccurrences(of: "menuBarArea", with: "belowSystemUI"), contains: "notch_islands")
+        assertInvalid(text.replacingOccurrences(of: "corner_radius = 16", with: "unknown = 16"), contains: "unknown")
+        assertInvalid(text.replacingOccurrences(of: "corner_radius = 16", with: "corner_radius = -1"), contains: "notch_islands.corner_radius")
+        let legacy = try parser.parse(text: text.replacingOccurrences(of: "notch_islands = { corner_radius = 16 }", with: ""))
+        XCTAssertNil(legacy.configuration.surfaces.first?.notchIslands)
+        let defaults = try parser.parse(text: text.replacingOccurrences(of: "{ corner_radius = 16 }", with: "{}"))
+        XCTAssertEqual(defaults.configuration.surfaces.first?.notchIslands, NotchIslandSpec())
+    }
+
     func testSemanticStylesValidateAndRoundTrip() throws {
         let text = """
         schema_version = 1
@@ -797,6 +906,17 @@ final class ProductionConfigurationTests: XCTestCase {
 }
 
 final class EdgeWidgetConfigurationTests: XCTestCase {
+    func testDetailShadowCanBeDisabledWithoutChangingLegacyDefaults() throws {
+        let omitted = #"{"id":"side","extension":"test","contribution":"side"}"#
+        let disabled = #"{"id":"side","extension":"test","contribution":"side","detail_shadow":false}"#
+        XCTAssertTrue(try JSONDecoder().decode(EdgeWidgetSpec.self, from: Data(omitted.utf8)).detailShadow)
+        let spec = try JSONDecoder().decode(EdgeWidgetSpec.self, from: Data(disabled.utf8))
+        XCTAssertFalse(spec.detailShadow)
+        XCTAssertEqual(try JSONDecoder().decode(EdgeWidgetSpec.self, from: JSONEncoder().encode(spec)), spec)
+        let invalid = disabled.replacingOccurrences(of: "false", with: "\"false\"")
+        XCTAssertThrowsError(try JSONDecoder().decode(EdgeWidgetSpec.self, from: Data(invalid.utf8)))
+    }
+
     func testAutoCollapseIsOptIn() throws {
         let enabled = #"{"id":"side","extension":"test","contribution":"side","auto_collapse":true}"#
         let omitted = #"{"id":"side","extension":"test","contribution":"side"}"#
