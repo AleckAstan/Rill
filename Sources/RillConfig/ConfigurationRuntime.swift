@@ -167,7 +167,8 @@ public struct ConfigurationParser: Sendable {
             throw ConfigurationLoadError([diagnostic(for: error)])
         }
 
-        let relative = resolveRelativePaths(in: decoded, source: source)
+        let packages = try resolveGitHubPackages(in: decoded)
+        let relative = resolveRelativePaths(in: packages, source: source)
         let resolved = try resolveExtensions(in: resolvePlugins(in: relative, source: source), source: source)
         let diagnostics = resolved.validate()
         guard diagnostics.isEmpty else {
@@ -241,6 +242,58 @@ public struct ConfigurationParser: Sendable {
             result.extensions[index].path = resolve(result.extensions[index].path, relativeTo: baseURL)
         }
         return result
+    }
+
+    private func resolveGitHubPackages(in configuration: AppConfiguration) throws -> AppConfiguration {
+        var result = configuration
+        for index in result.plugins.indices where result.plugins[index].path.contains("://") {
+            result.plugins[index].path = try installedPackage(result.plugins[index].path)
+        }
+        for index in result.extensions.indices where result.extensions[index].path.contains("://") {
+            result.extensions[index].path = try installedPackage(result.extensions[index].path)
+        }
+        return result
+    }
+
+    private func installedPackage(_ path: String) throws -> String {
+        let package = try GitHubPackage(path)
+        let directory = package.installationDirectory
+        guard FileManager.default.fileExists(atPath: directory.path) else {
+            throw ConfigurationLoadError([.init(path: "package", message: "Package is not installed; run rillctl install \(path)")])
+        }
+        return directory.path
+    }
+
+    public func validatePackage(at directory: URL) throws {
+        let directory = URL(fileURLWithPath: directory.path, isDirectory: true)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.withoutEscapingSlashes]
+        let extensionURL = directory.appendingPathComponent("extension.toml")
+        if FileManager.default.fileExists(atPath: extensionURL.path) {
+            let manifest = try TOMLDecoder().decode(ExtensionManifestFile.self, from: readText(extensionURL)).extension
+            try validatePackageExecutable(manifest.executable, in: directory)
+            let encodedID = String(decoding: try encoder.encode(manifest.id), as: UTF8.self)
+            let encodedPath = String(decoding: try encoder.encode(directory.path), as: UTF8.self)
+            let grants = String(decoding: try encoder.encode(RillExtensionCapability.allCases.map(\.rawValue)), as: UTF8.self)
+            _ = try parse(text: "schema_version = 2\n[[extensions]]\nid = \(encodedID)\npath = \(encodedPath)\ngrant = \(grants)")
+        } else {
+            let manifest = try TOMLDecoder().decode(PluginManifestFile.self, from: readText(directory.appendingPathComponent("plugin.toml"))).plugin
+            try validatePackageExecutable(manifest.executable, in: directory)
+            let encodedID = String(decoding: try encoder.encode(manifest.id), as: UTF8.self)
+            let encodedPath = String(decoding: try encoder.encode(directory.path), as: UTF8.self)
+            let snapshot = try parse(text: "schema_version = 1\n[[plugins]]\nid = \(encodedID)\npath = \(encodedPath)\n[[providers]]\nid = \"installed\"\nkind = \"plugin\"\nplugin = \(encodedID)")
+            guard let executable = snapshot.configuration.providers.first?.executable,
+                  FileManager.default.isExecutableFile(atPath: executable) else {
+                throw ConfigurationLoadError([.init(path: "package", message: "Plugin executable is missing or not executable")])
+            }
+        }
+    }
+
+    private func validatePackageExecutable(_ executable: String, in directory: URL) throws {
+        let resolved = URL(fileURLWithPath: resolve(executable, relativeTo: directory)).resolvingSymlinksInPath()
+        guard resolved.path.hasPrefix(directory.resolvingSymlinksInPath().path + "/") else {
+            throw ConfigurationLoadError([.init(path: "package.executable", message: "Installed executable must stay inside its package")])
+        }
     }
 
     private func resolveExtensions(

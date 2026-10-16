@@ -3,6 +3,48 @@ import XCTest
 final class ConfigurationParserTests: XCTestCase {
     private let parser = ConfigurationParser()
 
+    func testGitHubPackageURLsAreStrictAndStable() throws {
+        let package = try GitHubPackage("https://github.com/Example/Plugin.git/")
+        XCTAssertEqual(package.owner, "example")
+        XCTAssertEqual(package.repository, "plugin")
+        XCTAssertEqual(package.downloadURL.absoluteString, "https://github.com/example/plugin/releases/latest/download/rill-plugin-macos-arm64.zip")
+        XCTAssertEqual(package, try GitHubPackage("https://github.com/example/plugin"))
+        let pinned = try GitHubPackage("https://github.com/example/plugin/releases/tag/v1.2.3")
+        XCTAssertEqual(pinned.downloadURL.absoluteString, "https://github.com/example/plugin/releases/download/v1.2.3/rill-plugin-macos-arm64.zip")
+        XCTAssertNotEqual(package.installationDirectory, pinned.installationDirectory)
+        for value in ["http://github.com/a/b", "https://github.com.evil/a/b", "https://user@github.com/a/b", "https://github.com:443/a/b", "https://github.com/a/b?x=1", "https://github.com/a/b#main", "https://github.com/a/b/tree/main", "https://github.com/a/%2E%2E", "https://github.com/a/..", "https://github.com//b", "file:///tmp/plugin"] {
+            XCTAssertThrowsError(try GitHubPackage(value), value)
+        }
+    }
+
+    func testGitHubConfigurationRequiresExplicitInstallation() throws {
+        let text = "schema_version = 2\n[[extensions]]\nid = \"example\"\npath = \"https://github.com/rill-uninstalled-test/example/releases/tag/v0\""
+        XCTAssertThrowsError(try parser.parse(text: text)) { error in
+            XCTAssertTrue(String(describing: error).contains("rillctl install"))
+        }
+        XCTAssertThrowsError(try parser.parse(text: text.replacingOccurrences(of: "https://github.com", with: "https://untrusted.example"))) { error in
+            XCTAssertTrue(String(describing: error).contains("Expected https://github.com"))
+        }
+    }
+
+    func testInstallValidationKeepsExecutableInsidePackageAndDoesNotRunIt() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let executable = directory.appendingPathComponent("run.sh")
+        try "#!/bin/sh\ntouch sentinel\n".write(to: executable, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: executable.path)
+        let manifest = directory.appendingPathComponent("plugin.toml")
+        let text = "[plugin]\napi_version = 1\nid = \"example\"\nname = \"Example\"\nexecutable = \"./run.sh\""
+        try text.write(to: manifest, atomically: true, encoding: .utf8)
+        try parser.validatePackage(at: directory)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("sentinel").path))
+        try text.replacingOccurrences(of: "./run.sh", with: "/usr/bin/true").write(to: manifest, atomically: true, encoding: .utf8)
+        XCTAssertThrowsError(try parser.validatePackage(at: directory))
+        try text.replacingOccurrences(of: "./run.sh", with: "./missing").write(to: manifest, atomically: true, encoding: .utf8)
+        XCTAssertThrowsError(try parser.validatePackage(at: directory))
+    }
+
     func testConvexStyleAndStandardStyleResolveIndependentlyOfTheme() throws {
         let text = """
         schema_version = 1
