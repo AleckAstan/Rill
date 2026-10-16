@@ -27,3 +27,5 @@ The Debug app is written to `.build/DerivedData/Build/Products/Debug/Rill.app`. 
 For diagnostics and recovery, see [troubleshooting](docs/user/troubleshooting.md). Release preparation does not establish support on every deployment-target OS; interactive accessibility, sleep/wake, login and installation checks require real observations.
 
 Homebrew packaging is prepared in [the installation guide](docs/user/homebrew.md).
+
+See [GitHub release verification](docs/github-release-verification.md) for installation, runtime and packaging results.

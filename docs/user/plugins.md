@@ -84,8 +84,7 @@ socket IPC; plugins receive no network listener or elevated privilege.
 
 Install only packages you trust: a plugin executable runs as your macOS user,
 just like a configured command or stream provider. API v1 intentionally does
-not support in-process Swift, JavaScript, QML, arbitrary SwiftUI views, or
-in-process third-party UI code.
+not support in-process Swift, JavaScript, QML, or arbitrary SwiftUI views.
 
 ## Install a GitHub release
 
