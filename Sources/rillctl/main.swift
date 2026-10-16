@@ -45,6 +45,11 @@ struct RillCTL {
             print("rillctl 0.1.0")
         case "init":
             try initialize(Array(arguments.dropFirst()))
+        case "install":
+            guard arguments.count == 2 else { throw CLIError.usage("install requires a GitHub repository or release URL") }
+            let package = try GitHubPackage(arguments[1])
+            let directory = try GitHubPackageInstaller().install(package)
+            print("Installed \(directory.path)")
         case "validate":
             try validate(Array(arguments.dropFirst()))
         case "status":
@@ -151,6 +156,7 @@ struct RillCTL {
         Usage:
           rillctl init [--config PATH]      Create the no-manager starter without overwriting
           rillctl validate --config PATH    Parse and validate without executing commands
+          rillctl install GITHUB_URL        Install a trusted release without executing it
           rillctl reload                    Reload the active configuration
           rillctl status --json             Show generation, provider health and errors
           rillctl diagnostics --json        Export-safe redacted runtime diagnostics
