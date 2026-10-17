@@ -7,7 +7,7 @@
 - Clock, frontmost application, battery, workspace and custom producer modules.
 - Bounded local IPC and bundled `rillctl` for status, displays, reload, diagnostics and events.
 - AeroSpace, OmniWM and yabai adapters, examples and recovery documentation.
-- Unsigned local archive preparation; signing, notarization and publication remain owner-controlled gates.
+- Locally signed DMG and ZIP packaging, with a Homebrew cask using the same DMG and documented first-launch approval for non-notarized builds.
 
 ### Desktop customization
 

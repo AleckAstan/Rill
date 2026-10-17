@@ -2,6 +2,32 @@
 
 Verified locally on 16 October 2026 on Apple Silicon.
 
+## Distribution update, 17 October 2026
+
+The earlier Homebrew preparation status below is superseded by the following
+local distribution checks. The plugin verification remains unchanged.
+
+- Rill, its bundled CLI and the DMG were signed with the owner's local Apple Development identity. All signatures passed verification; the app passed deep, strict verification.
+- The compressed DMG contains Rill.app, an Applications shortcut and first-launch instructions. Its portable SHA-256 sidecar was checked, and the image was mounted read-only to verify contents, CLI version and isolated configuration initialization/validation.
+- The Homebrew cask now downloads the same DMG. Its SHA-256 matches the signed artifact. ZIP input is explicitly rejected by cask generation without changing the cask.
+- An isolated writable copy of Homebrew installed the DMG from a loopback HTTP server into a temporary app directory, linked rillctl, ran its version command, verified the installed app signature and uninstalled the app and CLI link. The final cask also passed this install/uninstall scenario. The personal app and configuration were not replaced.
+- Rill's Xcode suite passed again: 150 core/config/provider/platform tests and 9 IPC tests, with no failures.
+- The signed app passed the isolated runtime check: 100 reload cycles, descriptor count stable at 37, automatic recovery, duplicate-instance protection and clean shutdown.
+- Shell syntax, cask Ruby syntax and git diff whitespace checks passed.
+- Homebrew cask style passed with only Style/FrozenStringLiteralComment excluded to respect the repository's no-code-comments rule. All other style rules remained enabled.
+
+The DMG and checksum are published on the
+[Rill v0.1.0 release](https://github.com/AleckAstan/Rill/releases/tag/v0.1.0).
+The dedicated [Homebrew tap](https://github.com/AleckAstan/homebrew-rill) is public.
+The public DMG download was verified against the local SHA-256 checksum.
+The existing v0.1.0 SDK tag was preserved. The binary code is the existing
+versioned Rill code; the local changes concern packaging and documentation.
+
+The development signature does not replace Developer ID distribution signing
+or notarization. First-launch Gatekeeper behavior on a separate Mac and
+interactive OS/hardware acceptance checks remain manual. Both installation
+methods document the explicit per-app approval path.
+
 ## Published source and plugins
 
 The Rill SDK source is available at
