@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.1.0 — unreleased
+## 0.1.1
+
+- Animate Convex island resizing when changing spaces or applications.
+- Keep island contours joined during transitions and preserve panels when display geometry is unchanged.
+- Respect Reduce Motion and disabled theme animations.
+
+## 0.1.0
 
 - Native AppKit/SwiftUI bars on top, bottom, left and right edges.
 - Strict TOML configuration with transactional reload and last-good rollback.

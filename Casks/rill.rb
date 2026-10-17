@@ -1,6 +1,6 @@
 cask "rill" do
-  version "0.1.0"
-  sha256 "514f0bd3863c602cfbd6936a932c756f7d263fce0051c66f7702377b2ad684cd"
+  version "0.1.1"
+  sha256 "f109a4fa670b1f1877491222288111aca01775ecaeb703725cb155e96b1bd648"
 
   url "https://github.com/AleckAstan/Rill/releases/download/v#{version}/Rill-#{version}-macos-arm64.dmg"
   name "Rill"

@@ -1,6 +1,6 @@
 # Quickstart
 
-Rill 0.1.0 is a native Apple Silicon macOS bar. Follow the [DMG or Homebrew installation guide](installation.md), then launch Rill from Applications. Use its status item to reload configuration, open the configuration, export redacted diagnostics or quit.
+Rill 0.1.1 is a native Apple Silicon macOS bar. Follow the [DMG or Homebrew installation guide](installation.md), then launch Rill from Applications. Use its status item to reload configuration, open the configuration, export redacted diagnostics or quit.
 
 The bundled CLI is `Rill.app/Contents/Resources/bin/rillctl`. Initialize and validate a configuration explicitly:
 

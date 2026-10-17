@@ -2,7 +2,7 @@
 
 A native, configurable desktop bar for macOS, inspired by the file-driven customization of Waybar. AppKit panels and SwiftUI controls combine editable TOML themes, window-manager workspaces and supervised script modules.
 
-Rill 0.1.0 targets Apple Silicon and macOS 14 or newer. Distribution builds are signed locally and are not notarized by Apple; macOS can require a manual first-launch exception. Supported-OS/hardware acceptance checks remain open. Rich UI extensions use a preview API.
+Rill 0.1.1 targets Apple Silicon and macOS 14 or newer. Distribution builds are signed locally and are not notarized by Apple; macOS can require a manual first-launch exception. Supported-OS/hardware acceptance checks remain open. Rich UI extensions use a preview API.
 
 - Bars on all four screen edges, multiple displays and notch-safe layouts.
 - Live configuration reload with last-good rollback.
