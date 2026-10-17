@@ -7,6 +7,8 @@ cd "$root"
 swift test --package-path Packages/RillExtensionKit
 swift build -c release --package-path Examples/extensions/RichSample
 ./scripts/release.sh
+./scripts/prepare-homebrew.sh
+./scripts/verify-release.sh
 python3 - <<'PY'
 from pathlib import Path
 import subprocess
