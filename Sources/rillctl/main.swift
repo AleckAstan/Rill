@@ -42,7 +42,7 @@ struct RillCTL {
         case "--help", "help":
             printHelp()
         case "--version", "version":
-            print("rillctl 0.1.0")
+            print("rillctl 0.1.1")
         case "init":
             try initialize(Array(arguments.dropFirst()))
         case "install":

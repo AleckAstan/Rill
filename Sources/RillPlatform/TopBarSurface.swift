@@ -287,14 +287,29 @@ struct BarIslandShape: Shape {
         let source = CGRect(x: rect.minX - leading, y: rect.minY,
                             width: rect.width + leading + trailing, height: rect.height)
         let body = source.insetBy(dx: shoulder, dy: 0)
-        let bottomRadius = min(radius, rect.height - shoulder)
-        var path = NotchSurfaceShape(shoulder: 0, radius: bottomRadius).path(in: body)
-        path.addPath(BarLowerCornerShape(attachment: .trailing).path(in: CGRect(
-            x: source.minX, y: source.minY, width: shoulder, height: shoulder
-        )))
-        path.addPath(BarLowerCornerShape(attachment: .leading).path(in: CGRect(
-            x: source.maxX - shoulder, y: source.minY, width: shoulder, height: shoulder
-        )))
+        let bottomRadius = min(radius, body.width / 2, rect.height - shoulder)
+        let controlOffset = shoulder * 0.5522847498307936
+        var path = Path()
+        path.move(to: CGPoint(x: source.minX, y: source.minY))
+        path.addLine(to: CGPoint(x: source.maxX, y: source.minY))
+        path.addCurve(
+            to: CGPoint(x: body.maxX, y: source.minY + shoulder),
+            control1: CGPoint(x: source.maxX - controlOffset, y: source.minY),
+            control2: CGPoint(x: body.maxX, y: source.minY + shoulder - controlOffset)
+        )
+        path.addLine(to: CGPoint(x: body.maxX, y: body.maxY - bottomRadius))
+        path.addQuadCurve(to: CGPoint(x: body.maxX - bottomRadius, y: body.maxY),
+                          control: CGPoint(x: body.maxX, y: body.maxY))
+        path.addLine(to: CGPoint(x: body.minX + bottomRadius, y: body.maxY))
+        path.addQuadCurve(to: CGPoint(x: body.minX, y: body.maxY - bottomRadius),
+                          control: CGPoint(x: body.minX, y: body.maxY))
+        path.addLine(to: CGPoint(x: body.minX, y: source.minY + shoulder))
+        path.addCurve(
+            to: CGPoint(x: source.minX, y: source.minY),
+            control1: CGPoint(x: body.minX, y: source.minY + shoulder - controlOffset),
+            control2: CGPoint(x: source.minX + controlOffset, y: source.minY)
+        )
+        path.closeSubpath()
         return path
     }
 }
@@ -342,6 +357,7 @@ struct BarSurfaceView: View {
     let notchExclusion: CGRect?
     @ObservedObject var store: NativeModuleStore
     @ObservedObject var extensionRuntime: ExtensionRuntimeStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let performAction: (ModuleID, ActionSpec) -> Void
     let performNativeAction: (ModuleID, NativeModuleAction) -> Void
     let showFrontmostApplicationMenu: (ModuleID) -> Void
@@ -420,6 +436,11 @@ struct BarSurfaceView: View {
         let isIsland = surface.resolvedNotchIslands != nil && !identifiers.isEmpty
         let shoulderRadius = surface.resolvedNotchIslands?.resolvedUpperCornerRadius ?? 0
         let contentInset = min(theme.padding + (isIsland ? min(shoulderRadius, frame.height) : 0), frame.width / 4)
+        let islandShape = BarIslandShape(
+            attachment: alignment == .leading ? .leading : alignment == .trailing ? .trailing : .center,
+            radius: surface.resolvedNotchIslands?.cornerRadius ?? 0,
+            shoulderRadius: shoulderRadius
+        )
         return HStack(spacing: theme.spacing) {
             ForEach(identifiers, id: \.self) { identifier in
                 if let module = modules[identifier] {
@@ -442,17 +463,22 @@ struct BarSurfaceView: View {
         .padding(.horizontal, contentInset)
         .frame(height: frame.height)
         .background {
-            if isIsland, let islands = surface.resolvedNotchIslands {
-                BarIslandShape(
-                    attachment: alignment == .leading ? .leading : alignment == .trailing ? .trailing : .center,
-                    radius: islands.cornerRadius,
-                    shoulderRadius: shoulderRadius
-                ).fill(.black)
+            if isIsland {
+                islandShape.fill(.black)
             }
         }
+        .clipShape(isIsland ? AnyShape(islandShape) : AnyShape(Rectangle()))
+        .animation(isIsland ? islandResizeAnimation : nil, value: store.workspaceStates)
+        .animation(isIsland ? islandResizeAnimation : nil, value: store.focusedWindows)
+        .animation(isIsland ? islandResizeAnimation : nil, value: store.frontmostApplication.text)
         .frame(width: frame.width, height: frame.height, alignment: alignment)
         .clipped()
         .position(x: frame.midX, y: frame.midY)
+    }
+
+    private var islandResizeAnimation: Animation? {
+        guard !reduceMotion, theme.animationMS > 0 else { return nil }
+        return .smooth(duration: max(Double(theme.animationMS) / 1_000, 0.22))
     }
 
     private func verticalGroup(_ identifiers: [ModuleID]) -> some View {
@@ -1598,6 +1624,7 @@ final class SurfaceResource: NSObject, ManagedConfigurationResource, @unchecked 
     private let moduleRuntime: NativeModuleRuntime
     private let extensionRuntime: ExtensionRuntimeStore
     private var panels: [RillPanel] = []
+    private var displays: [DisplayDescriptor] = []
     private var committed = false
 
     init(
@@ -1616,6 +1643,7 @@ final class SurfaceResource: NSObject, ManagedConfigurationResource, @unchecked 
         self.moduleRuntime = moduleRuntime
         self.extensionRuntime = extensionRuntime
         super.init()
+        displays = ScreenInventory.descriptors()
         panels = makePanels()
     }
 
@@ -1635,8 +1663,12 @@ final class SurfaceResource: NSObject, ManagedConfigurationResource, @unchecked 
     }
 
     @objc private func reconcile() {
-        panels.forEach { $0.close() }
-        panels = makePanels()
+        let currentDisplays = ScreenInventory.descriptors()
+        if currentDisplays != displays {
+            panels.forEach { $0.close() }
+            displays = currentDisplays
+            panels = makePanels()
+        }
         if committed {
             panels.forEach { $0.orderFrontRegardless() }
         }

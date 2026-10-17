@@ -33,8 +33,8 @@ a first-launch Gatekeeper exception. See [installation](installation.md).
 
 ## Publish the downloads and tap
 
-Publish `Rill-0.1.0-macos-arm64.dmg` and its `.sha256` sidecar on the Rill
-`v0.1.0` GitHub release. The optional ZIP and its checksum can be published
+Publish `Rill-0.1.1-macos-arm64.dmg` and its `.sha256` sidecar on the Rill
+`v0.1.1` GitHub release. The optional ZIP and its checksum can be published
 alongside it. Do not move the existing SDK source tag: it is already consumed
 by plugin builds.
 

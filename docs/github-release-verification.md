@@ -1,5 +1,14 @@
 # GitHub plugin release verification
 
+## Rill 0.1.1
+
+The Convex resizing and continuous-contour fixes passed 161 Xcode tests,
+11 SDK tests, all 15 example configurations, signed DMG verification and
+Homebrew cask style checks with the existing no-comments exception.
+The isolated runtime check initially encountered a startup-status race;
+an unchanged standalone rerun passed all 100 reload cycles, recovery and
+shutdown checks with descriptors stable at 37.
+
 Verified locally on 16 October 2026 on Apple Silicon.
 
 ## Distribution update, 17 October 2026

@@ -4,6 +4,67 @@ import SwiftUI
 import XCTest
 
 final class TopBarGeometryTests: XCTestCase {
+    @MainActor
+    func testSpaceChangesPreserveExistingSurfacePanels() async throws {
+        let surface = SurfaceSpec(id: SurfaceID("space-resize-test"), style: .convex, topPlacement: .menuBarArea)
+        let resource = try SurfaceResource(
+            surfaceID: surface.id,
+            configuration: AppConfiguration(surfaces: [surface]),
+            generation: 1,
+            moduleRuntime: NativeModuleRuntime(),
+            extensionRuntime: ExtensionRuntimeStore()
+        )
+        await resource.commit()
+        let original = NSApplication.shared.windows.compactMap { $0 as? RillPanel }
+            .filter { $0.surfaceID == surface.id && $0.isVisible }
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
+        let current = NSApplication.shared.windows.compactMap { $0 as? RillPanel }
+            .filter { $0.surfaceID == surface.id && $0.isVisible }
+        await resource.stop()
+        XCTAssertFalse(original.isEmpty)
+        XCTAssertEqual(Set(original.map(ObjectIdentifier.init)), Set(current.map(ObjectIdentifier.init)))
+    }
+
+    @MainActor
+    func testConvexIslandWidthRendersIntermediateFrames() async throws {
+        try XCTSkipIf(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+        let store = NativeModuleStore()
+        store.frontmostApplication = .init(text: "App")
+        let module = ModuleSpec(id: ModuleID("frontmost"), kind: .frontmostApp)
+        let surface = SurfaceSpec(id: SurfaceID("resize-test"), style: .convex, topPlacement: .menuBarArea, start: [module.id])
+        let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 1_000, height: 40),
+                              styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        let view = RillHostingView(rootView: BarSurfaceView(
+            surface: surface, displayID: DisplayID("test"), modules: [module.id: module],
+            theme: ThemeSpec(animationMS: 800), notchExclusion: nil,
+            store: store, extensionRuntime: ExtensionRuntimeStore(),
+            performAction: { _, _ in }, performNativeAction: { _, _ in },
+            showFrontmostApplicationMenu: { _ in }, focusWorkspace: { _, _, _ in }
+        ))
+        window.contentView = view
+        window.orderFrontRegardless()
+        defer { window.close() }
+        try await Task.sleep(for: .milliseconds(150))
+        let initial = try renderedBlackLength(view, horizontal: true)
+        store.frontmostApplication = .init(text: "An application with a much longer name")
+        try await Task.sleep(for: .milliseconds(150))
+        let intermediate = try renderedBlackLength(view, horizontal: true)
+        try await Task.sleep(for: .milliseconds(900))
+        let expanded = try renderedBlackLength(view, horizontal: true)
+        XCTAssertGreaterThan(intermediate, initial)
+        XCTAssertLessThan(intermediate, expanded)
+        store.frontmostApplication = .init(text: "App")
+        try await Task.sleep(for: .milliseconds(150))
+        let shrinking = try renderedBlackLength(view, horizontal: true)
+        XCTAssertGreaterThan(shrinking, initial)
+        XCTAssertLessThan(shrinking, expanded)
+        try await Task.sleep(for: .milliseconds(900))
+        XCTAssertEqual(try renderedBlackLength(view, horizontal: true), initial)
+    }
+
     func testBottomCornersRoundOnlyTheScreenCorners() {
         let rect = CGRect(x: 0, y: 0, width: 24, height: 24)
         let leading = BarLowerCornerShape(attachment: .leading, isBottom: true).path(in: rect)
@@ -462,18 +523,6 @@ final class EdgeWidgetGeometryTests: XCTestCase {
         XCTAssertLessThan(Double(reopenedLength), Double(openLength) * 0.75)
     }
 
-    @MainActor
-    private func renderedBlackLength(_ view: NSView) throws -> Int {
-        view.layoutSubtreeIfNeeded()
-        let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
-        view.cacheDisplay(in: view.bounds, to: bitmap)
-        let x = bitmap.pixelsWide - 2
-        return try (0..<bitmap.pixelsHigh).filter { y in
-            let color = try XCTUnwrap(bitmap.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB))
-            return color.alphaComponent > 0.9 && max(color.redComponent, color.greenComponent, color.blueComponent) < 0.05
-        }.count
-    }
-
     func testIndependentEndsShiftCenterWithoutDetachingFromAnyEdge() {
         let screen = CGRect(x: -1800, y: -900, width: 1800, height: 900)
         for edge in SurfaceEdge.allCases {
@@ -656,4 +705,18 @@ final class WallpaperKeyboardTests: XCTestCase {
         if let competing { UnregisterEventHotKey(competing) }
         XCTAssertEqual(available, noErr)
     }
+}
+
+@MainActor
+private func renderedBlackLength(_ view: NSView, horizontal: Bool = false) throws -> Int {
+    view.layoutSubtreeIfNeeded()
+    let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+    view.cacheDisplay(in: view.bounds, to: bitmap)
+    let length = horizontal ? bitmap.pixelsWide : bitmap.pixelsHigh
+    return try (0..<length).filter { index in
+        let x = horizontal ? index : bitmap.pixelsWide - 2
+        let y = horizontal ? 2 : index
+        let color = try XCTUnwrap(bitmap.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB))
+        return color.alphaComponent > 0.9 && max(color.redComponent, color.greenComponent, color.blueComponent) < 0.05
+    }.count
 }
