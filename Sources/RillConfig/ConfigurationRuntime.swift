@@ -529,9 +529,13 @@ public enum DefaultConfiguration {
     edge = "top"
     top_placement = "menuBarArea"
     fullscreen = "hide"
-    start = ["frontmost"]
+    start = ["apple", "frontmost"]
     center = ["clock"]
     end = ["wifi", "status-separator", "volume", "battery"]
+
+    [[modules]]
+    id = "apple"
+    kind = "appleMenu"
 
     [[modules]]
     id = "frontmost"

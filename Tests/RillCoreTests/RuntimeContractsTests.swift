@@ -28,6 +28,14 @@ final class RuntimeContractsTests: XCTestCase {
         XCTAssertEqual(decoded.value.first?.applications?.first?.windowCount, 2)
     }
 
+    func testAppleMenuModuleRoundTripsWithoutProvider() throws {
+        let module = ModuleSpec(id: ModuleID("apple"), kind: .appleMenu)
+        let decoded = try JSONDecoder().decode(ModuleSpec.self, from: JSONEncoder().encode(module))
+        XCTAssertEqual(decoded, module)
+        XCTAssertNil(decoded.provider)
+        XCTAssertEqual(decoded.kind.rawValue, "appleMenu")
+    }
+
     func testConfigurationRoundTripsStableIDsAndReferences() throws {
         let configuration = AppConfiguration(surfaces: [SurfaceSpec(id: SurfaceID("main"), start: [ModuleID("clock")])], modules: [ModuleSpec(id: ModuleID("clock"), kind: .clock)])
         let data = try JSONEncoder().encode(configuration)

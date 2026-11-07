@@ -133,13 +133,15 @@ public enum SurfaceStyle: String, Codable, Sendable { case standard, convex }
 public enum SurfaceKind: String, Codable, Sendable { case bar }
 public enum ProviderKind: String, Codable, Sendable { case yabai, aerospace, omniwm, event, command, stream, plugin }
 public enum ModuleKind: String, Codable, Sendable {
-    case text, clock, frontmostApp, battery, wifi, volume, cpu, memory, separator, workspaces, custom
+    case text, clock, frontmostApp, appleMenu, battery, wifi, volume, bluetooth, microphone, keepAwake, cpu, memory, separator, workspaces, custom
     case extensionModule = "extension"
 }
 public enum TopPlacement: String, Codable, Sendable { case menuBarArea, belowSystemUI }
 public enum SafeAreaPolicy: String, Codable, Sendable { case system }
 public enum FullscreenPolicy: String, Codable, Sendable { case hide, show }
-public enum WorkspaceVariant: String, Codable, Sendable { case standard, dot }
+public enum WorkspaceVariant: String, Codable, Sendable {
+    case standard, dot, omarchy, omarchyCircle, omarchyTriangle
+}
 public enum ModuleState: String, Codable, Sendable, CaseIterable { case normal, warning, error, success }
 
 public enum DisplaySelector: Codable, Hashable, Sendable {
@@ -445,8 +447,9 @@ public enum ModuleSemanticState: String, Sendable {
     public static func supported(by kind: ModuleKind) -> [ModuleSemanticState] {
         switch kind {
         case .battery: return [.charging, .full, .critical]
-        case .wifi: return [.connected, .disconnected, .off]
-        case .volume: return [.muted]
+        case .wifi, .bluetooth: return [.connected, .disconnected, .off]
+        case .volume, .microphone: return [.muted]
+        case .keepAwake: return [.active, .off]
         case .workspaces: return [.active, .visible, .occupied, .empty]
         default: return []
         }
@@ -1682,8 +1685,8 @@ public extension AppConfiguration {
                 if icons.isEmpty || icons.count > 20 || icons.contains(where: { $0.isEmpty || $0.count > 128 }) {
                     append("\(path).format_icons", "Expected 1...20 SF Symbol names of 1...128 characters")
                 }
-                if ![ModuleKind.battery, .volume, .cpu, .memory, .custom].contains(module.kind) {
-                    append("\(path).format_icons", "Value-based icons require battery, volume, cpu, memory or custom")
+                if ![ModuleKind.battery, .volume, .microphone, .cpu, .memory, .custom].contains(module.kind) {
+                    append("\(path).format_icons", "Value-based icons require battery, volume, microphone, cpu, memory or custom")
                 }
             }
             if let alternate = module.formatAlt {

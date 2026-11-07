@@ -1,0 +1,53 @@
+schema_version = 1
+
+[theme]
+preset = "glass"
+
+[[surfaces]]
+id = "main"
+kind = "bar"
+display = "all"
+edge = "top"
+start = ["frontmost"]
+center = ["clock"]
+end = ["keep-awake", "microphone", "bluetooth", "wifi", "volume", "battery", "apple"]
+
+[[modules]]
+id = "frontmost"
+kind = "frontmostApp"
+
+[[modules]]
+id = "clock"
+kind = "clock"
+format = "EEE d MMM HH:mm"
+
+[[modules]]
+id = "keep-awake"
+kind = "keepAwake"
+states.active = { foreground = "#A6E3A1" }
+
+[[modules]]
+id = "microphone"
+kind = "microphone"
+states.muted = { foreground = "#F38BA8" }
+
+[[modules]]
+id = "bluetooth"
+kind = "bluetooth"
+
+[[modules]]
+id = "wifi"
+kind = "wifi"
+
+[[modules]]
+id = "volume"
+kind = "volume"
+
+[[modules]]
+id = "battery"
+kind = "battery"
+
+[[modules]]
+id = "apple"
+kind = "appleMenu"
+style = { background = "#00000000", border_width = 0 }

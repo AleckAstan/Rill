@@ -273,6 +273,13 @@ public struct AudioOutputOption: Identifiable, Equatable, Sendable {
 }
 
 public enum NativeModuleAction: Sendable {
+    case refreshBluetooth
+    case connectBluetooth(address: String)
+    case disconnectBluetooth(address: String)
+    case setMicrophoneVolume(Double)
+    case setMicrophoneMuted(Bool)
+    case selectAudioInput(UInt32)
+    case setKeepAwake(Bool)
     case refreshWiFi
     case setWiFiPower(Bool)
     case connectWiFi(ssid: String, password: String?)
@@ -403,6 +410,9 @@ public final class NativeModuleStore: ObservableObject {
         tooltip: "Frontmost application unavailable",
         health: .unavailable
     )
+    @Published public var bluetooth = BluetoothSnapshot.unavailable
+    @Published public var microphone = MicrophoneSnapshot.unavailable
+    @Published public var keepAwake = KeepAwakeSnapshot.inactive
     @Published public var battery = BatterySnapshot.unavailable
     @Published public var wifi = WiFiSnapshot.unavailable
     @Published public var wifiNetworks: [WiFiNetworkOption] = []
@@ -510,7 +520,7 @@ private enum ApplicationMenuReader {
     private static let maximumDepth = 8
     private static let maximumItems = 1_000
 
-    static func snapshot(processIdentifier: pid_t) throws -> ApplicationMenuSnapshot {
+    static func snapshot(processIdentifier: pid_t, appleMenu: Bool) throws -> ApplicationMenuSnapshot {
         let application = AXUIElementCreateApplication(processIdentifier)
         guard let menuBar: AXUIElement = attribute(kAXMenuBarAttribute as CFString, of: application) else {
             throw ApplicationMenuError.unavailable
@@ -518,11 +528,14 @@ private enum ApplicationMenuReader {
 
         var actions: [Int: AXUIElement] = [:]
         var itemCount = 0
-        let entries = children(of: menuBar).compactMap {
+        let menuItems = children(of: menuBar)
+        let selectedItems = appleMenu ? Array(menuItems.prefix(1)) : menuItems
+        let entries = selectedItems.compactMap {
             entry(for: $0, depth: 0, itemCount: &itemCount, actions: &actions)
         }
-        guard !entries.isEmpty else { throw ApplicationMenuError.empty }
-        return .init(entries: entries, actions: actions)
+        let visibleEntries = appleMenu ? entries.first?.children ?? [] : entries
+        guard !visibleEntries.isEmpty else { throw ApplicationMenuError.empty }
+        return .init(entries: visibleEntries, actions: actions)
     }
 
     private static func entry(
@@ -625,6 +638,12 @@ public final class NativeModuleRuntime: NSObject {
     public let store = NativeModuleStore()
     private let actionRunner = BoundedActionRunner()
     private let wifiControl = WiFiControl()
+    private lazy var bluetoothControl = BluetoothModuleController(store: store)
+    private lazy var microphoneControl = MicrophoneModuleController(store: store)
+    private lazy var keepAwakeControl = KeepAwakeController(store: store)
+    private var bluetoothReferences: [ModuleID: Int] = [:]
+    private var microphoneReferences: [ModuleID: Int] = [:]
+    private var keepAwakeReferences: [ModuleID: Int] = [:]
     private var clockReferences: [ModuleID: (count: Int, format: String)] = [:]
     private var frontmostReferences: [ModuleID: Int] = [:]
     private var batteryReferences: [ModuleID: Int] = [:]
@@ -681,7 +700,12 @@ public final class NativeModuleRuntime: NSObject {
         actionGeneration = UUID()
         actionRequests.removeAll()
         store.actionFailures.removeAll()
-        if configuration == nil { await actionRunner.stop() }
+        if configuration == nil {
+            bluetoothControl.stop()
+            microphoneControl.stop()
+            keepAwakeControl.stop()
+            await actionRunner.stop()
+        }
         let ids = Set(configuration?.providers.map(\.id) ?? [])
         store.providerHealth = store.providerHealth.filter { ids.contains($0.key) }
         store.workspaceStates = store.workspaceStates.filter { ids.contains($0.key) }
@@ -718,6 +742,27 @@ public final class NativeModuleRuntime: NSObject {
     public func performNativeAction(moduleID: ModuleID, action: NativeModuleAction) {
         store.actionFailures[moduleID] = nil
         switch action {
+        case .refreshBluetooth:
+            guard bluetoothReferences[moduleID] != nil else { return }
+            bluetoothControl.refresh()
+        case .connectBluetooth(let address):
+            guard bluetoothReferences[moduleID] != nil else { return }
+            bluetoothControl.connect(address: address)
+        case .disconnectBluetooth(let address):
+            guard bluetoothReferences[moduleID] != nil else { return }
+            bluetoothControl.disconnect(address: address)
+        case .setMicrophoneVolume(let value):
+            guard microphoneReferences[moduleID] != nil else { return }
+            microphoneControl.setVolume(value)
+        case .setMicrophoneMuted(let muted):
+            guard microphoneReferences[moduleID] != nil else { return }
+            microphoneControl.setMuted(muted)
+        case .selectAudioInput(let deviceID):
+            guard microphoneReferences[moduleID] != nil else { return }
+            microphoneControl.selectInput(deviceID)
+        case .setKeepAwake(let enabled):
+            guard keepAwakeReferences[moduleID] != nil else { return }
+            keepAwakeControl.setEnabled(enabled)
         case .refreshWiFi:
             refreshWiFiNetworks(moduleID: moduleID)
         case .setWiFiPower(let enabled):
@@ -745,7 +790,7 @@ public final class NativeModuleRuntime: NSObject {
         }
     }
 
-    public func showFrontmostApplicationMenu(moduleID: ModuleID) {
+    public func showFrontmostApplicationMenu(moduleID: ModuleID, appleMenu: Bool = false) {
         guard AXIsProcessTrusted() else {
             let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
             _ = AXIsProcessTrustedWithOptions(options)
@@ -761,7 +806,7 @@ public final class NativeModuleRuntime: NSObject {
 
         do {
             let snapshot = try ApplicationMenuReader.snapshot(
-                processIdentifier: application.processIdentifier
+                processIdentifier: application.processIdentifier, appleMenu: appleMenu
             )
             let target = ApplicationMenuActionTarget(actions: snapshot.actions) { [weak self] result in
                 if result == .success {
@@ -910,6 +955,14 @@ public final class NativeModuleRuntime: NSObject {
 
     fileprivate func activate(_ module: ModuleSpec) {
         switch module.kind {
+        case .bluetooth:
+            bluetoothReferences[module.id, default: 0] += 1
+            if bluetoothReferences.values.reduce(0, +) == 1 { bluetoothControl.start() }
+        case .microphone:
+            microphoneReferences[module.id, default: 0] += 1
+            if microphoneReferences.values.reduce(0, +) == 1 { microphoneControl.start() }
+        case .keepAwake:
+            keepAwakeReferences[module.id, default: 0] += 1
         case .clock:
             let current = clockReferences[module.id] ?? (0, module.format ?? "HH:mm")
             let primary = module.format ?? "HH:mm"
@@ -948,13 +1001,22 @@ public final class NativeModuleRuntime: NSObject {
                     health: .unavailable
                 )
             }
-        case .text, .separator, .extensionModule:
+        case .text, .appleMenu, .separator, .extensionModule:
             break
         }
     }
 
     fileprivate func deactivate(_ module: ModuleSpec) {
         switch module.kind {
+        case .bluetooth:
+            decrement(module.id, in: &bluetoothReferences)
+            if bluetoothReferences.isEmpty { bluetoothControl.stop() }
+        case .microphone:
+            decrement(module.id, in: &microphoneReferences)
+            if microphoneReferences.isEmpty { microphoneControl.stop() }
+        case .keepAwake:
+            decrement(module.id, in: &keepAwakeReferences)
+            if keepAwakeReferences.isEmpty { keepAwakeControl.stop() }
         case .clock:
             decrement(module.id, in: &clockReferences)
             if clockReferences.isEmpty { stopClock() } else { scheduleClock() }
@@ -993,7 +1055,7 @@ public final class NativeModuleRuntime: NSObject {
                 if workspaceModulesByProvider[provider]?.isEmpty == true { workspaceModulesByProvider[provider] = nil }
             }
             if mockReferences[module.id] == nil { store.mockModules[module.id] = nil }
-        case .text, .separator, .extensionModule:
+        case .text, .appleMenu, .separator, .extensionModule:
             break
         }
         store.actionFailures[module.id] = nil

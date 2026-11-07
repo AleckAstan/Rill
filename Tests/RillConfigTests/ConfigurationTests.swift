@@ -3,6 +3,38 @@ import XCTest
 final class ConfigurationParserTests: XCTestCase {
     private let parser = ConfigurationParser()
 
+    func testNativeLaunchModulesValidateWithoutProviders() throws {
+        for kind in [ModuleKind.bluetooth, .microphone, .keepAwake] {
+            let source = """
+            schema_version = 1
+            [[surfaces]]
+            id = "main"
+            end = ["control"]
+            [[modules]]
+            id = "control"
+            kind = "\(kind.rawValue)"
+            """
+            let configuration = try parser.parse(text: source).configuration
+            XCTAssertEqual(configuration.modules.first?.kind, kind)
+            XCTAssertNil(configuration.modules.first?.provider)
+            XCTAssertEqual(try JSONDecoder().decode(AppConfiguration.self, from: JSONEncoder().encode(configuration)), configuration)
+        }
+    }
+
+    func testNativeLaunchModuleSemanticStylesValidate() throws {
+        for (kind, state) in [("bluetooth", "connected"), ("microphone", "muted"), ("keepAwake", "active")] {
+            let source = """
+            schema_version = 1
+            [[modules]]
+            id = "control"
+            kind = "\(kind)"
+            states.\(state) = { foreground = "#A6E3A1" }
+            """
+            XCTAssertNoThrow(try parser.parse(text: source))
+            assertInvalid(source.replacingOccurrences(of: "states.\(state)", with: "states.charging"), contains: "states.charging")
+        }
+    }
+
     func testGitHubPackageURLsAreStrictAndStable() throws {
         let package = try GitHubPackage("https://github.com/Example/Plugin.git/")
         XCTAssertEqual(package.owner, "example")
@@ -98,6 +130,13 @@ final class ConfigurationParserTests: XCTestCase {
         assertInvalid(text.replacingOccurrences(of: "kind = \"workspaces\"", with: "kind = \"clock\""), contains: "workspace_variant")
         let standard = try parser.parse(text: text.replacingOccurrences(of: "workspace_variant = \"dot\"", with: "workspace_variant = \"standard\""))
         XCTAssertEqual(standard.configuration.modules.first?.workspaceVariant, .standard)
+        for variant in [WorkspaceVariant.omarchy, .omarchyCircle, .omarchyTriangle] {
+            let source = text.replacingOccurrences(of: "workspace_variant = \"dot\"", with: "workspace_variant = \"\(variant.rawValue)\"")
+            let configuration = try parser.parse(text: source).configuration
+            XCTAssertEqual(configuration.modules.first?.workspaceVariant, variant)
+            XCTAssertEqual(try JSONDecoder().decode(AppConfiguration.self, from: JSONEncoder().encode(configuration)), configuration)
+            assertInvalid(source.replacingOccurrences(of: "kind = \"workspaces\"", with: "kind = \"clock\""), contains: "workspace_variant")
+        }
         let defaults = try parser.parse(text: text.replacingOccurrences(of: "workspace_variant = \"dot\"", with: ""))
         XCTAssertNil(defaults.configuration.modules.first?.workspaceVariant)
     }

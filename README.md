@@ -6,7 +6,7 @@ Rill 0.1.1 targets Apple Silicon and macOS 14 or newer. Distribution builds are 
 
 - Bars on all four screen edges, multiple displays and notch-safe layouts.
 - Live configuration reload with last-good rollback.
-- Clock, app menu, Wi-Fi, volume, battery, CPU and memory modules.
+- Clock with calendar, app and Apple menus, Wi-Fi, Bluetooth, audio output, microphone, keep awake, battery, CPU and memory modules.
 - AeroSpace, OmniWM and yabai workspace integrations.
 - Local command, stream and event modules, GitHub-installable plugins and a bundled CLI.
 - Flat, segmented and glass themes with system accessibility preferences.

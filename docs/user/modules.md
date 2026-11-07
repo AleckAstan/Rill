@@ -24,6 +24,13 @@ format = "HH:mm"
 
 The format uses `DateFormatter` syntax and defaults to `HH:mm`. Scheduling aligns to the displayed precision: formats with seconds update each second; other formats update on minute boundaries. Rill immediately refreshes after wake, time-zone changes, and locale changes.
 
+Click the clock to open a localized month calendar. Use the previous/next buttons
+to navigate and Today to return to the current month. The current day is marked;
+the grid follows the system calendar, time zone and first weekday. It does not
+read Calendar events or request calendar access. An explicit `on_click` or
+`format_alt` replaces this calendar interaction.
+
+
 ## Frontmost application
 
 ```toml
@@ -210,3 +217,113 @@ background, with `theme.accent` as the fallback for a transparent background.
 Other dots use their semantic foreground color and the configured empty-workspace
 opacity. Set `workspace_variant = "standard"` or omit the option to use the usual
 workspace labels and application icons. This option only applies to `workspaces`.
+
+## Omarchy workspace variants
+
+Rill includes three compact variants inspired by the
+[Omarchy 4.5 workspace widget](https://github.com/omacom/omarchy/blob/v4.5.0/shell/plugins/bar/widgets/Workspaces.qml):
+
+| `workspace_variant` | Inactive spaces | Focused space |
+| --- | --- | --- |
+| `omarchy` | Workspace name or number | Filled square |
+| `omarchyCircle` | Workspace name or number | Filled circle |
+| `omarchyTriangle` | Workspace name or number | Filled triangle |
+
+```toml
+[[modules]]
+id = "spaces"
+kind = "workspaces"
+provider = "omniwm"
+workspace_variant = "omarchy"
+```
+
+These variants use native SF Symbols, without requiring a Nerd Font. They omit
+application icons and item backgrounds, dim empty spaces, and preserve click to
+focus, application tooltips, VoiceOver labels, state foreground colors and the
+surface orientation. Names supplied by the window manager remain unchanged.
+
+Omarchy uses these symbols to represent tiling, scrolling and floating layouts.
+In Rill the selected variant fixes the active symbol; it does not detect or
+change the window manager's layout. Clicking the focused space retains Rill's
+normal focus action. Existing `standard` and `dot` variants remain available.
+
+## Apple menu
+
+The built-in `appleMenu` module shows the Apple logo and opens the frontmost
+application's native Apple menu, including its system commands and confirmation
+dialogs. Enable Rill in System Settings > Privacy & Security > Accessibility.
+No external plugin or provider is required. New configurations include it by default.
+For an existing configuration, add the module ID to a surface's `start` group:
+
+```toml
+[[modules]]
+id = "apple"
+kind = "appleMenu"
+```
+
+Set `icon = "circle.grid.2x2.fill"` to use another SF Symbol. The usual module
+styles apply; an explicit `on_click` or `format_alt` replaces the native menu.
+
+## Bluetooth
+
+```toml
+[[modules]]
+id = "bluetooth"
+kind = "bluetooth"
+```
+
+The built-in module shows Bluetooth state and a popup listing paired Bluetooth
+Classic devices with connection status, Connect/Disconnect buttons, Refresh and
+a Bluetooth Settings link. It requests Bluetooth access only when this module
+is active. Denied access, a powered-off radio and operation failures are shown
+explicitly. It refreshes the paired list every ten seconds while active.
+
+macOS handles new pairing, radio power, profile activation and audio routing.
+The module does not scan for devices, enumerate BLE-only accessories, report
+unsupported battery values or automatically select a connected headset as an
+audio output. Use Bluetooth Settings for those operations. State styles support
+`connected`, `disconnected` and `off`.
+
+## Microphone
+
+```toml
+[[modules]]
+id = "microphone"
+kind = "microphone"
+states.muted = { foreground = "#F38BA8" }
+```
+
+The built-in microphone popup selects the default audio input and exposes its
+master input volume and hardware mute when the device provides those controls.
+Unsupported controls are disabled and identified in the popup. Zero gain is not
+reported as a hardware mute. CoreAudio listeners update the module when devices
+or settings change, and stop when the module is removed.
+
+This module never records audio and does not request microphone recording
+permission. Hardware without master gain or mute properties remains selectable;
+per-channel gain and software mute are not implemented. Sound Settings remains
+available from the popup. `format`, `format_icons` and the `muted` state style
+work as with other native modules.
+
+## Keep awake
+
+```toml
+[[modules]]
+id = "keep-awake"
+kind = "keepAwake"
+states.active = { foreground = "#A6E3A1" }
+```
+
+Click to open the Keep awake toggle. It starts off and uses a native IOKit
+assertion to prevent automatic system sleep. The display can still turn off;
+manual Sleep, closing the lid and system safety behavior remain effective.
+No helper process or elevated permission is needed.
+
+All instances share the same state. The assertion is released when disabled,
+when the last keep-awake module is removed, or when Rill exits. An ordinary
+configuration reload retaining a keep-awake module preserves its current state;
+a restart starts off again. State styles support `active` and `off`.
+
+Try the complete [system controls configuration](../../Examples/system-controls/config.toml).
+These controls are built into Rill and require no external plugin. As with
+other native modules, `on_click` and `format_alt` override their default popup.

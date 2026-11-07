@@ -42,7 +42,7 @@ final class TopBarGeometryTests: XCTestCase {
             theme: ThemeSpec(animationMS: 800), notchExclusion: nil,
             store: store, extensionRuntime: ExtensionRuntimeStore(),
             performAction: { _, _ in }, performNativeAction: { _, _ in },
-            showFrontmostApplicationMenu: { _ in }, focusWorkspace: { _, _, _ in }
+            showFrontmostApplicationMenu: { _, _ in }, focusWorkspace: { _, _, _ in }
         ))
         window.contentView = view
         window.orderFrontRegardless()

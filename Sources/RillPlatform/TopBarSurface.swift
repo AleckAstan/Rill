@@ -360,7 +360,7 @@ struct BarSurfaceView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let performAction: (ModuleID, ActionSpec) -> Void
     let performNativeAction: (ModuleID, NativeModuleAction) -> Void
-    let showFrontmostApplicationMenu: (ModuleID) -> Void
+    let showFrontmostApplicationMenu: (ModuleID, Bool) -> Void
     let focusWorkspace: (ModuleID, ProviderID, WorkspaceID) -> Void
 
     var body: some View {
@@ -639,7 +639,7 @@ private struct ModuleView: View {
     @Namespace private var workspaceFocusNamespace
     let performAction: (ModuleID, ActionSpec) -> Void
     let performNativeAction: (ModuleID, NativeModuleAction) -> Void
-    let showFrontmostApplicationMenu: (ModuleID) -> Void
+    let showFrontmostApplicationMenu: (ModuleID, Bool) -> Void
     let focusWorkspace: (ModuleID, ProviderID, WorkspaceID) -> Void
     @State private var nativePopoverPresented = false
     @State private var alternateFormatActive = false
@@ -723,17 +723,19 @@ private struct ModuleView: View {
                     .focusable()
                     .focusEffectDisabled()
                     .accessibilityHint("Switches the module format")
-            } else if [.wifi, .volume, .battery].contains(module.kind) {
+            } else if [.wifi, .volume, .battery, .bluetooth, .microphone, .keepAwake, .clock].contains(module.kind) {
                 Button {
                     nativePopoverPresented.toggle()
                     if module.kind == .wifi {
                         performNativeAction(module.id, .refreshWiFi)
+                    } else if module.kind == .bluetooth {
+                        performNativeAction(module.id, .refreshBluetooth)
                     }
                 } label: { decoratedContent }
                     .buttonStyle(.plain)
                     .focusable()
                     .focusEffectDisabled()
-                    .accessibilityHint("Shows system controls")
+                    .accessibilityHint(module.kind == .clock ? "Shows calendar" : "Shows system controls")
                     .popover(isPresented: $nativePopoverPresented) {
                         NativeStatusPopover(
                             module: module,
@@ -750,12 +752,12 @@ private struct ModuleView: View {
                     .popover(isPresented: $nativePopoverPresented) {
                         CustomModulePopover(title: presentation.text, content: popover)
                     }
-            } else if module.kind == .frontmostApp {
-                Button { showFrontmostApplicationMenu(module.id) } label: { decoratedContent }
+            } else if [.frontmostApp, .appleMenu].contains(module.kind) {
+                Button { showFrontmostApplicationMenu(module.id, module.kind == .appleMenu) } label: { decoratedContent }
                     .buttonStyle(.plain)
                     .focusable()
                     .focusEffectDisabled()
-                    .accessibilityHint("Shows the frontmost application's menu")
+                    .accessibilityHint(module.kind == .appleMenu ? "Shows the Apple menu" : "Shows the frontmost application's menu")
             } else { decoratedContent }
         }
         .background(ModulePointerInput(module: module, perform: performGesture))
@@ -765,8 +767,8 @@ private struct ModuleView: View {
         .accessibilityLabel(accessibilityLabel)
         .accessibilityValue(accessibilityValue)
         .accessibilityAddTraits(
-            module.onClick != nil || module.formatAlt != nil || module.kind == .frontmostApp ||
-                [.wifi, .volume, .battery].contains(module.kind) || presentation.popover != nil
+            module.onClick != nil || module.formatAlt != nil || [.frontmostApp, .appleMenu].contains(module.kind) ||
+                [.wifi, .volume, .battery, .bluetooth, .microphone, .keepAwake, .clock].contains(module.kind) || presentation.popover != nil
                 ? .isButton
                 : .isStaticText
         )
@@ -812,6 +814,22 @@ private struct ModuleView: View {
                 .padding(3)
                 .frame(minWidth: isHorizontal ? 12 : 24, minHeight: isHorizontal ? 24 : 12)
                 .contentShape(Rectangle())
+        } else if let activeSymbol = omarchyWorkspaceSymbol {
+            Group {
+                if workspace.focused {
+                    Image(systemName: activeSymbol)
+                        .font(.system(size: workspaceStyle(workspace).fontSize ?? theme.fontSize))
+                        .accessibilityHidden(true)
+                } else {
+                    workspaceNumber(workspace)
+                }
+            }
+            .foregroundStyle(workspaceStyle(workspace).foreground.map { Color(hex: $0) } ??
+                (theme.resolvedAdaptiveText ? Color.primary : Color(hex: theme.foreground)))
+            .opacity(workspace.occupied == false && !workspace.focused ? theme.resolvedEmptyWorkspaceOpacity : 1)
+            .frame(minWidth: 20, minHeight: 24)
+            .padding(.horizontal, workspaceStyle(workspace).padding ?? 6)
+            .contentShape(Rectangle())
         } else {
             workspaceContents(workspace, providerID: providerID)
             .frame(minHeight: theme.resolvedWorkspaceMinimumHeight)
@@ -850,6 +868,15 @@ private struct ModuleView: View {
                     isHorizontal: isHorizontal
                 )
             )
+        }
+    }
+
+    private var omarchyWorkspaceSymbol: String? {
+        switch module.workspaceVariant {
+        case .omarchy: return "square.fill"
+        case .omarchyCircle: return "circle.fill"
+        case .omarchyTriangle: return "triangle.fill"
+        case .standard, .dot, nil: return nil
         }
     }
 
@@ -1012,12 +1039,20 @@ private struct ModuleView: View {
             } else {
                 HStack(spacing: 4) {
                     if let symbolName = presentation.symbolName {
-                        Image(systemName: symbolName)
-                            .symbolRenderingMode(.hierarchical)
-                            .font(theme.preset == .glass
-                                  ? .system(size: resolvedStyle.fontSize ?? max(theme.fontSize + 5, 18))
-                                  : font)
-                            .frame(maxWidth: isHorizontal ? nil : 22, maxHeight: isHorizontal ? nil : 22)
+                        Group {
+                            if module.kind == .bluetooth, symbolName == "rill.bluetooth" {
+                                BluetoothIcon(size: resolvedStyle.fontSize ??
+                                    (theme.preset == .glass ? max(theme.fontSize + 5, 18) : theme.fontSize))
+                                    .opacity(store.bluetooth.state == .poweredOff ? 0.45 : 1)
+                            } else {
+                                Image(systemName: symbolName)
+                                    .symbolRenderingMode(.hierarchical)
+                                    .font(theme.preset == .glass
+                                          ? .system(size: resolvedStyle.fontSize ?? max(theme.fontSize + 5, 18))
+                                          : font)
+                            }
+                        }
+                        .frame(maxWidth: isHorizontal ? nil : 22, maxHeight: isHorizontal ? nil : 22)
                     }
                     if !presentation.text.isEmpty {
                         Text(presentation.text)
@@ -1057,12 +1092,20 @@ private struct ModuleView: View {
                 ),
                 tooltip: "Current time"
             )
+        case .appleMenu:
+            return .init(text: module.text ?? "", symbolName: "apple.logo", tooltip: "Apple menu")
         case .frontmostApp:
             return store.frontmostApplication
         case .cpu:
             return store.systemMetrics.cpuPresentation
         case .memory:
             return store.systemMetrics.memoryPresentation
+        case .bluetooth:
+            return store.bluetooth.presentation
+        case .microphone:
+            return store.microphone.presentation
+        case .keepAwake:
+            return store.keepAwake.presentation
         case .battery:
             return store.battery.presentation
         case .wifi:
@@ -1105,12 +1148,14 @@ private struct ModuleView: View {
         if module.formatAlt != nil { return "Switches the module format" }
         if [.cpu, .memory].contains(module.kind), let tooltip = presentation.tooltip { return tooltip }
         if presentation.popover != nil { return "Shows module details" }
-        if [.wifi, .volume, .battery].contains(module.kind) { return "Shows system controls" }
+        if module.kind == .clock { return "Shows calendar" }
+        if [.wifi, .volume, .battery, .bluetooth, .microphone, .keepAwake].contains(module.kind) { return "Shows system controls" }
         if module.kind == .frontmostApp { return "Shows the frontmost application's menu" }
         return presentation.tooltip ?? module.id.rawValue
     }
 
     private var accessibilityLabel: String {
+        if module.kind == .appleMenu { return "Apple menu" }
         if module.kind == .cpu { return "CPU utilization" }
         if module.kind == .memory { return "Memory usage" }
         if !basePresentation.text.isEmpty { return basePresentation.text }
@@ -1164,6 +1209,14 @@ private struct NativeStatusPopover: View {
     var body: some View {
         Group {
             switch module.kind {
+            case .clock:
+                CalendarPopover(now: store.now)
+            case .bluetooth:
+                BluetoothControlPopover(store: store, perform: perform)
+            case .microphone:
+                MicrophoneControlPopover(store: store, perform: perform)
+            case .keepAwake:
+                KeepAwakePopover(store: store, perform: perform)
             case .wifi:
                 WiFiControlPopover(moduleID: module.id, store: store, perform: perform)
             case .volume:
@@ -1407,7 +1460,7 @@ private struct BatteryControlPopover: View {
     }
 }
 
-private struct SettingsButton: View {
+struct SettingsButton: View {
     let title: String
     let url: String
 
@@ -1727,8 +1780,8 @@ final class SurfaceResource: NSObject, ManagedConfigurationResource, @unchecked 
                     performNativeAction: { [weak moduleRuntime] moduleID, action in
                         moduleRuntime?.performNativeAction(moduleID: moduleID, action: action)
                     },
-                    showFrontmostApplicationMenu: { [weak moduleRuntime] moduleID in
-                        moduleRuntime?.showFrontmostApplicationMenu(moduleID: moduleID)
+                    showFrontmostApplicationMenu: { [weak moduleRuntime] moduleID, appleMenu in
+                        moduleRuntime?.showFrontmostApplicationMenu(moduleID: moduleID, appleMenu: appleMenu)
                     },
                     focusWorkspace: { [weak moduleRuntime] moduleID, providerID, workspaceID in
                         moduleRuntime?.focusWorkspace(moduleID: moduleID, providerID: providerID, workspace: workspaceID)
