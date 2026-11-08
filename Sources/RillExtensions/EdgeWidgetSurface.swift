@@ -23,29 +23,48 @@ extension RillMetricAccent {
 struct MetricGaugeView: View {
     let metric: RillMetricContent
     let packageDirectory: URL
+    var inline = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                Circle().stroke(Color.white.opacity(0.18), lineWidth: 4)
-                if let value = metric.value {
-                    Circle().trim(from: 0, to: value)
-                        .stroke(metric.accent.color, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                        .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: value)
+        Group {
+            if inline {
+                HStack(spacing: 7) {
+                    if let image = ExtensionImageCache.image(at: packageDirectory.appendingPathComponent(metric.icon)) {
+                        Image(nsImage: image).resizable().scaledToFit().frame(width: 12, height: 12).opacity(0.5)
+                    }
+                    ring.frame(width: 28, height: 28)
                 }
-                if let image = ExtensionImageCache.image(at: packageDirectory.appendingPathComponent(metric.icon)) {
-                    Image(nsImage: image).resizable().scaledToFit().frame(width: 24, height: 24)
+            } else {
+                VStack(spacing: 8) {
+                    ring.frame(width: 40, height: 40)
+                    Text(metric.text).font(.system(size: 14)).monospacedDigit()
                 }
-            }.frame(width: 40, height: 40)
-            Text(metric.text).font(.system(size: 14, weight: .regular)).monospacedDigit()
+            }
         }
         .foregroundStyle(.white)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(metric.title)
         .accessibilityValue(metric.text)
     }
+    private var ring: some View {
+        ZStack {
+            Circle().stroke(Color.white.opacity(inline ? 0.1 : 0.18), lineWidth: inline ? 2 : 4)
+            if let value = metric.value {
+                Circle().trim(from: 0, to: value)
+                    .stroke(metric.accent.color.opacity(inline ? 0.75 : 1), style: StrokeStyle(lineWidth: inline ? 2 : 3, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: value)
+            }
+            if inline {
+                Text(metric.text).font(.system(size: metric.text.count > 4 ? 6 : 8, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.7)).monospacedDigit()
+            } else if let image = ExtensionImageCache.image(at: packageDirectory.appendingPathComponent(metric.icon)) {
+                Image(nsImage: image).resizable().scaledToFit().frame(width: 24, height: 24)
+            }
+        }
+    }
+
 }
 
 struct MetricDetailView: View {
@@ -115,7 +134,12 @@ enum EdgeWidgetGeometry {
     static let metricPadding: CGFloat = 24
     static let metricSlotLength: CGFloat = 88
 
-    static func contentFrame(frame: CGRect, edge: SurfaceEdge, metricCount: Int) -> CGRect {
+    static func contentFrame(frame: CGRect, edge: SurfaceEdge, metricCount: Int,
+                             agentSessionCount: Int? = nil, showsConversation: Bool = false) -> CGRect {
+        if let agentSessionCount, !showsConversation, !edge.isHorizontal {
+            let length = min(frame.height, CGFloat(max(3, agentSessionCount)) * 62 + 190)
+            return CGRect(x: frame.minX, y: frame.midY - length / 2, width: frame.width, height: length)
+        }
         guard metricCount > 0 else { return frame }
         let horizontal = edge.isHorizontal
         let maximumLength = horizontal ? frame.width : frame.height
@@ -125,8 +149,8 @@ enum EdgeWidgetGeometry {
             : CGRect(x: frame.minX, y: frame.midY - length / 2, width: frame.width, height: length)
     }
 
-    static func animatedFrame(frame: CGRect, edge: SurfaceEdge, leading: CGFloat, trailing: CGFloat, depth: CGFloat) -> CGRect {
-        let compact = collapsedFrame(frame: frame, edge: edge)
+    static func animatedFrame(frame: CGRect, edge: SurfaceEdge, leading: CGFloat, trailing: CGFloat, depth: CGFloat, showsSummary: Bool = false, showsActivity: Bool = false) -> CGRect {
+        let compact = collapsedFrame(frame: frame, edge: edge, showsSummary: showsSummary, showsActivity: showsActivity)
         let horizontal = edge.isHorizontal
         let wing = max(0, (horizontal ? frame.width - compact.width : frame.height - compact.height) / 2)
         let start = wing * max(0, leading)
@@ -150,9 +174,9 @@ enum EdgeWidgetGeometry {
         }
     }
 
-    static func collapsedFrame(frame: CGRect, edge: SurfaceEdge) -> CGRect {
-        let depth: CGFloat = 6
-        let length: CGFloat = 48
+    static func collapsedFrame(frame: CGRect, edge: SurfaceEdge, showsSummary: Bool = false, showsActivity: Bool = false) -> CGRect {
+        let depth: CGFloat = showsActivity ? 10 : showsSummary ? (edge.isHorizontal ? 34 : 44) : 6
+        let length: CGFloat = showsActivity ? 72 : showsSummary ? (edge.isHorizontal ? 156 : 112) : 48
         switch edge {
         case .right: return CGRect(x: frame.maxX - depth, y: frame.midY - length / 2, width: depth, height: length)
         case .left: return CGRect(x: frame.minX, y: frame.midY - length / 2, width: depth, height: length)
@@ -335,13 +359,17 @@ final class EdgeWidgetResource: NSObject, ManagedConfigurationResource, @uncheck
     private func trackPointer(updateHover: Bool = true) {
         let point = NSEvent.mouseLocation
         let key = ExtensionContributionKey(extensionID: spec.extensionID, contributionID: spec.contribution)
-        let count = runtime.presentations[key]?.compact.edgeMetrics.count ?? 0
+        let presentation = runtime.presentations[key]
+        let count = presentation?.expanded == nil ? (presentation?.compact.edgeMetrics.count ?? 0) : 0
         for (panel, interaction, widget) in panels {
-            let content = EdgeWidgetGeometry.contentFrame(frame: widget, edge: spec.edge, metricCount: count)
-            let frame = interaction.expanded ? content : EdgeWidgetGeometry.collapsedFrame(frame: content, edge: spec.edge)
+            let content = EdgeWidgetGeometry.contentFrame(frame: widget, edge: spec.edge, metricCount: count,
+                agentSessionCount: presentation?.expanded?.agents?.sessions.count,
+                showsConversation: presentation?.expanded?.agents?.selectedSessionID != nil)
+            let frame = interaction.expanded ? content : EdgeWidgetGeometry.collapsedFrame(frame: content, edge: spec.edge, showsSummary: presentation?.collapsed != nil && presentation?.expanded?.agents == nil,
+                showsActivity: presentation?.expanded?.agents != nil)
             let local = CGPoint(x: point.x - frame.minX, y: frame.maxY - point.y)
             let visibleInside = EdgeWidgetShape(edge: spec.edge,
-                cornerRadius: runtime.presentations[key]?.compact.kind == .wallpaper ? 14 : 32).path(in: CGRect(origin: .zero, size: frame.size)).contains(local)
+                cornerRadius: presentation?.collapsed != nil && !interaction.expanded ? 14 : presentation?.expanded?.agents != nil ? 24 : presentation?.compact.kind == .wallpaper ? 14 : 32).path(in: CGRect(origin: .zero, size: frame.size)).contains(local)
             let inside = interaction.expanded
                 ? visibleInside
                 : frame.insetBy(dx: -10, dy: -10).contains(point)
@@ -450,14 +478,17 @@ struct EdgeWidgetRootView: View {
     let refreshPointer: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var content: RillExtensionNode? {
-        runtime.presentations[.init(extensionID: spec.extensionID, contributionID: spec.contribution)]?.compact
+    private var presentation: RillExtensionPresentation? {
+        runtime.presentations[.init(extensionID: spec.extensionID, contributionID: spec.contribution)]
     }
+    private var content: RillExtensionNode? { presentation?.compact }
     private var metrics: [RillMetricContent] { content?.edgeMetrics ?? [] }
 
     private var packageDirectory: URL { runtime.packageDirectory(for: spec.extensionID) }
     private var contentWidget: CGRect {
-        EdgeWidgetGeometry.contentFrame(frame: widget, edge: spec.edge, metricCount: metrics.count)
+        EdgeWidgetGeometry.contentFrame(frame: widget, edge: spec.edge, metricCount: presentation?.expanded == nil ? metrics.count : 0,
+            agentSessionCount: presentation?.expanded?.agents?.sessions.count,
+            showsConversation: presentation?.expanded?.agents?.selectedSessionID != nil)
     }
     private var localWidget: CGRect {
         CGRect(x: contentWidget.minX - canvas.minX, y: canvas.maxY - contentWidget.maxY,
@@ -481,7 +512,8 @@ struct EdgeWidgetRootView: View {
             let frame = EdgeWidgetGeometry.animatedFrame(frame: contentWidget, edge: spec.edge,
                 leading: reduceMotion ? target : motion.leading,
                 trailing: reduceMotion ? target : motion.trailing,
-                depth: reduceMotion ? target : motion.depth)
+                depth: reduceMotion ? target : motion.depth, showsSummary: presentation?.collapsed != nil && presentation?.expanded?.agents == nil,
+                showsActivity: presentation?.expanded?.agents != nil)
             let visibleWidget = CGRect(x: frame.minX - canvas.minX, y: canvas.maxY - frame.maxY,
                                        width: frame.width, height: frame.height)
             surface(visibleWidget: visibleWidget, contentOpacity: reduceMotion ? target : min(1, max(0, (motion.depth - 0.15) / 0.65)))
@@ -510,6 +542,14 @@ struct EdgeWidgetRootView: View {
         }
         .preferredColorScheme(.dark)
         .onExitCommand { interaction.collapse() }
+        .onChange(of: presentation?.attentionID) { _, identifier in
+            if identifier != nil {
+                interaction.expand()
+                NSSound(named: "Glass")?.play()
+            }
+        }
+        .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: presentation?.expanded?.agents?.selectedSessionID)
+        .onChange(of: contentWidget) { _, _ in refreshPointer() }
         .onChange(of: interaction.expanded) { _, _ in refreshPointer() }
         .onChange(of: metrics.map(\.title)) { _, _ in
             interaction.selected = nil
@@ -519,7 +559,7 @@ struct EdgeWidgetRootView: View {
     }
 
     private func surface(visibleWidget: CGRect, contentOpacity: CGFloat) -> some View {
-        let outline = EdgeWidgetShape(edge: spec.edge, cornerRadius: content?.kind == .wallpaper ? 14 : 32)
+        let outline = EdgeWidgetShape(edge: spec.edge, cornerRadius: presentation?.collapsed != nil && !expanded ? 14 : presentation?.expanded?.agents != nil ? 24 : content?.kind == .wallpaper ? 14 : 32)
             .size(width: visibleWidget.width, height: visibleWidget.height)
             .offset(x: visibleWidget.minX, y: visibleWidget.minY)
         return ZStack(alignment: .topLeading) {
@@ -529,17 +569,31 @@ struct EdgeWidgetRootView: View {
                 .mask { outline }
                 .allowsHitTesting(expanded)
                 .accessibilityHidden(!expanded)
-            if !expanded {
+            if !expanded || presentation?.expanded?.agents != nil {
                 Button { interaction.expand() } label: {
-                    Color.clear.frame(width: visibleWidget.width, height: visibleWidget.height)
-                        .contentShape(EdgeWidgetShape(edge: spec.edge))
+                    Group {
+                        if let dashboard = presentation?.expanded?.agents {
+                            AgentActivityIndicatorView(content: dashboard, horizontal: spec.edge.isHorizontal, isVisible: !expanded)
+                        } else if let summary = presentation?.collapsed {
+                            ExtensionNodeView(node: spec.edge.isHorizontal && summary.kind == .vStack
+                                ? .hStack(summary.children) : summary, packageDirectory: packageDirectory, action: { _ in })
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.white)
+                                .padding(8)
+                        } else { Color.clear }
+                    }.frame(width: visibleWidget.width, height: visibleWidget.height)
+                        .clipShape(EdgeWidgetShape(edge: spec.edge, cornerRadius: 14))
+                        .contentShape(EdgeWidgetShape(edge: spec.edge, cornerRadius: 14))
                 }
                 .buttonStyle(.plain).focusable().focusEffectDisabled()
-                .accessibilityLabel("Show widget")
+                .opacity(expanded ? 0 : 1)
+                .allowsHitTesting(!expanded)
+                .accessibilityHidden(expanded)
+                .accessibilityLabel(presentation?.expanded?.agents.map { "Show agents, " + AgentActivityState(content: $0).label } ?? "Show widget")
                 .onHover { if $0 && spec.shortcut == nil { interaction.enter() } }
                 .position(x: visibleWidget.midX, y: visibleWidget.midY)
             }
-            if expanded, let index = selectedIndex, metrics.indices.contains(index) {
+            if expanded, presentation?.expanded == nil, let index = selectedIndex, metrics.indices.contains(index) {
                 detail(metrics[index], index: index)
             }
         }
@@ -557,7 +611,25 @@ struct EdgeWidgetRootView: View {
 
     private var widgetContent: some View {
         ZStack(alignment: .topLeading) {
-            if metrics.isEmpty {
+            if let dashboard = presentation?.expanded?.agents {
+                AgentDashboardView(content: dashboard, packageDirectory: packageDirectory) {
+                    runtime.perform(extensionID: spec.extensionID, contributionID: spec.contribution, actionID: $0)
+                }
+                .frame(width: contentWidget.width, height: contentWidget.height)
+                .position(x: localWidget.midX, y: localWidget.midY)
+            } else if presentation?.expanded != nil {
+                ScrollView {
+                    ExtensionContributionView(extensionID: spec.extensionID, contributionID: spec.contribution,
+                        expanded: true, runtime: runtime)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 40)
+                }
+                .frame(width: contentWidget.width, height: contentWidget.height)
+                .position(x: localWidget.midX, y: localWidget.midY)
+            } else if metrics.isEmpty {
                 ExtensionContributionView(extensionID: spec.extensionID, contributionID: spec.contribution,
                     expanded: false, runtime: runtime)
                     .frame(width: contentWidget.width - 16, height: contentWidget.height - (content?.kind == .wallpaper ? 16 : EdgeWidgetGeometry.metricPadding * 2))

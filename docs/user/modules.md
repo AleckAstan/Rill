@@ -1,5 +1,15 @@
 # Built-in modules
 
+[Documentation](../README.md) · [Add your first module](customization.md#add-cpu-and-ram) · [Configuration reference](configuration.md) · [Theme gallery](../../Examples/themes/README.md)
+
+| Category | Modules |
+| --- | --- |
+| Desktop | [Clock/calendar](#clock), [frontmost app](#frontmost-application), [Apple menu](#apple-menu), [keep awake](#keep-awake) |
+| Connectivity | [Wi-Fi](#wi-fi), [Bluetooth](#bluetooth) |
+| Audio | [Volume/output](#volume), [microphone/input](#microphone) |
+| Metrics | [Battery](#battery), [CPU and RAM](#cpu-and-memory) |
+| Layout and external data | [Text](#text), [separator](#separator), [workspaces and custom data](#custom-data) |
+
 Rill modules are configured in `[[modules]]` and placed by ID in a surface's `start`, `center`, or `end` list. One shared native data source feeds every display, so `display = "all"` does not duplicate timers or system observers.
 
 ## Text

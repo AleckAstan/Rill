@@ -418,6 +418,53 @@ final class TopBarGeometryTests: XCTestCase {
 }
 
 final class EdgeWidgetGeometryTests: XCTestCase {
+    func testAgentSignalPrioritizesAttentionThenWorkThenAllCompleted() {
+        var content = RillAgentDashboard(sessions: [], usage: [], sessionCount: 3, activeCount: 1,
+            needsAttention: true, completedCount: 2)
+        XCTAssertEqual(AgentActivityState(content: content), .attention)
+        content.needsAttention = false
+        XCTAssertEqual(AgentActivityState(content: content), .working)
+        content.activeCount = 0
+        XCTAssertEqual(AgentActivityState(content: content), .idle)
+        content.completedCount = 3
+        XCTAssertEqual(AgentActivityState(content: content), .completed)
+        XCTAssertGreaterThan(AgentActivityState.attention.intensity(at: 0.16), 0.95)
+        XCTAssertGreaterThan(AgentActivityState.attention.intensity(at: 0.64), 0.95)
+        XCTAssertLessThan(AgentActivityState.attention.intensity(at: 1.2), 0.2)
+        XCTAssertEqual(AgentActivityState.attention.intensity(at: 2.56),
+            AgentActivityState.attention.intensity(at: 0.16), accuracy: 0.001)
+        XCTAssertLessThan(AgentActivityState.completed.intensity(at: 0), AgentActivityState.completed.intensity(at: 1.4))
+    }
+
+    func testSessionListFitsItsRowsAndConversationUsesTheFullPanel() {
+        let frame = CGRect(x: 100, y: 100, width: 400, height: 560)
+        let list = EdgeWidgetGeometry.contentFrame(frame: frame, edge: .right, metricCount: 0, agentSessionCount: 3)
+        XCTAssertEqual(list.height, 376)
+        XCTAssertEqual(list.midY, frame.midY)
+        XCTAssertEqual(list.maxX, frame.maxX)
+        XCTAssertEqual(EdgeWidgetGeometry.contentFrame(frame: frame, edge: .right, metricCount: 0,
+            agentSessionCount: 3, showsConversation: true), frame)
+    }
+
+    func testActivitySummaryRemainsAttachedToEachEdgeAndAnimatesToDashboard() {
+        for edge in SurfaceEdge.allCases {
+            let frame = CGRect(x: 100, y: 100, width: 400, height: 560)
+            let compact = EdgeWidgetGeometry.collapsedFrame(frame: frame, edge: edge, showsSummary: true)
+            XCTAssertTrue(frame.contains(compact))
+            XCTAssertEqual(min(compact.width, compact.height), edge.isHorizontal ? 34 : 44)
+            XCTAssertEqual(EdgeWidgetGeometry.animatedFrame(frame: frame, edge: edge,
+                leading: 0, trailing: 0, depth: 0, showsSummary: true), compact)
+            XCTAssertEqual(EdgeWidgetGeometry.animatedFrame(frame: frame, edge: edge,
+                leading: 1, trailing: 1, depth: 1, showsSummary: true), frame)
+            switch edge {
+            case .left: XCTAssertEqual(compact.minX, frame.minX)
+            case .right: XCTAssertEqual(compact.maxX, frame.maxX)
+            case .top: XCTAssertEqual(compact.maxY, frame.maxY)
+            case .bottom: XCTAssertEqual(compact.minY, frame.minY)
+            }
+        }
+    }
+
     func testMetricContentFitsItsCountWhilePreservingEdgeAndCenter() {
         for edge in SurfaceEdge.allCases {
             let frame = edge.isHorizontal

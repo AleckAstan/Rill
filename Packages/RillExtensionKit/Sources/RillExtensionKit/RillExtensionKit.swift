@@ -23,7 +23,7 @@ public enum RillExtensionContributionKind: String, Codable, Sendable {
 }
 
 public enum RillExtensionNodeKind: String, Codable, CaseIterable, Sendable {
-    case text, symbol, image, hStack, vStack, spacer, divider, progress, button, list, popover, nowPlaying, metric, wallpaper
+    case text, symbol, image, hStack, vStack, spacer, divider, progress, button, list, popover, nowPlaying, metric, wallpaper, agentDashboard
 }
 
 public enum RillMetricAccent: String, Codable, Sendable {
@@ -215,6 +215,65 @@ public struct RillWallpaperContent: Codable, Equatable, Sendable {
     }
 }
 
+public enum RillAgentPhase: String, Codable, Sendable {
+    case working, approval, waiting, completed, unknown
+}
+
+public struct RillAgentSession: Codable, Equatable, Sendable {
+    public var id: String
+    public var title: String
+    public var project: String
+    public var provider: String
+    public var phase: RillAgentPhase
+    public var detail: String
+    public var actionID: String
+    public var allowActionID: String?
+    public var denyActionID: String?
+
+    public init(id: String, title: String, project: String, provider: String, phase: RillAgentPhase,
+                detail: String, actionID: String, allowActionID: String? = nil, denyActionID: String? = nil) {
+        self.id = id; self.title = title; self.project = project; self.provider = provider
+        self.phase = phase; self.detail = detail; self.actionID = actionID
+        self.allowActionID = allowActionID; self.denyActionID = denyActionID
+    }
+}
+
+public struct RillAgentMessage: Codable, Equatable, Sendable {
+    public var isUser: Bool
+    public var text: String
+
+    public init(isUser: Bool, text: String) { self.isUser = isUser; self.text = text }
+}
+
+public struct RillAgentDashboard: Codable, Equatable, Sendable {
+    public var sessions: [RillAgentSession]
+    public var usage: [RillMetricContent]
+    public var selectedSessionID: String?
+    public var sessionCount: Int
+    public var activeCount: Int
+    public var completedCount: Int
+    public var needsAttention: Bool
+    public var messages: [RillAgentMessage]
+    public var status: String?
+    public var page: Int
+    public var pageCount: Int
+    public var conversationPage: Int
+    public var conversationPageCount: Int
+
+    public init(sessions: [RillAgentSession], usage: [RillMetricContent], selectedSessionID: String? = nil,
+                messages: [RillAgentMessage] = [], status: String? = nil, page: Int = 0, pageCount: Int = 1,
+                conversationPage: Int = 0, conversationPageCount: Int = 1,
+                sessionCount: Int? = nil, activeCount: Int? = nil, needsAttention: Bool? = nil, completedCount: Int? = nil) {
+        self.sessions = sessions; self.usage = usage; self.selectedSessionID = selectedSessionID
+        self.messages = messages; self.status = status; self.page = page; self.pageCount = pageCount
+        self.sessionCount = sessionCount ?? sessions.count
+        self.activeCount = activeCount ?? sessions.filter { $0.phase == .working }.count
+        self.completedCount = completedCount ?? sessions.filter { $0.phase == .completed }.count
+        self.needsAttention = needsAttention ?? sessions.contains { $0.phase == .approval }
+        self.conversationPage = conversationPage; self.conversationPageCount = conversationPageCount
+    }
+}
+
 public struct RillExtensionNode: Codable, Equatable, Sendable {
     public var kind: RillExtensionNodeKind
     public var text: String?
@@ -226,10 +285,11 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
     public var media: RillNowPlayingContent?
     public var metric: RillMetricContent?
     public var wallpaper: RillWallpaperContent?
+    public var agents: RillAgentDashboard?
     public var children: [RillExtensionNode]
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case kind, text, name, resource, value, label, media, metric, wallpaper
+        case kind, text, name, resource, value, label, media, metric, wallpaper, agents
         case actionID = "action_id"
         case children
     }
@@ -245,6 +305,7 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
         media: RillNowPlayingContent? = nil,
         metric: RillMetricContent? = nil,
         wallpaper: RillWallpaperContent? = nil,
+        agents: RillAgentDashboard? = nil,
         children: [RillExtensionNode] = []
     ) {
         self.kind = kind
@@ -257,6 +318,7 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
         self.media = media
         self.metric = metric
         self.wallpaper = wallpaper
+        self.agents = agents
         self.children = children
     }
 
@@ -272,6 +334,7 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
         media = try container.decodeIfPresent(RillNowPlayingContent.self, forKey: .media)
         metric = try container.decodeIfPresent(RillMetricContent.self, forKey: .metric)
         wallpaper = try container.decodeIfPresent(RillWallpaperContent.self, forKey: .wallpaper)
+        agents = try container.decodeIfPresent(RillAgentDashboard.self, forKey: .agents)
         children = try container.decodeIfPresent([RillExtensionNode].self, forKey: .children) ?? []
     }
 
@@ -296,18 +359,25 @@ public struct RillExtensionNode: Codable, Equatable, Sendable {
 public struct RillExtensionPresentation: Codable, Equatable, Sendable {
     public var compact: RillExtensionNode
     public var expanded: RillExtensionNode?
+    public var collapsed: RillExtensionNode?
+    public var attentionID: String?
 
-    enum CodingKeys: String, CodingKey, CaseIterable { case compact, expanded }
+    enum CodingKeys: String, CodingKey, CaseIterable { case compact, expanded, collapsed, attentionID }
 
-    public init(compact: RillExtensionNode, expanded: RillExtensionNode? = nil) {
+    public init(compact: RillExtensionNode, expanded: RillExtensionNode? = nil,
+                collapsed: RillExtensionNode? = nil, attentionID: String? = nil) {
         self.compact = compact
         self.expanded = expanded
+        self.collapsed = collapsed
+        self.attentionID = attentionID
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.rillStrictContainer(keyedBy: CodingKeys.self)
         compact = try container.decode(RillExtensionNode.self, forKey: .compact)
         expanded = try container.decodeIfPresent(RillExtensionNode.self, forKey: .expanded)
+        collapsed = try container.decodeIfPresent(RillExtensionNode.self, forKey: .collapsed)
+        attentionID = try container.decodeIfPresent(String.self, forKey: .attentionID)
     }
 }
 
@@ -479,7 +549,11 @@ public enum RillExtensionFrameCodec {
 
 public extension RillExtensionPresentation {
     func validate(packageDirectory: URL? = nil) throws {
+        if let attentionID, attentionID.isEmpty || attentionID.count > 128 {
+            throw RillExtensionProtocolError.invalidTree("Invalid attention identifier")
+        }
         var count = 0
+        if let collapsed { try validate(collapsed, depth: 0, count: &count, packageDirectory: packageDirectory) }
         try validate(compact, depth: 0, count: &count, packageDirectory: packageDirectory)
         if let expanded { try validate(expanded, depth: 0, count: &count, packageDirectory: packageDirectory) }
     }
@@ -507,6 +581,33 @@ public extension RillExtensionPresentation {
         }
         if let value = node.value, !value.isFinite || !(0...1).contains(value) {
             throw RillExtensionProtocolError.invalidTree("Progress value must be finite and between 0 and 1")
+        }
+        if node.kind == .agentDashboard {
+            guard let dashboard = node.agents, node.children.isEmpty,
+                  dashboard.sessions.count <= 24, dashboard.usage.count <= 3, dashboard.messages.count <= 6,
+                  (dashboard.sessions.count...24).contains(dashboard.sessionCount), (0...dashboard.sessionCount).contains(dashboard.activeCount),
+                  (0...dashboard.sessionCount).contains(dashboard.completedCount),
+                  dashboard.pageCount > 0, (0..<dashboard.pageCount).contains(dashboard.page),
+                  dashboard.conversationPageCount > 0, (0..<dashboard.conversationPageCount).contains(dashboard.conversationPage),
+                  Set(dashboard.sessions.map(\.id)).count == dashboard.sessions.count else {
+                throw RillExtensionProtocolError.invalidTree("Invalid agent dashboard")
+            }
+            let strings = dashboard.sessions.flatMap { [$0.id, $0.title, $0.project, $0.provider, $0.detail] }
+                + dashboard.messages.map(\.text) + [dashboard.status].compactMap { $0 }
+            guard strings.allSatisfy({ $0.count <= RillExtensionAPI.maximumTextCharacters }) else {
+                throw RillExtensionProtocolError.invalidTree("Agent text exceeds the character limit")
+            }
+            for session in dashboard.sessions {
+                guard !session.id.isEmpty, !session.title.isEmpty,
+                      [session.actionID, session.allowActionID, session.denyActionID].compactMap({ $0 }).allSatisfy({ !$0.isEmpty && $0.count <= 128 }) else {
+                    throw RillExtensionProtocolError.invalidTree("Invalid agent session or action")
+                }
+            }
+            for metric in dashboard.usage {
+                try validate(.init(kind: .metric, metric: metric), depth: depth + 1, count: &count, packageDirectory: packageDirectory)
+            }
+        } else if node.agents != nil {
+            throw RillExtensionProtocolError.invalidTree("Only an agent dashboard may carry agent content")
         }
         if node.kind == .wallpaper {
             guard let wallpaper = node.wallpaper, node.children.isEmpty,

@@ -1,5 +1,20 @@
 # GitHub plugin release verification
 
+## Rill 0.2.0, 8 November 2026
+
+- The current source passed 192 Xcode tests and 13 extension SDK tests. The RichSample extension built in Release, and all 22 example configurations validated with the Release CLI.
+- The Apple Silicon Release app, bundled CLI and compressed DMG were signed with the existing local Apple Development identity. Deep/strict app verification, DMG verification and the mounted image's CLI version and configuration checks passed.
+- The DMG SHA-256 is `d9670c2aa11683ab5b138df3c45b3bf7bed626775cfd7cb63871586ff886b803`. The generated Homebrew cask uses this exact artifact and version 0.2.0.
+- The isolated runtime check passed 100 reload cycles, automatic recovery, duplicate-instance protection and clean shutdown. Descriptor count remained at 37, and shutdown left no owned producer or socket.
+- The runtime verifier now waits for the initial invalid configuration to finish loading before asserting its error state. This resolves the startup-status race recorded for 0.1.1 without removing its assertions. The corrected verifier passed against the unchanged Release binary.
+- Homebrew cask style passed in an isolated writable Homebrew prefix, excluding only `Style/FrozenStringLiteralComment` to respect the repository's no-code-comments rule. Documentation links, screenshot assets and tutorial configurations also passed their checks.
+
+This is a locally signed, non-notarized release. Separate-machine Gatekeeper,
+supported-OS and interactive hardware/accessibility acceptance remain manual;
+these checks do not establish a new OS/hardware support matrix. Existing SDK
+and plugin release tags are preserved. The new SDK source is tagged with the
+host release as v0.2.0.
+
 ## Rill 0.1.1
 
 The Convex resizing and continuous-contour fixes passed 161 Xcode tests,

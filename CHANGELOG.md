@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0
+
+- Add native Apple menu, Bluetooth, microphone and keep-awake controls.
+- Add compact Omarchy-inspired workspace variants alongside labels, application icons and dots.
+- Add six complete showcase themes and live OmniWM workspaces to Convex Style and Catppuccin.
+- Align native module capsules with configurable minimum dimensions and consistent vertical group spacing.
+- Refine glass symbol sizing and workspace geometry.
+- Extend experimental API v2 with agent dashboards, collapsed summaries and attention indicators.
+- Refresh the README, screenshot gallery, quickstart, customization walkthrough and contribution guide.
+- Publish locally signed Apple Silicon DMG and ZIP downloads with matching Homebrew metadata.
+
 ## 0.1.1
 
 - Animate Convex island resizing when changing spaces or applications.

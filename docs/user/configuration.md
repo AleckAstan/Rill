@@ -1,6 +1,10 @@
 # Configuration reference
 
-Rill 0.1 configuration is strict TOML with `schema_version = 1`. Experimental UI extensions opt in to `schema_version = 2`; all version-1 meanings remain unchanged. Unknown keys, unsupported versions, invalid values and unresolved references are errors. Rill never executes configured programs while parsing or validating.
+[Documentation](../README.md) · [Quickstart](quickstart.md) · [Customize your bar](customization.md) · [Modules](modules.md)
+
+New to Rill? Follow the quickstart and customization walkthrough first. This page lists the exact keys, bounds and precedence rules for the current source build.
+
+Rill configuration is strict TOML with `schema_version = 1`. Experimental UI extensions opt in to `schema_version = 2`; all version-1 meanings remain unchanged. Unknown keys, unsupported versions, invalid values and unresolved references are errors. Rill never executes configured programs while parsing or validating.
 
 ## Location and commands
 
@@ -63,6 +67,8 @@ When the focused workspace changes, its filled indicator glides between workspac
 | `workspace_corner_radius` | `4` | `0` | `7` | 0–32 |
 | `module_padding` | `8` | `0` | `6` | 0–64 |
 | `module_vertical_padding` | `4` | `0` | `4` | 0–32 |
+| `module_min_width` | natural | natural | natural | 0–256 |
+| `module_min_height` | natural | natural | natural | 0–64 |
 | `workspace_padding` | `5` | `2` | `11` | 0–64 |
 | `workspace_vertical_padding` | `2` | `2` | `5` | 0–32 |
 | `workspace_content_spacing` | `4` | `4` | `4` | 0–32 |
@@ -74,6 +80,8 @@ When the focused workspace changes, its filled indicator glides between workspac
 | `adaptive_text` | `false` | `false` | `true` | boolean |
 
 All numeric values must be finite. Module-level `style.background`, `style.padding`, `style.foreground`, and `style.accent` override the corresponding global presentation for that module.
+
+`module_min_width` and `module_min_height` set the minimum module dimensions in points, including padding. Omit them to preserve natural content sizing. They help align icon-only controls with text capsules without shrinking longer labels or larger text. For a 30-point row, use `module_min_height = 30`, `workspace_min_height = 20` and `workspace_vertical_padding = 5` with standard workspaces. Horizontal dot controls and Omarchy variants apply `workspace_min_height` directly, with their existing 24-point minimum. Separators keep their independent hairline geometry. The minimum width must fit inside the available surface width, particularly on a vertical rail.
 
 The mixed glass appearance can be reproduced without relying on implicit preset values (omit `module_background` to keep ordinary modules backgroundless):
 

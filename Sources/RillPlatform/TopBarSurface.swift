@@ -383,7 +383,7 @@ struct BarSurfaceView: View {
                 size: geometry.size,
                 padding: theme.padding
             ) {
-                VStack(spacing: 0) {
+                VStack(spacing: theme.spacing) {
                     ScrollView(.vertical) {
                         verticalGroup(surface.start)
                     }
@@ -812,7 +812,8 @@ private struct ModuleView: View {
                        height: !isHorizontal && workspace.focused ? 18 : 6)
                 .opacity(workspace.occupied == false && !workspace.focused ? theme.resolvedEmptyWorkspaceOpacity : 1)
                 .padding(3)
-                .frame(minWidth: isHorizontal ? 12 : 24, minHeight: isHorizontal ? 24 : 12)
+                .frame(minWidth: isHorizontal ? 12 : 24,
+                       minHeight: isHorizontal ? max(24, theme.resolvedWorkspaceMinimumHeight) : 12)
                 .contentShape(Rectangle())
         } else if let activeSymbol = omarchyWorkspaceSymbol {
             Group {
@@ -827,7 +828,7 @@ private struct ModuleView: View {
             .foregroundStyle(workspaceStyle(workspace).foreground.map { Color(hex: $0) } ??
                 (theme.resolvedAdaptiveText ? Color.primary : Color(hex: theme.foreground)))
             .opacity(workspace.occupied == false && !workspace.focused ? theme.resolvedEmptyWorkspaceOpacity : 1)
-            .frame(minWidth: 20, minHeight: 24)
+            .frame(minWidth: 20, minHeight: max(24, theme.resolvedWorkspaceMinimumHeight))
             .padding(.horizontal, workspaceStyle(workspace).padding ?? 6)
             .contentShape(Rectangle())
         } else {
@@ -1041,15 +1042,12 @@ private struct ModuleView: View {
                     if let symbolName = presentation.symbolName {
                         Group {
                             if module.kind == .bluetooth, symbolName == "rill.bluetooth" {
-                                BluetoothIcon(size: resolvedStyle.fontSize ??
-                                    (theme.preset == .glass ? max(theme.fontSize + 5, 18) : theme.fontSize))
+                                BluetoothIcon(size: symbolFontSize)
                                     .opacity(store.bluetooth.state == .poweredOff ? 0.45 : 1)
                             } else {
                                 Image(systemName: symbolName)
                                     .symbolRenderingMode(.hierarchical)
-                                    .font(theme.preset == .glass
-                                          ? .system(size: resolvedStyle.fontSize ?? max(theme.fontSize + 5, 18))
-                                          : font)
+                                    .font(.system(size: symbolFontSize))
                             }
                         }
                         .frame(maxWidth: isHorizontal ? nil : 22, maxHeight: isHorizontal ? nil : 22)
@@ -1070,6 +1068,14 @@ private struct ModuleView: View {
             .foregroundStyle(foreground)
             .accessibilityElement(children: .ignore)
             .accessibilityIdentifier("rill.module.\(module.id.rawValue)")
+    }
+
+    private var symbolFontSize: CGFloat {
+        if let fontSize = resolvedStyle.fontSize { return fontSize }
+        if theme.preset == .glass && [.appleMenu, .battery].contains(module.kind) {
+            return max(theme.fontSize + 5, 18)
+        }
+        return theme.fontSize
     }
 
     private var presentation: ModuleData {
@@ -1617,6 +1623,8 @@ private struct ModuleChrome: ViewModifier {
         let padded = content
             .padding(.horizontal, isHorizontal ? (style?.padding ?? theme.resolvedModulePadding) : min(4, style?.padding ?? theme.resolvedModulePadding))
             .padding(.vertical, theme.resolvedModuleVerticalPadding)
+            .frame(minWidth: theme.moduleMinimumWidth.map { CGFloat($0) },
+                   minHeight: theme.moduleMinimumHeight.map { CGFloat($0) })
         if theme.preset == .glass {
             if isEndGroup && (style?.background ?? theme.resolvedModuleBackground).isTransparentColor {
                 padded

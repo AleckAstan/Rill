@@ -14,6 +14,24 @@ module_padding = 4
 module_vertical_padding = 2
 border_width = 0
 
+module_min_width = 28
+module_min_height = 24
+workspace_min_height = 20
+workspace_vertical_padding = 2
+workspace_padding = 6
+workspace_spacing = 6
+workspace_content_spacing = 4
+workspace_corner_radius = 6
+application_icon_size = 14
+empty_workspace_opacity = 0.7
+
+[[providers]]
+id = "omniwm"
+kind = "omniwm"
+executable = "/Applications/OmniWM.app/Contents/MacOS/omniwmctl"
+timeout_ms = 3000
+max_output_bytes = 262144
+
 [[surfaces]]
 id = "main"
 style = "convex"
@@ -21,7 +39,7 @@ display = "all"
 edge = "top"
 top_placement = "menuBarArea"
 fullscreen = "hide"
-start = ["frontmost"]
+start = ["spaces", "frontmost"]
 end = ["cpu", "memory", "volume", "wifi", "battery", "clock"]
 
 [[modules]]
@@ -58,3 +76,14 @@ format = "{percent}%"
 id = "clock"
 kind = "clock"
 format = "HH:mm"
+
+[[modules]]
+id = "spaces"
+kind = "workspaces"
+provider = "omniwm"
+placeholder = "OmniWM unavailable"
+workspace_variant = "standard"
+states.active = { foreground = "#000000", background = "#A78BDD" }
+states.occupied = { foreground = "#F2F2F7" }
+states.empty = { foreground = "#F2F2F7" }
+states.error = { foreground = "#F38BA8" }

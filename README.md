@@ -1,31 +1,109 @@
 # Rill
 
-A native, configurable desktop bar for macOS, inspired by the file-driven customization of Waybar. AppKit panels and SwiftUI controls combine editable TOML themes, window-manager workspaces and supervised script modules.
+A configurable native desktop bar for macOS. Compose your bar in TOML, connect your workspaces, and add your own scripts. Rill brings Waybar-style customization to native macOS controls.
 
-Rill 0.1.1 targets Apple Silicon and macOS 14 or newer. Distribution builds are signed locally and are not notarized by Apple; macOS can require a manual first-launch exception. Supported-OS/hardware acceptance checks remain open. Rich UI extensions use a preview API.
+[Install](docs/user/installation.md) · [Get started](docs/user/quickstart.md) · [Theme gallery](Examples/themes/README.md) · [Documentation](docs/README.md) · [Contribute](CONTRIBUTING.md)
 
-- Bars on all four screen edges, multiple displays and notch-safe layouts.
-- Live configuration reload with last-good rollback.
-- Clock with calendar, app and Apple menus, Wi-Fi, Bluetooth, audio output, microphone, keep awake, battery, CPU and memory modules.
-- AeroSpace, OmniWM and yabai workspace integrations.
-- Local command, stream and event modules, GitHub-installable plugins and a bundled CLI.
-- Flat, segmented and glass themes with system accessibility preferences.
+[![Convex Style with live workspaces, application icons, black attached islands and native controls](Examples/themes/previews/convex-style.png)](Examples/themes/README.md#convex-style)
 
-Start with the [DMG and Homebrew installation guide](docs/user/installation.md), [quickstart](docs/user/quickstart.md), [configuration reference](docs/user/configuration.md) and [module guide](docs/user/modules.md). Try the [Catppuccin-inspired and macOS glass configurations](Examples/themes/README.md) for a complete starting point. See [plugin authoring](docs/user/plugins.md) to add your own data source.
+*Convex Style*
 
-## Build and verify
+[![Gruvbox Blocks with warm rectangular modules and live workspace switching](Examples/themes/previews/gruvbox-blocks.png)](Examples/themes/README.md#gruvbox-blocks)
 
-With Xcode and its command-line tools selected:
+*Gruvbox Blocks*
+
+[![Catppuccin-inspired bar with live workspaces, application icons, Mocha colors and metrics](Examples/themes/previews/catppuccin.png)](Examples/themes/README.md#catppuccin)
+
+*Catppuccin-inspired. All three are real captures from the development build. [Explore the theme gallery](Examples/themes/README.md).*
+
+## Make it yours
+
+- **Native controls:** calendar, application and Apple menus, Wi-Fi, Bluetooth, output volume, microphone, keep awake, battery, CPU and RAM.
+- **Live workspaces:** switch spaces through [AeroSpace](docs/user/aerospace.md), [OmniWM](docs/user/omniwm.md) or [yabai](docs/user/yabai.md). AeroSpace and OmniWM can show application icons inside workspaces.
+- **Your layout:** top, bottom, left or right; one display or all of them; continuous bars, individual capsules, glass and Convex Style.
+- **Your data:** command, stream and event modules, packaged plugins, and experimental rich UI extensions for notch and edge widgets.
+- **Fast iteration:** edit and save your configuration to reload it. Invalid edits keep the last working bar visible.
+
+Built-in modules work without scripts or a window manager. System fonts and SF Symbols are included; no Nerd Font is needed. Keyboard access, VoiceOver and Reduce Motion follow the native controls.
+
+## Install and launch
+
+Requires **Apple Silicon and macOS 14 or newer**. The current release is locally signed and is **not notarized**; follow the [first-launch instructions](docs/user/installation.md#first-launch) if macOS blocks it.
+
+With Homebrew:
 
 ```sh
-./scripts/build.sh
-./scripts/test.sh
+brew tap AleckAstan/rill
+brew install --cask AleckAstan/rill/rill
+rillctl init
+open -a Rill
 ```
 
-The Debug app is written to `.build/DerivedData/Build/Products/Debug/Rill.app`. `./ci/verify.sh` also tests the extension SDK, builds locally signed Release artifacts, validates example configurations and runs an isolated 100-cycle recovery/reload scenario. Runtime checks launch temporary Rill panels and use their own configuration and IPC directory.
+`rillctl init` creates your configuration and refuses to overwrite an existing file. If you already have one, skip that command. Prefer a direct download? Use the [DMG installation guide](docs/user/installation.md).
 
-For diagnostics and recovery, see [troubleshooting](docs/user/troubleshooting.md). Release preparation does not establish support on every deployment-target OS; interactive accessibility, sleep/wake, login and installation checks require real observations.
+Open the **Rill ◇** status menu and choose **Open Configuration** to edit your bar. The starter uses the system menu-bar area; enable macOS menu-bar auto-hide, or follow the [quickstart](docs/user/quickstart.md) for a floating bar that leaves it in place.
 
-For signing, DMG generation and tap publication, see [release preparation](docs/user/homebrew.md).
+The eight workspace configurations require Rill 0.2.0 or newer, including support for `module_min_width` and `module_min_height`. Use the current release through Homebrew or the DMG, or [build from source](#build-from-source) for development changes. Liquid Glass needs macOS 26+ and falls back to translucent styling on older systems. OmniWM has its own macOS 26+ requirement.
 
-See [GitHub release verification](docs/github-release-verification.md) for installation, runtime and packaging results.
+## Choose a look
+
+| Theme | Layout | Workspace style |
+| --- | --- | --- |
+| [Convex Style](Examples/themes/convex-style.toml) | Black attached islands with curved cutouts | Labels and application icons |
+| [Catppuccin-inspired](Examples/themes/catppuccin.toml) | Floating Mocha-colored capsules | Labels and application icons |
+| [Mono Minimal](Examples/themes/mono-minimal.toml) | Thin monochrome top bar | Dots |
+| [Tokyo Night Pills](Examples/themes/tokyo-night-pills.toml) | Floating colored capsules | Labels and application icons |
+| [Gruvbox Blocks](Examples/themes/gruvbox-blocks.toml) | Warm rectangular blocks | Active square |
+| [Nord Glass](Examples/themes/nord-glass.toml) | Frosted blue-gray surface | Labels and application icons |
+| [Everforest Rail](Examples/themes/everforest-rail.toml) | Vertical rail with launchers | Active triangle |
+| [Latte Bottom](Examples/themes/latte-bottom.toml) | Light bottom bar | Active circle |
+
+All eight configurations include live OmniWM workspaces. The six showcase layouts demonstrate the full native control set; Convex Style and Catppuccin use a more compact selection. The [gallery](Examples/themes/README.md) explains how to preview them, adapt their workspace provider, or start with a configuration that needs no window manager.
+
+## Configure your bar
+
+The usual configuration file is `~/.config/rill/config.toml`. Rill watches it for changes. A surface arranges module IDs in three groups:
+
+```toml
+start = ["spaces", "frontmost"]
+center = ["clock"]
+end = ["cpu", "memory", "wifi", "volume", "battery"]
+```
+
+These are entries in a `[[surfaces]]` table; each ID references a `[[modules]]` table. Built-in modules provide their own data. Workspaces and custom modules connect to a configured provider.
+
+Start with the [complete first-bar example](docs/user/quickstart.md#make-your-first-edit), then follow [Customize your bar](docs/user/customization.md) to add modules, style states and connect your own data.
+
+| I want to… | Go to |
+| --- | --- |
+| Pick modules and learn their click actions | [Module guide](docs/user/modules.md) |
+| Change colors, sizing or mouse actions | [Configuration reference](docs/user/configuration.md) |
+| Move the bar or use multiple displays | [Surface placement](docs/user/surfaces.md) |
+| Add workspace switching | [AeroSpace](docs/user/aerospace.md), [OmniWM](docs/user/omniwm.md), [yabai](docs/user/yabai.md) |
+| Write a script or package a data module | [Custom producers](Examples/custom/README.md), [plugin guide](docs/user/plugins.md) |
+| Build a richer panel or notch widget | [UI extensions](docs/user/extensions.md), experimental API v2 |
+| Diagnose a problem | [Troubleshooting](docs/user/troubleshooting.md) |
+
+## Build from source
+
+Use a full Xcode installation with the macOS 26 SDK or newer, with its command-line tools selected:
+
+```sh
+git clone https://github.com/AleckAstan/Rill.git
+cd Rill
+./scripts/build.sh
+```
+
+The app is written to `.build/DerivedData/Build/Products/Debug/Rill.app`, including `Contents/Resources/bin/rillctl`. Quit any running Rill instance before launching this build:
+
+```sh
+open .build/DerivedData/Build/Products/Debug/Rill.app
+```
+
+Run `./scripts/test.sh` for the Xcode tests. See [contributing](CONTRIBUTING.md) for focused checks, [release preparation](docs/user/homebrew.md) for packaging, and [release verification](docs/github-release-verification.md) for recorded installation and runtime results.
+
+## Share your setup
+
+Share a screenshot and your TOML, report a reproducible [issue](https://github.com/AleckAstan/Rill/issues), or improve an example or guide. The [contribution guide](CONTRIBUTING.md) explains what to include so others can reproduce your setup.
+
+Inspired by [Waybar](https://github.com/Alexays/Waybar) and the macOS bar customization community, including [SketchyBar](https://github.com/FelixKratz/SketchyBar).

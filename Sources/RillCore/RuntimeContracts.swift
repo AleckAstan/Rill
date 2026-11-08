@@ -884,6 +884,8 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
     public var workspaceCornerRadius: Double?
     public var modulePadding: Double?
     public var moduleVerticalPadding: Double?
+    public var moduleMinimumWidth: Double?
+    public var moduleMinimumHeight: Double?
     public var workspacePadding: Double?
     public var workspaceVerticalPadding: Double?
     public var workspaceContentSpacing: Double?
@@ -909,6 +911,8 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
         case workspaceCornerRadius = "workspace_corner_radius"
         case modulePadding = "module_padding"
         case moduleVerticalPadding = "module_vertical_padding"
+        case moduleMinimumWidth = "module_min_width"
+        case moduleMinimumHeight = "module_min_height"
         case workspacePadding = "workspace_padding"
         case workspaceVerticalPadding = "workspace_vertical_padding"
         case workspaceContentSpacing = "workspace_content_spacing"
@@ -941,6 +945,8 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
         workspaceCornerRadius: Double? = nil,
         modulePadding: Double? = nil,
         moduleVerticalPadding: Double? = nil,
+        moduleMinimumWidth: Double? = nil,
+        moduleMinimumHeight: Double? = nil,
         workspacePadding: Double? = nil,
         workspaceVerticalPadding: Double? = nil,
         workspaceContentSpacing: Double? = nil,
@@ -971,6 +977,8 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
         self.workspaceCornerRadius = workspaceCornerRadius
         self.modulePadding = modulePadding
         self.moduleVerticalPadding = moduleVerticalPadding
+        self.moduleMinimumWidth = moduleMinimumWidth
+        self.moduleMinimumHeight = moduleMinimumHeight
         self.workspacePadding = workspacePadding
         self.workspaceVerticalPadding = workspaceVerticalPadding
         self.workspaceContentSpacing = workspaceContentSpacing
@@ -1004,6 +1012,8 @@ public struct ThemeSpec: Codable, Hashable, Sendable {
         workspaceCornerRadius = try container.decodeIfPresent(Double.self, forKey: .workspaceCornerRadius)
         modulePadding = try container.decodeIfPresent(Double.self, forKey: .modulePadding)
         moduleVerticalPadding = try container.decodeIfPresent(Double.self, forKey: .moduleVerticalPadding)
+        moduleMinimumWidth = try container.decodeIfPresent(Double.self, forKey: .moduleMinimumWidth)
+        moduleMinimumHeight = try container.decodeIfPresent(Double.self, forKey: .moduleMinimumHeight)
         workspacePadding = try container.decodeIfPresent(Double.self, forKey: .workspacePadding)
         workspaceVerticalPadding = try container.decodeIfPresent(Double.self, forKey: .workspaceVerticalPadding)
         workspaceContentSpacing = try container.decodeIfPresent(Double.self, forKey: .workspaceContentSpacing)
@@ -1465,7 +1475,7 @@ public extension AppConfiguration {
                     append("\(path).shortcut", "Shortcut is already assigned to another edge widget")
                 }
             }
-            validateFinite(widget.thickness, path: "\(path).thickness", range: (widget.edge.isHorizontal ? 104 : 64)...256)
+            validateFinite(widget.thickness, path: "\(path).thickness", range: (widget.edge.isHorizontal ? 104 : 64)...640)
             validateFinite(widget.length, path: "\(path).length", range: 160...1200)
             validateFinite(widget.offset, path: "\(path).offset", range: -10000...10000)
             if surfaces.contains(where: { $0.edge == widget.edge && $0.display.mayResolveSameDisplay(as: widget.display) }) {
@@ -1507,6 +1517,12 @@ public extension AppConfiguration {
         if let value = theme.modulePadding { validateFinite(value, path: "theme.module_padding", range: 0...64) }
         if let value = theme.moduleVerticalPadding {
             validateFinite(value, path: "theme.module_vertical_padding", range: 0...32)
+        }
+        if let value = theme.moduleMinimumWidth {
+            validateFinite(value, path: "theme.module_min_width", range: 0...256)
+        }
+        if let value = theme.moduleMinimumHeight {
+            validateFinite(value, path: "theme.module_min_height", range: 0...64)
         }
         if let value = theme.workspacePadding {
             validateFinite(value, path: "theme.workspace_padding", range: 0...64)

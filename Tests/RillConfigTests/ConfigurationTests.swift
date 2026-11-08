@@ -436,6 +436,34 @@ final class ConfigurationParserTests: XCTestCase {
         XCTAssertTrue(theme.resolvedAdaptiveText)
     }
 
+    func testModuleMinimumSizeDecodesAndRoundTrips() throws {
+        let text = DefaultConfiguration.contents.replacingOccurrences(
+            of: "preset = \"segmented\"",
+            with: "preset = \"segmented\"\nmodule_min_width = 36\nmodule_min_height = 28"
+        )
+        let theme = try parser.parse(text: text).configuration.theme
+        XCTAssertEqual(theme.moduleMinimumWidth, 36)
+        XCTAssertEqual(theme.moduleMinimumHeight, 28)
+        let data = try JSONEncoder().encode(theme)
+        XCTAssertEqual(try JSONDecoder().decode(ThemeSpec.self, from: data), theme)
+        XCTAssertNil(ThemeSpec().moduleMinimumWidth)
+        XCTAssertNil(ThemeSpec().moduleMinimumHeight)
+    }
+
+    func testInvalidModuleMinimumSizesAreRejected() {
+        for (key, value) in [("module_min_width", "-1"), ("module_min_width", "257"),
+                             ("module_min_height", "-1"), ("module_min_height", "65"),
+                             ("module_min_width", "nan"), ("module_min_height", "inf")] {
+            assertInvalid(
+                DefaultConfiguration.contents.replacingOccurrences(
+                    of: "preset = \"segmented\"",
+                    with: "preset = \"segmented\"\n\(key) = \(value)"
+                ),
+                contains: "theme.\(key)"
+            )
+        }
+    }
+
     func testGlassThemePresetDecodes() throws {
         let text = DefaultConfiguration.contents.replacingOccurrences(
             of: "preset = \"segmented\"",

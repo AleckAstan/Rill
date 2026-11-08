@@ -1,12 +1,14 @@
 # Install Rill
 
+[Documentation](../README.md) · [Quickstart](quickstart.md) · [Troubleshooting](troubleshooting.md)
+
 Rill requires Apple Silicon and macOS Sonoma 14 or newer. No Xcode or Swift
 installation is required.
 
 ## Download the DMG
 
-Download `Rill-0.1.1-macos-arm64.dmg` from the
-[GitHub release](https://github.com/AleckAstan/Rill/releases/tag/v0.1.1).
+Download `Rill-0.2.0-macos-arm64.dmg` from the
+[GitHub release](https://github.com/AleckAstan/Rill/releases/tag/v0.2.0).
 Open the disk image, drag Rill into Applications, then eject the disk image.
 Launch Rill from Applications, rather than from inside the disk image.
 
@@ -14,7 +16,7 @@ The DMG download also has a `.sha256` file. To check it, download both files
 into the same directory and run:
 
 ```sh
-shasum -a 256 -c Rill-0.1.1-macos-arm64.dmg.sha256
+shasum -a 256 -c Rill-0.2.0-macos-arm64.dmg.sha256
 ```
 
 ## Install with Homebrew

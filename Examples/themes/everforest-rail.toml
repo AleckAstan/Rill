@@ -1,0 +1,150 @@
+schema_version = 1
+
+[theme]
+preset = "segmented"
+font = "SF Mono"
+font_size = 13
+foreground = "#D3C6AA"
+background = "#2D353B"
+accent = "#A7C080"
+module_background = "#343F44"
+corner_radius = 16
+module_corner_radius = 10
+padding = 12
+spacing = 10
+module_padding = 6
+module_vertical_padding = 6
+module_min_width = 80
+module_min_height = 34
+border_color = "#475258"
+border_width = 1
+
+workspace_corner_radius = 10
+workspace_padding = 8
+workspace_min_height = 34
+workspace_spacing = 6
+application_icon_size = 14
+focused_workspace_background = "#A7C080"
+empty_workspace_opacity = 0.7
+
+[[providers]]
+id = "omniwm"
+kind = "omniwm"
+executable = "/Applications/OmniWM.app/Contents/MacOS/omniwmctl"
+timeout_ms = 3000
+max_output_bytes = 262144
+
+[[surfaces]]
+id = "main"
+display = "all"
+edge = "left"
+thickness = 112
+inset = 10
+start = ["apple", "finder", "search", "spaces", "frontmost", "activity", "memory"]
+center = ["clock"]
+end = ["keep-awake", "bluetooth", "wifi", "microphone", "volume", "battery"]
+
+[[modules]]
+id = "finder"
+kind = "text"
+text = "Finder"
+icon = "folder"
+format = ""
+style = { foreground = "#A7C080" }
+on_click = { executable = "/usr/bin/open", args = ["-b", "com.apple.finder"] }
+
+[[modules]]
+id = "search"
+kind = "text"
+text = "Spotlight"
+icon = "magnifyingglass"
+format = ""
+style = { foreground = "#83C092" }
+on_click = { executable = "/usr/bin/open", args = ["-b", "com.apple.Spotlight"] }
+
+[[modules]]
+id = "activity"
+kind = "cpu"
+format = "{percent}%"
+style = { foreground = "#7FBBB3" }
+states.warning = { foreground = "#DBBC7F" }
+on_click = { executable = "/usr/bin/open", args = ["-b", "com.apple.ActivityMonitor"] }
+
+[[modules]]
+id = "clock"
+kind = "clock"
+icon = "clock"
+format = "HH:mm"
+style = { foreground = "#D3C6AA", background = "#414B50" }
+
+[[modules]]
+id = "keep-awake"
+kind = "keepAwake"
+format = ""
+
+[[modules]]
+id = "wifi"
+kind = "wifi"
+format = ""
+states.disconnected = { foreground = "#DBBC7F" }
+
+[[modules]]
+id = "volume"
+kind = "volume"
+format = ""
+scroll_volume_step = 5
+states.muted = { foreground = "#9DA9A0" }
+
+[[modules]]
+id = "battery"
+kind = "battery"
+format = "{percent}%"
+states.charging = { foreground = "#A7C080" }
+states.warning = { foreground = "#DBBC7F" }
+states.critical = { foreground = "#E67E80", background = "#493B40" }
+
+[[modules]]
+id = "apple"
+kind = "appleMenu"
+style = { foreground = "#A7C080" }
+
+[[modules]]
+id = "bluetooth"
+kind = "bluetooth"
+format = ""
+style = { foreground = "#A7C080" }
+states.error = { foreground = "#E67E80" }
+states.connected = { foreground = "#A7C080" }
+states.off = { foreground = "#9DA9A0" }
+
+[[modules]]
+id = "microphone"
+kind = "microphone"
+format = ""
+style = { foreground = "#A7C080" }
+states.error = { foreground = "#E67E80" }
+states.muted = { foreground = "#9DA9A0" }
+
+[[modules]]
+id = "frontmost"
+kind = "frontmostApp"
+icon = "app"
+format = ""
+style = { foreground = "#A7C080" }
+
+[[modules]]
+id = "memory"
+kind = "memory"
+format = "{percent}%"
+style = { foreground = "#A7C080" }
+
+[[modules]]
+id = "spaces"
+kind = "workspaces"
+provider = "omniwm"
+placeholder = "OmniWM unavailable"
+workspace_variant = "omarchyTriangle"
+states.active = { foreground = "#A7C080" }
+states.occupied = { foreground = "#A7C080" }
+states.empty = { foreground = "#9DA9A0" }
+states.error = { foreground = "#E67E80" }

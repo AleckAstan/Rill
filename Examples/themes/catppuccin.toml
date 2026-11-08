@@ -8,12 +8,31 @@ foreground = "#CDD6F4"
 background = "#1E1E2E"
 accent = "#CBA6F7"
 module_background = "#313244"
-focused_workspace_background = "#45475A"
+focused_workspace_background = "#CBA6F7"
+workspace_background = "#313244"
 border_color = "#585B7040"
 corner_radius = 12
 module_corner_radius = 8
 padding = 8
-spacing = 6
+spacing = 8
+
+module_min_width = 32
+module_min_height = 26
+workspace_min_height = 18
+workspace_vertical_padding = 4
+workspace_padding = 6
+workspace_spacing = 6
+workspace_content_spacing = 4
+workspace_corner_radius = 6
+application_icon_size = 14
+empty_workspace_opacity = 0.7
+
+[[providers]]
+id = "omniwm"
+kind = "omniwm"
+executable = "/Applications/OmniWM.app/Contents/MacOS/omniwmctl"
+timeout_ms = 3000
+max_output_bytes = 262144
 
 [[surfaces]]
 id = "main"
@@ -22,7 +41,7 @@ edge = "top"
 top_placement = "belowSystemUI"
 thickness = 36
 inset = 8
-start = ["frontmost"]
+start = ["spaces", "frontmost"]
 center = ["clock"]
 end = ["cpu", "memory", "volume", "battery"]
 
@@ -56,3 +75,14 @@ kind = "volume"
 [[modules]]
 id = "battery"
 kind = "battery"
+
+[[modules]]
+id = "spaces"
+kind = "workspaces"
+provider = "omniwm"
+placeholder = "OmniWM unavailable"
+workspace_variant = "standard"
+states.active = { foreground = "#1E1E2E", background = "#CBA6F7" }
+states.occupied = { foreground = "#CDD6F4" }
+states.empty = { foreground = "#CDD6F4" }
+states.error = { foreground = "#F38BA8" }

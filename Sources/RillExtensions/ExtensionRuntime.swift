@@ -451,12 +451,13 @@ struct ExtensionContributionView: View {
 
 }
 
-private struct ExtensionNodeView: View {
+struct ExtensionNodeView: View {
     let node: RillExtensionNode
     var expanded = false
     let packageDirectory: URL
     let action: (String) -> Void
     @State private var popover = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @ViewBuilder var body: some View {
         switch node.kind {
@@ -470,9 +471,10 @@ private struct ExtensionNodeView: View {
     private var rendered: AnyView {
         switch node.kind {
         case .text:
-            return AnyView(Text(node.text ?? "").lineLimit(1).truncationMode(.tail))
+            return AnyView(Text(.init(node.text ?? "")).lineLimit(expanded ? nil : 1).truncationMode(.tail).textSelection(.enabled))
         case .symbol:
-            return AnyView(Image(systemName: node.name ?? "questionmark"))
+            return AnyView(Image(systemName: node.name ?? "questionmark")
+                .symbolEffect(.variableColor, options: .repeating, isActive: node.name == "waveform" && !reduceMotion))
         case .image:
             let url = packageDirectory.appendingPathComponent(node.resource ?? "")
             if let image = ExtensionImageCache.image(at: url) {
@@ -505,7 +507,7 @@ private struct ExtensionNodeView: View {
                 .popover(isPresented: $popover) {
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach(Array(node.children.dropFirst().enumerated()), id: \.offset) { _, child in
-                            ExtensionNodeView(node: child, packageDirectory: packageDirectory, action: action)
+                            ExtensionNodeView(node: child, expanded: expanded, packageDirectory: packageDirectory, action: action)
                         }
                     }.padding(14).frame(maxWidth: 420)
                 }
@@ -518,6 +520,11 @@ private struct ExtensionNodeView: View {
                 return AnyView(WallpaperPreviewView(content: wallpaper, packageDirectory: packageDirectory, action: action))
             }
             return AnyView(Text("Wallpaper unavailable"))
+        case .agentDashboard:
+            if let dashboard = node.agents {
+                return AnyView(AgentDashboardView(content: dashboard, packageDirectory: packageDirectory, action: action))
+            }
+            return AnyView(Text("Agents unavailable"))
         case .metric:
             if let metric = node.metric {
                 return AnyView(MetricGaugeView(metric: metric, packageDirectory: packageDirectory))
@@ -528,7 +535,7 @@ private struct ExtensionNodeView: View {
 
     private var children: some View {
         ForEach(Array(node.children.enumerated()), id: \.offset) { _, child in
-            ExtensionNodeView(node: child, packageDirectory: packageDirectory, action: action)
+            ExtensionNodeView(node: child, expanded: expanded, packageDirectory: packageDirectory, action: action)
         }
     }
 

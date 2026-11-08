@@ -78,7 +78,7 @@ optional `thickness`, `length` and `offset`. The host renders a short black
 panel attached to the selected edge using its existing notch contour.
 Thickness defaults to 80 points for vertical edges and 104 for horizontal
 edges; length defaults to 400 points and offset to zero. Supported thickness
-is 64...256 vertically or 104...256 horizontally, length 160...1200 and offset
+is 64...640 vertically or 104...640 horizontally, length 160...1200 and offset
 -10000...10000. Length and offset clamp to the display's visible axis.
 Metric panels fit their length to the visible content, with 24-point end
 padding and 88-point slots, capped by the configured `length`. One, two and
@@ -208,6 +208,24 @@ automatically generated source archive. Do not include credentials or user
 configuration. Check the release on a separate installation before announcing it.
 
 Swift authors can depend on `.package(url:
-"https://github.com/AleckAstan/Rill.git", exact: "0.1.0")` and the
+"https://github.com/AleckAstan/Rill.git", exact: "0.2.0")` and the
 `RillExtensionKit` product from package `Rill`. See the build and release scripts
 in RillAIUsage, RillNotch and RillWallpaperSwitcher for standalone examples.
+
+## Agent dashboards (Rill 0.2.0)
+
+The experimental `agentDashboard` node carries a typed `agents` payload for
+session lists, conversation pages, usage metrics and opaque actions. It uses
+the Rill 0.2.0 SDK and host; existing metric, wallpaper and Now Playing nodes
+remain supported. The host renders the dashboard and owns focus and layout.
+
+A presentation may also publish `collapsed` content for an edge-widget summary
+and a bounded `attentionID` to signal a new attention event. These optional
+fields are not required by existing extensions. Auto-collapsing dashboards can
+show an activity indicator while resting and expand when attention changes.
+
+Dashboard payloads allow at most 24 unique sessions, three usage metrics and
+six messages per update. Session counts and page indices are validated, text
+uses the SDK character limit, and action IDs must be nonempty and at most 128
+characters. Extensions supply data and handle actions; the host does not
+connect to agent accounts or execute model requests itself.

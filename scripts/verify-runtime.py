@@ -82,7 +82,7 @@ timeout_ms = 100
     with (root/'app.log').open('w') as log:
         process = subprocess.Popen([str(binary),'--config',str(config)], env=environment, stdout=log, stderr=log)
         try:
-            initial = wait_for(lambda: rpc('status')['result'])
+            initial = wait_for(lambda: (status := rpc('status')['result'])['configuration_error'] and status)
             assert initial['configuration_error'] and not initial['providers']
             report['invalid_start_no_children'] = not children()
             write(good)

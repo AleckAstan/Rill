@@ -1,5 +1,9 @@
 # Plugins
 
+[Documentation](../README.md) · [First custom event](customization.md#publish-your-own-status) · [Runnable plugin example](../../Examples/plugins/README.md) · [Rich UI extensions](extensions.md)
+
+Use a data plugin for text, icons, status values and plain-text popovers. If you only need a private script, start with a [custom producer](../../Examples/custom/README.md). Rich panels and notch widgets use the separate experimental API-v2 extension system.
+
 Plugins let a local program add data modules to Rill without embedding code in
 the app. A plugin is a user-trusted directory containing a strict,
 versioned `plugin.toml` and an executable that emits the same bounded NDJSON
@@ -137,6 +141,6 @@ automatically generated source archive. Do not include credentials or user
 configuration. Check the release on a separate installation before announcing it.
 
 Swift authors can depend on `.package(url:
-"https://github.com/AleckAstan/Rill.git", exact: "0.1.0")` and the
+"https://github.com/AleckAstan/Rill.git", exact: "0.2.0")` and the
 `RillExtensionKit` product from package `Rill`. See the build and release scripts
 in RillAIUsage, RillNotch and RillWallpaperSwitcher for standalone examples.

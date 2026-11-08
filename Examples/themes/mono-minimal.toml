@@ -1,0 +1,136 @@
+schema_version = 1
+
+[theme]
+preset = "flat"
+font = "SF Mono"
+font_size = 12
+foreground = "#E4E4E7"
+background = "#18181B"
+accent = "#FAFAFA"
+corner_radius = 0
+module_corner_radius = 0
+padding = 16
+spacing = 12
+module_padding = 6
+module_vertical_padding = 4
+module_min_width = 30
+module_min_height = 28
+border_width = 0
+
+workspace_corner_radius = 10
+workspace_padding = 4
+workspace_min_height = 28
+workspace_spacing = 8
+application_icon_size = 14
+focused_workspace_background = "#FAFAFA"
+empty_workspace_opacity = 0.5
+
+[[providers]]
+id = "omniwm"
+kind = "omniwm"
+executable = "/Applications/OmniWM.app/Contents/MacOS/omniwmctl"
+timeout_ms = 3000
+max_output_bytes = 262144
+
+[[surfaces]]
+id = "main"
+display = "all"
+edge = "top"
+top_placement = "belowSystemUI"
+thickness = 36
+inset = 0
+start = ["apple", "spaces"]
+center = ["frontmost", "separator", "clock"]
+end = ["cpu", "memory", "status-separator", "keep-awake", "bluetooth", "wifi", "microphone", "volume", "battery"]
+
+[[modules]]
+id = "frontmost"
+kind = "frontmostApp"
+show_icon = false
+
+[[modules]]
+id = "clock"
+kind = "clock"
+format = "EEE  HH:mm"
+style = { foreground = "#FAFAFA" }
+
+[[modules]]
+id = "wifi"
+kind = "wifi"
+format = ""
+states.disconnected = { foreground = "#FCA5A5" }
+states.off = { foreground = "#A1A1AA" }
+
+[[modules]]
+id = "volume"
+kind = "volume"
+format = ""
+scroll_volume_step = 5
+states.muted = { foreground = "#A1A1AA" }
+
+[[modules]]
+id = "battery"
+kind = "battery"
+format = "{percent}%"
+states.warning = { foreground = "#FDE68A" }
+states.critical = { foreground = "#FCA5A5" }
+
+[[modules]]
+id = "apple"
+kind = "appleMenu"
+style = { foreground = "#FAFAFA" }
+
+[[modules]]
+id = "bluetooth"
+kind = "bluetooth"
+format = ""
+style = { foreground = "#FAFAFA" }
+states.error = { foreground = "#FCA5A5" }
+states.connected = { foreground = "#FAFAFA" }
+states.off = { foreground = "#A1A1AA" }
+
+[[modules]]
+id = "microphone"
+kind = "microphone"
+format = ""
+style = { foreground = "#FAFAFA" }
+states.error = { foreground = "#FCA5A5" }
+states.muted = { foreground = "#A1A1AA" }
+
+[[modules]]
+id = "keep-awake"
+kind = "keepAwake"
+format = ""
+style = { foreground = "#FAFAFA" }
+
+[[modules]]
+id = "cpu"
+kind = "cpu"
+format = "{percent}%"
+style = { foreground = "#FAFAFA" }
+states.warning = { foreground = "#FDE68A" }
+
+[[modules]]
+id = "memory"
+kind = "memory"
+format = "{percent}%"
+style = { foreground = "#FAFAFA" }
+
+[[modules]]
+id = "separator"
+kind = "separator"
+
+[[modules]]
+id = "status-separator"
+kind = "separator"
+
+[[modules]]
+id = "spaces"
+kind = "workspaces"
+provider = "omniwm"
+placeholder = "OmniWM unavailable"
+workspace_variant = "dot"
+states.active = { foreground = "#18181B", background = "#FAFAFA" }
+states.occupied = { foreground = "#FAFAFA" }
+states.empty = { foreground = "#A1A1AA" }
+states.error = { foreground = "#FCA5A5" }

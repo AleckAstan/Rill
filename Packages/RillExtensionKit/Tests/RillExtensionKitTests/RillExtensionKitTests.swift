@@ -191,3 +191,37 @@ import Testing
         try RillExtensionPresentation(compact: .init(kind: .wallpaper, wallpaper: content)).validate()
     }
 }
+@Test func collapsedSummaryAndAttentionRoundTripWithSharedLimits() throws {
+    let presentation = RillExtensionPresentation(compact: .text("Usage"), expanded: .text("Sessions"),
+        collapsed: .text("2 active"), attentionID: "request-1")
+    try presentation.validate()
+    #expect(try JSONDecoder().decode(RillExtensionPresentation.self, from: JSONEncoder().encode(presentation)) == presentation)
+    let legacy = try JSONDecoder().decode(RillExtensionPresentation.self, from: Data(#"{"compact":{"kind":"text","text":"Legacy"}}"#.utf8))
+    #expect(legacy.collapsed == nil)
+    #expect(legacy.attentionID == nil)
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .text("Usage"), collapsed: .init(kind: .progress, value: 2)).validate()
+    }
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .text("Usage"), attentionID: String(repeating: "a", count: 129)).validate()
+    }
+}
+
+@Test func agentDashboardBoundsAndFrameRoundTrip() throws {
+    let session = RillAgentSession(id: "session", title: "Review the layout", project: "Rill", provider: "Codex",
+        phase: .working, detail: "Editing", actionID: "session:session")
+    var dashboard = RillAgentDashboard(sessions: [session], usage: [], messages: [.init(isUser: true, text: "Review the layout")])
+    let presentation = RillExtensionPresentation(compact: .text("Usage"), expanded: .init(kind: .agentDashboard, agents: dashboard))
+    try presentation.validate()
+    let message = RillExtensionMessage(kind: .update, extensionID: "dev.rill.test", contributionID: "agents", presentation: presentation)
+    #expect(try RillExtensionFrameCodec.decode(RillExtensionFrameCodec.encode(message)) == message)
+    dashboard.messages = [.init(isUser: false, text: String(repeating: "a", count: 4097))]
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .init(kind: .agentDashboard, agents: dashboard)).validate()
+    }
+    dashboard.messages = []
+    dashboard.sessions.append(session)
+    #expect(throws: RillExtensionProtocolError.self) {
+        try RillExtensionPresentation(compact: .init(kind: .agentDashboard, agents: dashboard)).validate()
+    }
+}
